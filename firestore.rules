@@ -1,0 +1,76 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+// Usuários
+    match /usuarios/{usuarioId} {
+      allow read, write: if true;
+    }
+
+// Plantas
+    match /plantas/{plantaID} {
+      allow read, write: if true;
+      }
+	// Espécies
+    match /especies/{especieId} {
+      allow read, write: if true;
+    }   
+    match /categorias_especies/{doc} {
+      allow read, write: if true;
+    }
+		match /estagios_planta/{estagioId} {
+      allow read, write: if true;
+    }
+	// Variedades
+    match /variedades/{variedadeId} {
+      allow read, write: if true;
+    }
+    match /estados_planta/{estadoId} {
+      allow read, write: if true;
+    }
+    match /caracteristicas_planta/{caracteristicaId} {
+      allow read, write: if true;
+    }    
+
+// Hortas
+    match /hortas/{doc} {
+      allow read, write: if true;
+		// Canteiros
+      match /canteiros/{canteiroID} {
+        allow read, write: if true;
+        }
+    }    
+    match /estados_canteiro/{estadoId} {
+      allow read, write: if true;
+    }
+    match /caracteristicas_canteiro/{caracteristicaId} {
+      allow read, write: if true;
+    }    
+
+// Manejos
+    match /manejos/{doc} {
+      allow read, write: if true;
+      match /efeitos/{paramentroId} {
+      	allow read, write: if true;
+      }
+      match /entradas/{entradaId} {
+      	allow read, write: if true;
+      }
+    }
+
+
+// Jobs
+		match /cvQueue/{jobId} {
+    	allow read, write: if true;
+    }
+		match /cvJobs/{jobId} {
+    	allow read, write: if true;
+    }
+
+
+// OLD RULES
+    match /climas_hortas/{doc} {
+  		allow read, write: if true;
+		}
+  }
+}

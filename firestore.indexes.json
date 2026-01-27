@@ -1,0 +1,61 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "cvJobs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "especies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "estados_planta",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "variedades",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "isDeleted",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "nome",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
