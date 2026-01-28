@@ -6,8 +6,13 @@ import { Container, Row, Col, Button, } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { cvJobsService } from "../../../services/crud/cvJobsService";
 import CVJobsModal from "./CVJobsModal";
+import { useAuth } from "../../../services/auth/authContext";
+import { NoUser } from "../../common/NoUser";
 
-function CVJobsCRUD({ user = {id: "teste", usuario: "rafael"}}) {
+function CVJobsCRUD() {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
+
   const [cvJobs, setCVJobs] = useState([]);
 
   const [editando, setEditando] = useState(null);

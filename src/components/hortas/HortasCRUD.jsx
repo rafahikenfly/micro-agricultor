@@ -6,8 +6,13 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import ListaAcoes from "../common/ListaAcoes";
 import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
 import { useCrudUI } from "../../services/ui/crudUI";
+import { useAuth } from "../../services/auth/authContext";
+import { NoUser } from "../common/NoUser";
 
-export default function HortasCRUD({user = {id: "teste", usuario: "rafael"}}) {
+export default function HortasCRUD() {
+    const { user } = useAuth();
+    if (!user) return <NoUser />
+  
   const [hortas, setHortas] = useState([]);
   const [climas, setClimas] = useState([]);
 

@@ -7,9 +7,11 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { db } from "../../firebase";
 import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
 
 
-export default function ManejosCRUD({ user }) {
+export default function ManejosCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [manejos, setManejos] = useState([]);

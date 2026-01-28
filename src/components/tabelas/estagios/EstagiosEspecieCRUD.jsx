@@ -6,8 +6,13 @@ import { Container, Row, Col, Button, } from "react-bootstrap";
 import { estagiosPlantaService } from "../../../services/crud/estagiosPlantaService";
 import EstagiosEspecieModal from "./EstagiosEspecieModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
+import { useAuth } from "../../../services/auth/authContext";
+import { NoUser } from "../../common/NoUser";
 
-function EstagiosEspecieCRUD({ user = {id: "teste", usuario: "rafael"}}) {
+function EstagiosEspecieCRUD() {
+    const { user } = useAuth();
+    if (!user) return <NoUser />
+  
   const [estagiosPlanta, setEstagiosPlanta] = useState([]);
 
   const [editando, setEditando] = useState(null);

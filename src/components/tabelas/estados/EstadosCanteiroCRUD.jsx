@@ -7,9 +7,11 @@ import { estadosCanteiroService } from "../../../services/crud/estadosCanteirosS
 import EstadosCanteiroModal from "./EstadosCanteiroModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
 
 
-function EstadosPlantaCRUD({ user }) {
+function EstadosPlantaCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [estadosCanteiro, setEstadosCanteiro] = useState([]);

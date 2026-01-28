@@ -7,8 +7,10 @@ import { caracteristicasPlantaService } from "../../../services/crud/caracterist
 import CaracteristicasPlantaModal from "./CaracteristicasPlantaModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
 
-function CaracteristicasPlantasCRUD({ user }) {
+function CaracteristicasPlantasCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [caracteristicasPlanta, setCaracteristicasPlanta] = useState([]);

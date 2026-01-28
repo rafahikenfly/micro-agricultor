@@ -6,16 +6,11 @@ import { Container, Row, Col, Button, } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import PlantasModal from "./PlantasModal";
 import { plantasService } from "../../services/crud/plantasService";
+import { NoUser } from "../common/NoUser";
+
 
 function PlantasCRUD({ user }) {
-  if (!user) {
-    return (
-      <Container fluid className="p-4 text-center">
-        <h5>Sem usuário</h5>
-        <p>É necessário estar autenticado para acessar o componente.</p>
-      </Container>
-    );
-  }
+  if (!user) return <NoUser />;
 
   const [plantas, setPlantas] = useState([]);
 

@@ -11,6 +11,8 @@ export default function AcaoPlantaOffcanvas({
   onClose = () => {},
   onModeChange = () => {},
   onEdit = () => {},
+  showToast = () => {},
+  user,
 }) {
   if (!data) return null;
 
@@ -65,11 +67,21 @@ export default function AcaoPlantaOffcanvas({
           </Tab>
 
           <Tab eventKey="manejo" title="Manejar">
-              <ManejarTab entidade={data} tipoEntidade={"Planta"} />
+            <ManejarTab
+              entidade={data}
+              tipoEntidade={"Planta"}
+              showToast={showToast}
+              user={user}
+            />
           </Tab>
 
           <Tab eventKey="medicao" title="Monitorar">
-            <MonitorarTab entidade={data} tipoEntidade="Planta" />
+            <MonitorarTab
+              entidade={data}
+              tipoEntidade="Planta"
+              showToast={showToast}
+              user={user}
+            />
           </Tab>
 
           <Tab eventKey="inspecao" title="Inspecionar">

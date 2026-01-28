@@ -1,6 +1,6 @@
 import SVGBussola from "../services/svg/SVGbussola";
 import SVGMapa from "../services/svg/SVGmapa";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, use } from "react";
 import { db } from "../firebase"; // ajuste o caminho conforme seu projeto
 
 import { AppToastMensagem, AppToastConfirmacao } from "../components/common/toast";
@@ -15,9 +15,11 @@ import CanteirosModal from "../components/canteiros/CanteirosModal";
 import AcaoCanteiroOffcanvas from "../components/canteiros/AcaoCanteiroOffcanvas";
 import AcaoPlantaOffcanvas from "../components/plantas/AcaoPlantaOffcanvas";
 import PlantasModal from "../components/plantas/plantasModal";
+import { NoUser } from "../components/common/NoUser";
 
 
 export default function Mapa({ user, hortaId }) {  
+  if (!user) return <NoUser />;
 
   const [horta, setHorta] = useState(null);
   const [canteiros, setCanteiros] = useState([]);
@@ -294,6 +296,8 @@ export default function Mapa({ user, hortaId }) {
           onClose={fecharOffcanvas}
           onModeChange={setMapMode}
           onEdit={abrirModal}
+          user={user}
+          showToast={showToast}
         />
       )}
 
@@ -306,6 +310,8 @@ export default function Mapa({ user, hortaId }) {
           onClose={fecharOffcanvas}
           onModeChange={setMapMode}
           onEdit={abrirModal}
+          user={user}
+          showToast={showToast}
         />
       )}
 

@@ -1,20 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
-    Container,
-    Row,
-    Col,
     Button,
     Table,
     Badge,
-    Modal,
-    Form,
-    Collapse,
-    Toast,
-    ToastContainer,
     Card
   } from "react-bootstrap";
   
-  function ListaAcoes ({campos, dados, acoes,}) {
+function ListaAcoes ({campos, dados, acoes,}) {
   /**
    * Renderiza uma lista a partir de um array de dados, com campos configuráveis e ações.
    * - Um campo marcado como boolean renderiza um badge conforme o valor sim/não.
@@ -24,18 +16,58 @@ import {
    * @param dados array com os dados a serem representados na lista
    * @param acoes array de objetos do tipo: {rotulo: String, funcao: function, variant?: String, toggle?: String, rotuloFalse?: String, funcaoFalse: function, variantFalse: String }
    */
+  const [ordem, setOrdem] = useState({
+    campo: null,      // ex: "nome"
+    direcao: "asc"    // "asc" | "desc"
+  });
+
+  const dadosOrdenados = useMemo(() => {
+    if (!ordem.campo) return dados;
+
+    return [...dados].sort((a, b) => {
+      const v1 = a[ordem.campo];
+      const v2 = b[ordem.campo];
+
+      if (v1 == null) return 1;
+      if (v2 == null) return -1;
+
+      if (typeof v1 === "string") {
+        return ordem.direcao === "asc"
+          ? v1.localeCompare(v2)
+          : v2.localeCompare(v1);
+      }
+
+      return ordem.direcao === "asc"
+        ? v1 - v2
+        : v2 - v1;
+    });
+  }, [dados, ordem]);
+
+
   if (!Array.isArray(campos)) {
-        console.error("ListaCRUD: campos não é um array", campos);
-        return null;
-    }
-    if (!Array.isArray(dados)) {
-        console.error("ListaCRUD: dados não é um array", dados);
-        return null;
-    }
-    if (!Array.isArray(acoes)) {
-        console.error("ListaCRUD: acoes não é um array", acoes);
-        return null;
-    }
+    console.error("ListaCRUD: campos não é um array", campos);
+    return null;
+  }
+  if (!Array.isArray(dados)) {
+    console.error("ListaCRUD: dados não é um array", dados);
+    return null;
+  }
+  if (!Array.isArray(acoes)) {
+    console.error("ListaCRUD: acoes não é um array", acoes);
+    return null;
+  }
+
+  const handleOrdenar = (campo) => {
+    setOrdem((prev) => {
+      if (prev.campo === campo) {
+        return {
+          campo,
+          direcao: prev.direcao === "asc" ? "desc" : "asc"
+        };
+      }
+      return { campo, direcao: "asc" };
+    });
+  };
 
       /* RENDER */
       return (
@@ -45,13 +77,24 @@ import {
             <thead>
               <tr>
                 {campos.map(campo => (
-                    <th key = {campo.data}>{campo.rotulo}</th>
+                  <th
+                    key={campo.data}
+                    style={{ cursor: "pointer", userSelect: "none" }}
+                    onClick={() => handleOrdenar(campo.data)}
+                  >
+                    {campo.rotulo}
+                    {ordem.campo === campo.data && (
+                      <span className="ms-1">
+                        {ordem.direcao === "asc" ? "▲" : "▼"}
+                      </span>
+                    )}
+                  </th>
                 ))}
                 <th width="240">Ações</th>
               </tr>
             </thead>
             <tbody>
-              {dados.map((data, idx) => (
+              {dadosOrdenados.map((data, idx) => (
                 <React.Fragment key={data.id}>
                   <tr>
                     {campos.map((campo, i) => {

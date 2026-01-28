@@ -14,37 +14,43 @@ import CVJobsCRUD from "../components/tabelas/cvJobs/CVJobsCRUD";
 import CaracteristicasPlantaCRUD from "../components/tabelas/caracteristicas/CaracteristicasPlantaCRUD"
 import VariedadesCRUD from "../components/variedades/variedadesCRUD";
 import CaracteristicasCanteiroCRUD from "../components/tabelas/caracteristicas/CaracteristicasCanteiroCRUD";
+import NoAccess from "../components/common/NoAccess";
+import Perfil from "../views/Perfil";
 
 function AppAdmin() {
-  const {user, logout} = useAuth();
+  const {user} = useAuth();
+  if (!user?.acessos?.usuario) return <NoAccess ambiente={"admin"}/>;
+
   const [telaAtiva, setTelaAtiva] = useState("especies");
 
   const renderTela = () => {
     switch (telaAtiva) {
       case "especies":
-        return <EspeciesCRUD user={user}/>;
+        return <EspeciesCRUD />;
       case "variedades":
-        return <VariedadesCRUD user={user}/>;
+        return <VariedadesCRUD />;
       case "hortas":
-        return <HortasCRUD user={user}/>;
+        return <HortasCRUD />;
       case "manejos":
-        return <ManejosCRUD user={user}/>;
+        return <ManejosCRUD />;
       case "usuarios":
-        return <UsuariosCRUD user={user}/>;
+        return <UsuariosCRUD />;
       case "cacateristicasCanteiro":
-        return <CaracteristicasCanteiroCRUD user={user}/>;
+        return <CaracteristicasCanteiroCRUD />;
       case "estagiosEspecie":
-        return <EstagiosEspecieCRUD user={user}/>;
+        return <EstagiosEspecieCRUD />;
       case "estadosPlanta":
-        return <EstadosPlantaCRUD user={user}/>;
+        return <EstadosPlantaCRUD />;
       case "estadosCanteiro":
-        return <EstadosCanteiroCRUD user={user}/>;
+        return <EstadosCanteiroCRUD />;
       case "caracteristicasPlanta":
-        return <CaracteristicasPlantaCRUD user={user}/>
+        return <CaracteristicasPlantaCRUD />
       case "cvJobs":
-        return <CVJobsCRUD user={user}/>
+        return <CVJobsCRUD />
+      case "perfil":
+        return <Perfil />
       default:
-        return <EspeciesCRUD user={user}/>;
+        return <EspeciesCRUD />;
     }
   };
 
@@ -123,6 +129,16 @@ function AppAdmin() {
             </NavDropdown>
 
           </Nav>
+            {/* Nome do usuário */}
+            {user && (
+              <Nav.Link
+                onClick={() => setTelaAtiva("perfil")}
+                className="ms-3 fw-semibold text-light"
+              >
+                {user.apelido || user.nome}
+              </Nav.Link>
+            )}
+
         </Navbar.Collapse>
       </Container>
     </Navbar>

@@ -7,9 +7,11 @@ import { estadosPlantaService } from "../../../services/crud/estadosPlantaServic
 import EstadosPlantaModal from "./EstadosPlantaModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
 
 
-function EstadosPlantaCRUD({ user }) {
+function EstadosPlantaCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [estadosPlanta, setEstadosPlanta] = useState([]);

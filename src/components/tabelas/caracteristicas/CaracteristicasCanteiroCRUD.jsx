@@ -7,10 +7,13 @@ import { caracteristicasCanteiroService } from "../../../services/crud/caracteri
 import CaracteristicasCanteiroModal from "./CaracteristicasCanteiroModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
 
-function CaracteristicasCanteiroCRUD({ user }) {
+function CaracteristicasCanteiroCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
+  
   const [caracteristicasCanteiro, setCaracteristicasCanteiro] = useState([]);
 
   const [editando, setEditando] = useState(null);

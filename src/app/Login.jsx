@@ -24,9 +24,7 @@ export default function Login() {
 
     const userData = usuarios.find(p => p.id === userId);
     login({
-      id: userId,
-      nome: userData.nome,
-      contexto: userData.contexto,
+      ...userData,
       tipo: "usuario",
     });
   };

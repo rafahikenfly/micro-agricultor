@@ -6,17 +6,10 @@ import { Container, Row, Col, Button, } from "react-bootstrap";
 import { canteirosService } from "../../../services/crud/canteirosService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import CanteirosModal from "./CanteirosModal";
+import { NoUser } from "../common/NoUser";
 
 function CanteirosCRUD({ user }) {
-
-  if (!user) {
-    return (
-      <Container fluid className="p-4 text-center">
-        <h5>Sem usuário</h5>
-        <p>É necessário estar autenticado para acessar os canteiros.</p>
-      </Container>
-    );
-  }
+  if (!user) return <NoUser />;
 
   const [canteiros, setCanteiros] = useState([]);
 

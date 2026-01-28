@@ -2,17 +2,19 @@ import { useState, useEffect } from "react";
 import { useAuth} from "../services/auth/authContext"
 
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { Container, Nav, Navbar, Button, Offcanvas, Dropdown } from "react-bootstrap";
+import { Container, Nav, Navbar, Dropdown } from "react-bootstrap";
 import Mapa from "../views/Mapa";
 import Calendario from "../views/Calendario";
 import Perfil from "../views/Perfil";
 
-import NovoCVJob from "../views/NovoCVJob";
 import { db, timestamp } from "../firebase";
+import NoAccess from "../components/common/NoAccess";
 
 
 export default function AppUsuario() {
-  const {user, logout} = useAuth();
+  const {user} = useAuth();
+  if (!user?.acessos?.usuario) return <NoAccess ambiente={ambiente} />;
+
   const [hortas, setHortas] = useState([]);
 
   const [hortaSelecionada, setHortaSelecionada] = useState(null);
@@ -72,14 +74,15 @@ export default function AppUsuario() {
             </Navbar.Brand>
 
           <Nav className="ms-auto">
-            <Nav.Link as={NavLink} to="/usuario/mapa">
+            <Nav.Link
+              as={NavLink}
+              to="/usuario/mapa">
               Mapa
             </Nav.Link>
-            <Nav.Link as={NavLink} to="/usuario/calendario">
+            <Nav.Link
+              as={NavLink}
+              to="/usuario/calendario">
               Calendário
-            </Nav.Link>
-            <Nav.Link as={NavLink} to="/usuario/perfil">
-              Perfil
             </Nav.Link>
 
             {/* Dropdown com listas */}
@@ -101,6 +104,18 @@ export default function AppUsuario() {
                 ))}              
               </Dropdown.Menu>
             </Dropdown>
+
+            {/* Nome do usuário */}
+            {user && (
+              <Nav.Link
+                as={NavLink}
+                to="/usuario/perfil"
+                className="ms-3 fw-semibold text-light"
+              >
+                {user.apelido || user.nome}
+              </Nav.Link>
+            )}
+
           </Nav>
         </Container>
       </Navbar>

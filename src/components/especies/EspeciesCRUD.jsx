@@ -8,9 +8,11 @@ import EspeciesModal from "./EspeciesModal";
 import { db } from "../../firebase";
 import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
 
-function EspeciesCRUD({ user }) {
-  if (!user) return <NoUser/>
+function EspeciesCRUD() {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
 
   const [especies, setEspecies] = useState([]);
   const [estagiosEspecie, setEstagiosEspecie] = useState([]);

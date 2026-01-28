@@ -8,8 +8,10 @@ import { db } from "../../firebase";
 import VariedadesModal from "./VariedadesModal";
 import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
 
-function VariedadesCRUD({ user }) {
+function VariedadesCRUD() {
+  const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [variedades, setVariedades] = useState([]);

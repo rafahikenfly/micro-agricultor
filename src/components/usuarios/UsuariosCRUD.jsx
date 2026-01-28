@@ -6,8 +6,13 @@ import { Container, Row, Col, Button, } from "react-bootstrap";
 import { usuariosService } from "../../services/crud/usuariosService";
 import UsuariosModal from "./UsuariosModal"
 import { useCrudUI } from "../../services/ui/crudUI";
+import { useAuth } from "../../services/auth/authContext";
+import { NoUser } from "../common/NoUser";
 
-function UsuariosCRUD ({ user = {id: "teste", usuario: "rafael"}}) {
+function UsuariosCRUD () {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
+
   const [usuarios, setUsuarios] = useState([]);
 
   const [editando, setEditando] = useState(null);

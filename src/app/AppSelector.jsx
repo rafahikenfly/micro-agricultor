@@ -1,35 +1,23 @@
-import { Container, Button, Row, Col } from "react-bootstrap";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { Container, Spinner } from "react-bootstrap";
+import { useAuth } from "../services/auth/authContext";
 
 export default function AppSelector() {
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  return (
-    <Container
-      fluid
-      className="vh-100 d-flex align-items-center justify-content-center"
-    >
-      <Row className="w-100 justify-content-center">
-        <Col md={4} className="d-grid gap-4">
-          <Button
-            size="lg"
-            variant="success"
-            style={{ height: "120px", fontSize: "1.5rem" }}
-            onClick={() => navigate("/admin")}
-          >
-            🌱 Painel Administrativo
-          </Button>
+  useEffect(() => {
+    if (!user) return;
 
-          <Button
-            size="lg"
-            variant="outline-success"
-            style={{ height: "120px", fontSize: "1.5rem" }}
-            onClick={() => navigate("/usuario")}
-          >
-            🌿 Visualizar Horta
-          </Button>
-        </Col>
-      </Row>
+    const ambienteAtivo = user.ambienteAtivo || "usuario";
+
+    navigate(`/${ambienteAtivo}`, { replace: true });
+  }, [user, navigate]);
+
+  return (
+    <Container className="vh-100 d-flex align-items-center justify-content-center">
+      <Spinner animation="border" />
     </Container>
   );
 }

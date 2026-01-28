@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Form, Button, InputGroup, } from "react-bootstrap";
 import { catalogosService } from "../../services/catalogosService";
+import { db, timestamp } from "../../firebase";
 
-export default function MonitorarTab({ entidade, tipoEntidade }) {
+export default function MonitorarTab({ entidade, tipoEntidade, user, showToast }) {
   const [caracteristicas_canteiro, setCaracteristicas_canteiro] = useState([]);
   const [caracteristicas_planta, setCaracteristicas_planta] = useState([]);
   const [form, setForm] = useState({});
@@ -27,10 +28,58 @@ export default function MonitorarTab({ entidade, tipoEntidade }) {
     return () => { ativo = false };
   }, []);
 
-  const aplicarInspecao = async () => {
-//    setLoadingCatalogos(true);
-    console.log(form)
-  };
+const aplicarInspecao = async () => {
+  try {
+    const medidas = {};
+
+    Object.entries(form).forEach(([caracteristicaId, dados]) => {
+      if (dados.atualizar) {
+        medidas[caracteristicaId] = {
+          valor: dados.valor,
+          confianca: dados.confianca,
+        };
+      }
+    });
+
+    if (Object.keys(medidas).length === 0) {
+      showToast("Selecione ao menos uma característica para atualizar.", "danger");
+      return;
+    }
+
+    const data = {
+      medicoes: medidas,
+      origem: "usuario",
+      createdAt: timestamp(),
+      usuarioId: user?.id ?? null,
+      schemaVersion: 1
+    };
+
+    let medicoesRef;
+
+    if (tipoEntidade === "Canteiro") {
+      medicoesRef = db
+        .collection("hortas")
+        .doc(entidade.hortaId)
+        .collection("canteiros")
+        .doc(entidade.id)
+        .collection("medicoes");
+    } else if (tipoEntidade === "Planta") {
+      medicoesRef = db
+        .collection("plantas")
+        .doc(entidade.id)
+        .collection("medicoes");
+    } else {
+      showToast("Tipo de entidade inválido.", "danger");
+    }
+
+    await medicoesRef.add(data);
+    setForm({});
+    showToast("Medição registrada com sucesso.");
+
+  } catch (error) {
+    showToast("Erro ao salvar a medição. Tente novamente.", "danger");
+  }
+};
 
   const caracteristicasArr = tipoEntidade === "Canteiro" ? 
                                 caracteristicas_canteiro :
@@ -49,18 +98,36 @@ export default function MonitorarTab({ entidade, tipoEntidade }) {
                 <Form.Label>
                   {c.nome}
                 </Form.Label>
-                { c.unidade && <Form.Text muted>({c.unidade})</Form.Text> }
                 <InputGroup>
-                  <Form.Control
-                    type="number"
-                    value={item.valor}
-                    onChange={(e) => setForm({...form, [c.id]: {...item, valor: Number(e.currentTarget.value), atualizar: true}})}
-                  />
                   <Form.Check
                     label="Atualizar"
                     checked={item.atualizar}
                     onChange={(e) => setForm({...form, [c.id]: {...item, atualizar: e.currentTarget.checked}})}
                   />
+                  <Form.Control
+                    type="number"
+                    value={item.valor}
+                    onChange={(e) => setForm({...form, [c.id]: {...item, valor: Number(e.currentTarget.value), atualizar: true}})}
+                  />
+                  <InputGroup.Text>{c.unidade || "un"}</InputGroup.Text>
+                  <Form.Control
+                    type="number"
+                    min={0}
+                    max={100}
+                    title="Confiança (0–100)"
+                    value={item.confianca || 100}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        [c.id]: {
+                          ...item,
+                          confianca: Math.min(100, Math.max(0, Number(e.currentTarget.value)))
+                        }
+                      })
+                    }
+                    style={{ maxWidth: 90 }}
+                  />
+                  <InputGroup.Text>%</InputGroup.Text>
                 </InputGroup>
               </Form.Group>
             )
