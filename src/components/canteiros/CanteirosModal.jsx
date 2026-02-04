@@ -5,38 +5,48 @@ import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
 import VetorTab from "../common/PosicaoTab";
 import CanteiroSistemaTab from "./CanteiroSistemaTab";
+import { catalogosService } from "../../services/catalogosService";
 
 export default function CanteirosModal({ show, onSave, onClose, data, restrito = false}) {
   const [tab, setTab] = useState("dados");
-  const [form, setForm] = useState({
-    nome: data.nome || "",
-    descricao: data.descricao || "",
-    estadoId: data.estadoId || "",
-    estadoNome: data.estadoNome || "",
-    aparencia: data.aparencia || {
-      fundo: "#4CAF50",
-      borda: "#1B5E20",
-      espessura: 2,
-      elipse: false,
-      vertices: [],
-    },
-    // RESTRITO
-    hortaId: data.hortaId || "",
-    hortaNome: data.hortaNome || "",
-    especieId: data.especieId || "",
-    especieNome: data.especieNome || "",
-  }
-);
+  const [form, setForm] = useState({aparencia: {}, posicao: {}, dimensao: {}});
+  const [estados_canteiro, setEstados_canteiro] = useState([]);
+  const [reading, setReading] = useState(false);
 
   useEffect(() => {
       if (data) setForm(data);
     }, [data]);
+
+    // ========== CARREGAR DADOS ==========
+  useEffect(() => {
+    if (!show) return;
   
-    const salvar = () => {
-      onSave({
-        ...form,
-      });
-    };
+    let ativo = true;
+    setReading(true);
+  
+    Promise.all([
+      catalogosService.getEstados_canteiro(),
+    ]).then(([estc, ]) => {
+      if (!ativo) return;
+      setEstados_canteiro(estc);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos do canteiro:", err);
+      showToast("Erro ao carregar catálogos.", "danger");
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, [show]);
+
+
+  const salvar = () => {
+    onSave({
+      ...form,
+    }, "canteiro");
+  };
   
   if (!show) return null;
   return (
@@ -54,7 +64,7 @@ export default function CanteirosModal({ show, onSave, onClose, data, restrito =
             className="mb-3"
           >
             <Tab eventKey="dados" title="Canteiro">
-              <CanteiroDadosTab form={form} setForm={setForm} estadosCanteiro={[]}/>
+              <CanteiroDadosTab form={form} setForm={setForm} estadosCanteiro={estados_canteiro}/>
             </Tab>
             <Tab eventKey="posicao" title="Posição">
               <VetorTab value={form.posicao} onChange={posicao => setForm({ ...form, posicao })} />

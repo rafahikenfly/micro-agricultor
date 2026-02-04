@@ -11,9 +11,8 @@ import EstagiosEspecieCRUD from "../components/tabelas/estagios/EstagiosEspecieC
 import EstadosPlantaCRUD from "../components/tabelas/estados/EstadosPlantaCRUD";
 import EstadosCanteiroCRUD from "../components/tabelas/estados/EstadosCanteiroCRUD";
 import CVJobsCRUD from "../components/tabelas/cvJobs/CVJobsCRUD";
-import CaracteristicasPlantaCRUD from "../components/tabelas/caracteristicas/CaracteristicasPlantaCRUD"
 import VariedadesCRUD from "../components/variedades/variedadesCRUD";
-import CaracteristicasCanteiroCRUD from "../components/tabelas/caracteristicas/CaracteristicasCanteiroCRUD";
+import CaracteristicasCRUD from "../components/tabelas/caracteristicas/CaracteristicasCRUD";
 import NoAccess from "../components/common/NoAccess";
 import Perfil from "../views/Perfil";
 
@@ -35,16 +34,14 @@ function AppAdmin() {
         return <ManejosCRUD />;
       case "usuarios":
         return <UsuariosCRUD />;
-      case "cacateristicasCanteiro":
-        return <CaracteristicasCanteiroCRUD />;
+      case "caracteristicas":
+        return <CaracteristicasCRUD />;
       case "estagiosEspecie":
         return <EstagiosEspecieCRUD />;
       case "estadosPlanta":
         return <EstadosPlantaCRUD />;
       case "estadosCanteiro":
         return <EstadosCanteiroCRUD />;
-      case "caracteristicasPlanta":
-        return <CaracteristicasPlantaCRUD />
       case "cvJobs":
         return <CVJobsCRUD />
       case "perfil":
@@ -103,16 +100,13 @@ function AppAdmin() {
               <NavDropdown.Item onClick={() => setTelaAtiva("estagiosEspecie")}>
                 Estágios
               </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTelaAtiva("caracteristicas")}>
+                Características
+              </NavDropdown.Item>
             </NavDropdown>
 
             {/* Manejos */}
             <NavDropdown title="Manejos" id="nav-manejos">
-              <NavDropdown.Item onClick={() => setTelaAtiva("cacateristicasCanteiro")}>
-                Características de canteiros
-              </NavDropdown.Item>
-              <NavDropdown.Item onClick={() => setTelaAtiva("caracteristicasPlanta")}>
-                Características de plantas
-              </NavDropdown.Item>
               <NavDropdown.Item onClick={() => setTelaAtiva("cvJobs")}>
                 Tarefas de Visão Computacional
               </NavDropdown.Item>

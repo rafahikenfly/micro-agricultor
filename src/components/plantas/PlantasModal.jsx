@@ -21,6 +21,8 @@ export default function PlantasModal({ show, onSave, onClose, data, restrito = f
     descricao: data.descricao || "",
     estadoId: data.estadoId || "",
     estadoNome: data.estadoNome || "",
+    estagioId: data.estagioId || "",
+    estagioNome: data.estagioNome || "",
     aparencia: data.aparencia || {
       fundo: "#4CAF50",
       borda: "#1B5E20",
@@ -28,19 +30,17 @@ export default function PlantasModal({ show, onSave, onClose, data, restrito = f
       elipse: false,
       vertices: [],
     },
-    confianca: { 
-      dimensao: data.confianca?.dimensao || { valor: 0, },
-      posicao:  data.confianca?.posicao  || { valor: 0, },
-    },
     dimensao: data.dimensao || {
       x: 0,
       y: 0,
       z: 0,
+      confianca: 0,
     },
     posicao: data.posicao || {
       x: 0,
       y: 0,
       z: 0,
+      confianca: 0,
     },
     especieId: data.especieId || "",
     especieNome: data.especieNome || "",

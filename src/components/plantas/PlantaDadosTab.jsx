@@ -29,7 +29,6 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
           onChange={e =>
             handleSelectIdNome(e, {
               list: estadosPlantas,
-              form,
               setForm,
               fieldId: "estadoId",
               fieldNome: "estadoNome",
@@ -50,7 +49,6 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
           onChange={e =>
             handleSelectIdNome(e, {
               list: canteirosHorta,
-              form,
               setForm,
               fieldId: "canteiroId",
               fieldNome: "canteiroNome",
@@ -71,7 +69,6 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
           onChange={e =>{
             handleSelectIdNome(e, {
               list: especies,
-              form,
               setForm,
               fieldId: "especieId",
               fieldNome: "especieNome",

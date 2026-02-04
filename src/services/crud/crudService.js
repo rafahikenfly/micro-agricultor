@@ -1,4 +1,4 @@
-import { db, timestamp } from "../../firebase";
+import { db, increment, timestamp } from "../../firebase";
 
 /**
  * Factory de serviços CRUD padronizados
@@ -9,10 +9,10 @@ export function createCRUDService(
   subCollection = null,
   {
     softDelete = true,
-    useArchive = true
+    useArchive = true,
   } = {}
 ){
-  if (!collection) console.error("createCRUDService: collectionName is required")
+  if (!collection) throw new Error("createCRUDService: collectionName é obrigatório")
   
   const resolveCollection = () => {
     // função customizada
@@ -34,9 +34,7 @@ export function createCRUDService(
 
   const getCollection = () => {
     const ref = resolveCollection();
-    if (!ref) {
-      throw new Error("createCRUDService: collection reference not resolved");
-    }
+    if (!ref) throw new Error("createCRUDService: collection reference not resolved");
     return ref;
   };
 
@@ -47,8 +45,7 @@ export function createCRUDService(
      * @param filters array de objetos com os filtros a serem aplicados na forma { field: "hortaId", op: "==", value: hortaId }
      * @param orderBy objeto com o campo e direção de ordenação na forma {field: "createdAt", dir: "asc" | "desc"}
      */
-    subscribe(callback, filters = [], orderBy = null ) { //VERSAO ANTIGA extraQuery = q => q) {  //VERSAO NOVA 
-// VERSAO NOVA
+    subscribe(callback, filters = [], orderBy = null ) {
       let query = getCollection()
   
       filters.forEach(({ field, op, value }) => {
@@ -64,18 +61,6 @@ export function createCRUDService(
           id: doc.id,
           ...doc.data()
         }));
-//*/
-/* VERSAO ANTIGA
-      const col = getCollection();
-      return extraQuery(
-        col
-          .where("isDeleted", "==", false)
-      ).onSnapshot(snapshot => {
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-//*/
         callback(data);
       });
     },
@@ -83,7 +68,26 @@ export function createCRUDService(
     /**
      * Cria um novo documento
      */
-    async create(data, user = { tipo: "usuario", id: "anônimo" },) {
+
+    criarRef() {
+      const col = getCollection();
+      return col.doc();
+    },
+    batchCreate (data, user = { tipo: "usuario", id: "anônimo" }, batch) {
+      const docRef = this.criarRef();
+      batch.set(docRef, {
+        ...data,
+        createdAt: timestamp(),
+        updatedAt: timestamp(),
+        isDeleted: false,
+        isArchived: false,
+        version: 1,
+        createdBy: {nome: user.nome, id: user.id},
+        updatedBy: {nome: user.nome, id: user.id},
+      })
+      return docRef;
+    },
+    async create(data, user = { tipo: "usuario", id: "anônimo" }) {
       const col = getCollection();
       return col.add({
         ...data,
@@ -100,12 +104,33 @@ export function createCRUDService(
     /**
      * Atualiza um documento existente
      */
+    batchUpsert (docRef, data, user = { tipo: "usuario", id: "anônimo" }, batch) {
+        batch.set(docRef, {
+          ...data,
+          createdAt: timestamp(),
+          createdBy: {nome: user.nome, id: user.id},
+          updatedAt: timestamp(),
+          updatedBy: {nome: user.nome, id: user.id},
+          isDeleted: false,
+          isArchived: false,
+          version: 1,
+        }, { merge: true});
+    },
+    batchUpdate (docRef, data, user = { tipo: "usuario", id: "anônimo" }, batch) {
+      batch.update(docRef, {
+        ...data,
+        updatedAt: timestamp(),
+        version: increment(1),
+        updatedBy: {nome: user.nome, id: user.id}
+      });
+      return docRef;
+    },
     async update(id, data, user = { tipo: "usuario", id: "anônimo" },) {
       const col = getCollection();
       return col.doc(id).update({
         ...data,
         updatedAt: timestamp(),
-        version: (data.version || 0) + 1,
+        version: increment(1),
         updatedBy: {nome: user.nome, id: user.id}
       });
     },
@@ -123,10 +148,6 @@ export function createCRUDService(
         updatedBy: {nome: user.nome, id: user.id}
       });
     },
-
-    /**
-     * Restaura item arquivado
-     */
     async restore(id, user = { tipo: "usuario", id: "anônimo" },) {
       const col = getCollection();
 
@@ -140,7 +161,6 @@ export function createCRUDService(
 
     /**
      * Remoção
-     * soft delete por padrão
      */
     async remove(id, user = { tipo: "usuario", id: "anônimo" },) {
       if (softDelete) {
@@ -154,11 +174,6 @@ export function createCRUDService(
 
       return col.doc(id).delete();
     },
-
-    /**
-     * Desremoção
-     * soft delete por padrão
-     */
     async unremove(id, user = { tipo: "usuario", id: "anônimo" },) {
       if (softDelete) {
         const col = getCollection();
@@ -176,11 +191,15 @@ export function createCRUDService(
     /**
      * Busca por ID
      */
-    async getById(id) {
+    async getDataById(id) {
       const col = getCollection();
       const doc = await col.doc(id).get();
       if (!doc.exists) return null;
       return { id: doc.id, ...doc.data() };
+    },
+    getRefById(id) {
+      const col = getCollection();
+      return col.doc(id)
     }
   };
 }

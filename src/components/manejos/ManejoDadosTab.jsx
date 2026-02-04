@@ -1,44 +1,55 @@
-import { Form, InputGroup } from "react-bootstrap";
-import { renderOptions } from "../../utils/formUtils";
+import { Form, InputGroup, } from "react-bootstrap";
+import { TIPOS_ENTIDADE } from "../../utils/consts/TIPOS_ENTIDADE";
+import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
 
 export default function ManejoDadosTab({ form, setForm, estados_canteiro, estados_planta, loading}) {
   return (
     <>
-      <Form.Group>
-        <Form.Label>Nome</Form.Label>
+      <InputGroup className="mb-3">
+        <InputGroup.Text style={{ width: "140px" }}>Nome</InputGroup.Text>
         <Form.Control
           value={form.nome}
           onChange={e => setForm({ ...form, nome: e.target.value })}
         />
-      </Form.Group>
+      </InputGroup>
 
-      <Form.Group>
-        <Form.Label>Descrição</Form.Label>
+      <InputGroup className="mb-3">
+        <InputGroup.Text style={{ width: "140px" }}>Descrição</InputGroup.Text>
         <Form.Control
           as="textarea"
           value={form.descricao}
           onChange={e => setForm({ ...form, descricao: e.target.value })}
         />
-      </Form.Group>
+      </InputGroup>
 
-      <Form.Group>
-        <Form.Label>Tipo de Entidade</Form.Label>
+     {/* ===== Tipo de Entidade (novo padrão) ===== */}
+      <InputGroup className="mb-3">
+        <InputGroup.Text style={{ width: "140px" }}>Aplicável a</InputGroup.Text>
         <Form.Select
           value={form.tipoEntidade}
           onChange={e => setForm({ ...form, tipoEntidade: e.target.value })}
         >
-          <option value="Horta">Horta</option>
-          <option value="Canteiro">Canteiro</option>
-          <option value="Planta">Planta</option>
+          {renderOptions({
+            list: TIPOS_ENTIDADE,
+            loading: false,
+            placeholder: "Selecione a entidade",
+          })}
         </Form.Select>
-      </Form.Group>
-
-      <InputGroup >
-        <Form.Label>Estado de Origem</Form.Label>
+      </InputGroup>
+      <InputGroup className="mb-3">
+        <InputGroup.Text style={{ width: "140px" }}>Estado</InputGroup.Text>
         <Form.Select
           disabled={(form.tipoEntidade) === "Horta"}
           value={form.estadoOrigemId}
-          onChange={e => setForm({ ...form, estadoOrigemId: e.target.value})}
+          onChange={e => handleSelectIdNome(e,{
+            list:
+              form.tipoEntidade === "Canteiro" ? estados_canteiro : 
+              form.tipoEntidade === "Planta" ? estados_planta : 
+              [],
+            setForm: setForm,
+            fieldId: "estadoOrigemId",
+            fieldNome: "estadoOrigemNome",
+          })}
         >
           {renderOptions({
             list: 
@@ -50,11 +61,18 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
             nullOption: true,
           })}
         </Form.Select>
-        <Form.Label>Estado de Destino</Form.Label>
         <Form.Select
           disabled={(form.tipoEntidade) === "Horta"}
           value={form.estadoDestinoId}
-          onChange={e => setForm({ ...form, estadoDestinoId: e.target.value})}
+          onChange={e => handleSelectIdNome(e,{
+            list:
+              form.tipoEntidade === "Canteiro" ? estados_canteiro : 
+              form.tipoEntidade === "Planta" ? estados_planta : 
+              [],
+            setForm: setForm,
+            fieldId: "estadoDestinoId",
+            fieldNome: "estadoDestinoNome",
+          })}
         >
           {renderOptions({
             list:
@@ -67,8 +85,11 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           })}
         </Form.Select>
       </InputGroup>
+    </>
+  );
+}
 
-
+/**
       <Form.Check
         label="Requer Entrada"
         checked={form.requerEntrada}
@@ -76,6 +97,4 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           setForm({ ...form, requerEntrada: e.target.checked })
         }
       />
-    </>
-  );
-}
+      */

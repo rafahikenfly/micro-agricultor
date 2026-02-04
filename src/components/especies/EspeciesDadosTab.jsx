@@ -38,7 +38,6 @@ export default function EspecieDadosTab({ form, setForm, categorias_especie = []
           onChange={e =>
             handleSelectIdNome(e, {
               list: categorias_especie,
-              form,
               setForm,
               fieldId: "categoriaId",
               fieldNome: "categoriaNome",

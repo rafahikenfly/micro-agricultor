@@ -6,10 +6,10 @@ let cache = {
   estadosPlanta: null,
   CVJobs: null,
   categorias_especie: null,
+  estagios_especie: null,
   estados_planta: null,
   estados_canteiro: null,
-  caracteristicas_planta: null,
-  caracteristicas_canteiro: null,
+  caracteristicas: null,
   manejos: null,
 };
 
@@ -60,6 +60,14 @@ export const catalogosService = {
     return cache.categorias_especie.filter(item => item[filter.field] === filter.value);    
   },
 
+  async getEstagios_especie(filter = null) {
+    if (!cache.estagios_especie) {
+      cache.estagios_especie = await fetchCollection("estagios_planta");  //TODO: AJUSTAR A NOMENCLATURA DA COLECAO
+    }
+    if (!filter) return cache.estagios_especie;
+    return cache.estagios_especie.filter(item => item[filter.field] === filter.value);    
+  },
+
   async getEstados_planta(filter = null) {
     if (!cache.estados_planta) {
       cache.estados_planta = await fetchCollection("estados_planta");
@@ -84,20 +92,12 @@ export const catalogosService = {
     return cache.manejos.filter(item => item[filter.field] === filter.value);    
   },
 
-  async getCaracteristicas_planta(filter = null) {
-    if (!cache.caracteristicas_planta) {
-      cache.caracteristicas_planta = await fetchCollection("caracteristicas_planta");
+  async getCaracteristicas(filter = null) {
+    if (!cache.caracteristicas) {
+      cache.caracteristicas = await fetchCollection("caracteristicas");
     }
-    if (!filter) return cache.caracteristicas_planta;
-    return cache.caracteristicas_planta.filter(item => item[filter.field] === filter.value);    
-  },
-
-  async getCaracteristicas_canteiro(filter = null) {
-    if (!cache.caracteristicas_canteiro) {
-      cache.caracteristicas_canteiro = await fetchCollection("caracteristicas_canteiro");
-    }
-    if (!filter) return cache.caracteristicas_canteiro;
-    return cache.caracteristicas_canteiro.filter(item => item[filter.field] === filter.value);    
+    if (!filter) return cache.caracteristicas;
+    return cache.caracteristicas.filter(item => item[filter.field] === filter.value);    
   },
 
   // útil se um dia precisar forçar reload
@@ -108,11 +108,11 @@ export const catalogosService = {
       estadosPlanta: null,
       CVJobs: null,
       categorias_especie: null,
+      estagios_especie: null,
       estados_planta: null,
       estados_canteiro: null,
       manejos: null,
-      caracteristicas_planta: null,
-      caracteristicas_canteiro: null,
+      caracteristicas: null,
     };
   }
 };

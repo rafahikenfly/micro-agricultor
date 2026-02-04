@@ -98,17 +98,18 @@ export default function HortasCRUD() {
             campos = {[
               {rotulo: "Nome", data: "nome",},
               {rotulo: "Clima", data: "climaNome",},
+              {rotulo: "Apagado",   data: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
               {rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger"},
               {toggle: "isArchived",
-                rotulo: "Arquivar",
-                funcao: arquivar,
-                variant: "dark",
-                rotuloFalse: "Desarquivar",
-                funcaoFalse: desarquivar,
-                variantFalse: "secondary"
+                rotulo: "Desarquivar",
+                funcao: desarquivar,
+                variant: "secondary",
+                rotuloFalse: "Arquivar",
+                funcaoFalse: arquivar,
+                variantFalse: "dark"
               },
             ]}
           />

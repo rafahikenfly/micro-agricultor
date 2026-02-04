@@ -94,13 +94,13 @@ function EstadosPlantaCRUD() {
             acoes={[
               { rotulo: "Editar", funcao: editar, variant: "warning" },
               { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
-              {toggle: "isArchived",
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />

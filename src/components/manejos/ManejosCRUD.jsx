@@ -52,14 +52,6 @@ export default function ManejosCRUD() {
       );
   }, []);
 
-  useEffect(() => {
-    return db.collection("parametros")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setParametros(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
 
   /* ================= TOAST/MODAL ================= */
   const showToast = (msg, variant = "success", confirmacao = false) => {
@@ -107,7 +99,7 @@ export default function ManejosCRUD() {
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Novo manejo</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo manejo</Button>
         </Col>
       </Row>
 
@@ -123,13 +115,13 @@ export default function ManejosCRUD() {
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
               {rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger"},
-              {toggle: "isArchived",
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />
@@ -144,7 +136,7 @@ export default function ManejosCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        parametros={parametros}
+        showToast={showToast}
       />
       {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem

@@ -6,10 +6,11 @@ import VerticesTab from "../common/VerticesTab";
 import AparenciaTab from "../common/AparenciaTab";
 import { catalogosService } from "../../services/catalogosService";
 
-export default function EspeciesModal({ show, onSave, onClose, data = {}, estagiosEspecie}) {
+export default function EspeciesModal({ show, onSave, onClose, data = {}, }) {
     const [tab, setTab] = useState("dados");
     const [categorias_especie, setCategorias_especie] = useState([]);
-    const [loadingCatalogos, setLoadingCatalogos] = useState(false);
+    const [estagios_especie, setEstagios_especie] = useState([]);
+    const [reading, setReading] = useState(false);
 
     const [form, setForm] = useState({
       categoriaId: data?.categoriaId || "",
@@ -28,8 +29,9 @@ export default function EspeciesModal({ show, onSave, onClose, data = {}, estagi
     }
   );
 
+  
   useEffect(() => {
-      if (data) setForm(...form, data);
+      if (data) setForm(data);
     }, [data]);
   
     const salvar = () => {
@@ -38,19 +40,22 @@ export default function EspeciesModal({ show, onSave, onClose, data = {}, estagi
       });
     };
 
+  // ================= CARREGAR DADOS ===============
   useEffect(() => {
     if (!show) return;
   
     let ativo = true;
-    setLoadingCatalogos(true);
+    setReading(true);
   
     Promise.all([
       catalogosService.getCategorias_especie(),
-    ]).then(([cats,]) => {
+      catalogosService.getEstagios_especie(),
+    ]).then(([cats, este]) => {
       if (!ativo) return;
   
       setCategorias_especie(cats);
-      setLoadingCatalogos(false);
+      setEstagios_especie(este);
+      setReading(false);
     });
   
     return () => { ativo = false };
@@ -76,11 +81,16 @@ export default function EspeciesModal({ show, onSave, onClose, data = {}, estagi
                   form={form}
                   setForm={setForm}
                   categorias_especie={categorias_especie}
-                  loading={loadingCatalogos}
+                  loading={reading}
                 />
             </Tab>
             <Tab eventKey="ciclo" title="Ciclo">
-                <EspecieEstagiosTab value={form.ciclo} onChange={ciclo => setForm({ ...form, ciclo })} estagios={estagiosEspecie} />
+                <EspecieEstagiosTab
+                  value={form.ciclo}
+                  onChange={ciclo => setForm({ ...form, ciclo })}
+                  estagios={estagios_especie}
+                  loading={reading}
+                />
             </Tab>
             <Tab eventKey="aparencia" title="Aparência Padrão">
                 <AparenciaTab value={form.aparencia} onChange={aparencia => setForm({ ...form, aparencia })} /> {/*TODO: INTEGRAR FORMULARIO DE VERTICES E DE APARENCIA*/}

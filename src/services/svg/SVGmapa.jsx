@@ -1,74 +1,34 @@
-import { useState, useRef } from "react";
+import { useState, useRef, } from "react";
+import { getEventSVGPoint, getMapPointFromPoint, pointInPolygon } from "./useMapTransform";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 export default function SVGMapa({
   vertices = [],          // vértices do polígono do mapa
-  orientacao = 0,         // orientação em graus do norte do polígono
-  mode = "pan",           // drag, click, pan, zoom
-//  isZooming = false,      // deve ou não gerenciar zoom
-//  isPanning = false,      // deve ou não gerenciar pan
-  grid = [],              // array com o tamanho do grid primário, secundário..., se houver
-  drag,                   // comportamento de drag
-  onClick,                // comportamento de click
+  view,
+  setView,
+  mapWorld,
+  hasZooming = false,      // deve ou não gerenciar zoom
+  hasPanning = false,      // deve ou não gerenciar pan
+  grid = [],               // array com o tamanho do grid primário, secundário..., se houver
+  drag = null,                    // comportamento de drag {onDrag: function, previewTag: "rect" || "circle", style: {}, limit:boolean}
+  onClick,                 // comportamento de click
   children,
 }) {
   /* ================= ESTADO ================= */
   const [dragStart, setDragStart] = useState(null);
   const [dragCoordinates, setDragCoordinates] = useState(null);
 
-  const [view, setView] = useState({
-    x: 0,
-    y: 0,
-    scale: 1,
-  });
-
-  const [panning, setPanning] = useState(false);
   const panStart = useRef(null);
-
-  /* ================= BOUNDING BOX ================= */
-  const getBoundingBox = (vertices) => {
-    const xs = vertices.map(v => v.x);
-    const ys = vertices.map(v => v.y);
-
-    const minX = Math.min(...xs);
-    const maxX = Math.max(...xs);
-    const minY = Math.min(...ys);
-    const maxY = Math.max(...ys);
-
-    return {
-      minX,
-      minY,
-      maxX,
-      maxY,
-      width: maxX - minX,
-      height: maxY - minY,
-      centerX: (minX + maxX) / 2,
-      centerY: (minY + maxY) / 2,
-    };
-  };
-
-  const bbox = getBoundingBox(vertices);
-  const diagonal = Math.sqrt(bbox.width ** 2 + bbox.height ** 2);
-
-  const offsetX = (diagonal - bbox.width) / 2 - bbox.minX;
-  const offsetY = (diagonal - bbox.height) / 2 - bbox.minY;
-
-  const worldBounds = {
-    minX: 0,
-    minY: 0,
-    maxX: diagonal,
-    maxY: diagonal,
-  };
 
   /* ================= LIMITES PAN ================= */
   const clampPan = (x, y, scale) => {
     const margin = 60;
 
-    const minX = -(worldBounds.maxX * scale) + margin;
+    const minX = -(mapWorld.bounds.maxX * scale) + margin;
     const maxX = margin;
 
-    const minY = -(worldBounds.maxY * scale) + margin;
+    const minY = -(mapWorld.bounds.maxY * scale) + margin;
     const maxY = margin;
 
     return {
@@ -77,139 +37,93 @@ export default function SVGMapa({
     };
   };
 
-  /* ================= LIMITES DRAG ================= */
-  const pointInPolygon = (point, polygon) => {
-    let inside = false;
-  
-    for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-      const xi = polygon[i].x, yi = polygon[i].y;
-      const xj = polygon[j].x, yj = polygon[j].y;
-  
-      const intersect =
-        yi > point.y !== yj > point.y &&
-        point.x < ((xj - xi) * (point.y - yi)) / (yj - yi) + xi;
-  
-      if (intersect) inside = !inside;
-    }
-  
-    return inside;
-  };
-  
-  /* ================= CONVERSÃO SVG ================= */
-  const getSVGPoint = (evt) => {
-    const svg = evt.currentTarget.ownerSVGElement || evt.currentTarget;
-    if (!svg?.createSVGPoint) return null;
-
-    const pt = svg.createSVGPoint();
-    pt.x = evt.clientX;
-    pt.y = evt.clientY;
-
-    return pt.matrixTransform(svg.getScreenCTM().inverse());
-  };
-
-  const rotatePoint = (p, angleDeg, cx, cy) => {
-    const rad = (angleDeg * Math.PI) / 180;
-    const cos = Math.cos(rad);
-    const sin = Math.sin(rad);
-
-    const dx = p.x - cx;
-    const dy = p.y - cy;
-
-    return {
-      x: cx + dx * cos - dy * sin,
-      y: cy + dx * sin + dy * cos,
-    };
-  };
-
-  const getMapPoint = (evt) => {
-    const p = getSVGPoint(evt);
-    if (!p) return null;
-
-    const unscaled = {
-      x: (p.x - view.x) / view.scale,
-      y: (p.y - view.y) / view.scale,
-    };
-
-    const local = {
-      x: unscaled.x - offsetX,
-      y: unscaled.y - offsetY,
-    };
-
-    return rotatePoint(
-      local,
-      -orientacao,
-      bbox.centerX,
-      bbox.centerY
-    );
-  };
-
   /* ================= GRID ================= */
   const renderGrid = (step, stroke, strokeWidth) => {
-    const linhas = [];
+  const linhas = [];
 
-    for (let i = 0; i <= bbox.maxX; i += step) {
-      linhas.push(
-        <line key={`v-${i}`} x1={i} y1={0} x2={i} y2={bbox.maxY}
-          stroke={stroke} strokeWidth={strokeWidth} />
-      );
-    }
+  const fontSize = 5; // tamanho base no mundo do mapa
+  const textOffset = 1.5;
 
-    for (let j = 0; j <= bbox.maxY; j += step) {
-      linhas.push(
-        <line key={`h-${j}`} x1={0} y1={j} x2={bbox.maxX} y2={j}
-          stroke={stroke} strokeWidth={strokeWidth} />
-      );
-    }
+  // Linhas verticais + números X
+  for (let i = 0; i <= view.bbox.maxX; i += step) {
+    linhas.push(
+      <g key={`v-${i}`}>
+        <line
+          x1={i}
+          y1={0}
+          x2={i}
+          y2={view.bbox.maxY}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+        />
+        <text
+          x={i + textOffset}
+          y={fontSize + 2}
+          fontSize={fontSize}
+          fill="#00000099"
+          pointerEvents="none"
+          transform={`scale(${1 / view.scale}) translate(${(i + textOffset) * (view.scale - 1)}, ${(fontSize + 2) * (view.scale - 1)})`}
+        >
+          {Math.round(i)}
+        </text>
+      </g>
+    );
+  }
 
-    return linhas;
-  };
+  // Linhas horizontais + números Y
+  for (let j = 0; j <= view.bbox.maxY; j += step) {
+    linhas.push(
+      <g key={`h-${j}`}>
+        <line
+          x1={0}
+          y1={j}
+          x2={view.bbox.maxX}
+          y2={j}
+          stroke={stroke}
+          strokeWidth={strokeWidth}
+        />
+        <text
+          x={2}
+          y={j - textOffset}
+          fontSize={fontSize}
+          fill="#00000099"
+          pointerEvents="none"
+          transform={`scale(${1 / view.scale}) translate(${2 * (view.scale - 1)}, ${(j - textOffset) * (view.scale - 1)})`}
+        >
+          {Math.round(j)}
+        </text>
+      </g>
+    );
+  }
 
-  /* ============= PAN // DRAG ================= */
+  return linhas;
+};
+
+
   const handleMouseDown = (evt) => {
-    if (mode === "pan") {
-      setPanning(true);
-      panStart.current = { x: evt.clientX, y: evt.clientY };
-    }
-
-    if (mode === "drag") {
-      if (!drag?.onDrag) return;
-  
-      const p = getMapPoint(evt);
-      if (!p) return;
+    // Prioritário é o drag
+    const p = getMapPointFromPoint(getEventSVGPoint(evt), view, mapWorld);
+    if (!p) return;
+    if (drag) {  
       if (drag.limit && !pointInPolygon(p, vertices)) return;
 
       setDragStart(p);
       setDragCoordinates({ x: p.x, y: p.y, width: 0, height: 0 });
     }
+
+    // Sem drag, vem pan
+    else if (hasPanning) {
+      panStart.current = p;
+    }
   };
 
   const handleMouseMove = (evt) => {
-    if (mode === "pan") {
-      if (!panning) return;
-  
-      const dx = evt.clientX - panStart.current.x;
-      const dy = evt.clientY - panStart.current.y;
-  
-      panStart.current = { x: evt.clientX, y: evt.clientY };
-  
-      setView(v => {
-        const next = clampPan(
-          v.x + dx / v.scale,
-          v.y + dy / v.scale,
-          v.scale
-        );
-        return { ...v, ...next };
-      });
-    }
-
-    if (mode === "drag") {
-      if (!dragStart) return;
-
-      const p = getMapPoint(evt);
-      if (!p) return;
+    const p = getMapPointFromPoint(getEventSVGPoint(evt), view, mapWorld);
+    if (!p) return;
+    if (drag && dragStart) {
       if (drag.limit && !pointInPolygon(p, vertices)) return;
   
-      if (drag.preview === "rect") {
+      if (drag.previewTag === "rect") {
         setDragCoordinates({
           x: Math.min(dragStart.x, p.x),
           y: Math.min(dragStart.y, p.y),
@@ -218,9 +132,9 @@ export default function SVGMapa({
         });
       }
     
-      if (drag.preview === "circle") {
-        const dx = p.x - dragStart.x;
-        const dy = p.y - dragStart.y;
+      if (drag.previewTag === "circle") {
+        const dx = p.x - dragStart.x * view.scale;
+        const dy = p.y - dragStart.y * view.scale;
     
         setDragCoordinates({
           cx: dragStart.x,
@@ -229,18 +143,35 @@ export default function SVGMapa({
         });
       }
     } 
+    else if (panStart.current) {
+      // diferença do movimento do mouse
+      const dx = p.x - panStart.current.x / view.scale;
+      const dy = p.y - panStart.current.y / view.scale;
+
+      // atualiza referência
+      panStart.current = p;
+
+      // atualiza a view com limites
+      setView(prev => {
+        const next = clampPan(
+          prev.x + dx,
+          prev.y + dy,
+          prev.scale
+        );
+        return { ...prev, ...next };
+      });
+    }
   };
 
   const handleMouseUp = () => {
-    if (mode === "pan") {
-      setPanning(false);
-      panStart.current = null;
-    }
-
-    if (mode == "drag") {
-      if (dragCoordinates) drag?.onDrag(dragCoordinates);
+    if (drag && dragCoordinates) {
+      drag.onDrag(dragCoordinates);
       setDragStart(null);
       setDragCoordinates(null);
+    }
+    else if (panStart.current) {
+//      setPanning(false);
+      panStart.current = null;
     }
   };
 
@@ -248,7 +179,7 @@ export default function SVGMapa({
   const handleWheelZoom = (evt) => {
     evt.preventDefault();
 
-    const mouse = getSVGPoint(evt);
+    const mouse = getEventSVGPoint(evt);
     if (!mouse) return;
 
     setView(v => {
@@ -258,25 +189,26 @@ export default function SVGMapa({
       const next = clampPan(
         mouse.x - (mouse.x - v.x) * ratio,
         mouse.y - (mouse.y - v.y) * ratio,
-        newScale
+        newScale,
       );
 
-      return { scale: newScale, ...next };
+      return { ...v, scale: newScale, ...next };
     });
   };
 
-  /* ============= GESTURE PROVIDERS ======== */
   const wheelProvider = () => {
-    if (mode === "zoom") return handleWheelZoom;
+    if (hasZooming) return handleWheelZoom;
     else return;
   }
 
   /* ================= SVG ================= */
   const polygonPoints = vertices.map(v => `${v.x},${v.y}`).join(" ");
 
+  if (!mapWorld) return;
+  console.log(view.scale)
   return (
     <svg
-      viewBox={`0 0 ${diagonal} ${diagonal}`}
+      viewBox={`0 0 ${mapWorld.diagonal} ${mapWorld.diagonal}`}
       style={{ width: "100%", height: "100%", background: "#f5f5f5" }}
       onWheel={wheelProvider()}
       onMouseDown={handleMouseDown}
@@ -284,9 +216,15 @@ export default function SVGMapa({
       onMouseUp={handleMouseUp}
     >
       <g transform={`translate(${view.x}, ${view.y}) scale(${view.scale})`}>
-        <g transform={`translate(${offsetX}, ${offsetY}) rotate(${orientacao}, ${bbox.centerX}, ${bbox.centerY})`}>
-
-          {/* MAPA */}
+        <g
+          transform={`
+            translate(${mapWorld.offsetX}, ${mapWorld.offsetY})
+            translate(${view.bbox.cX}, ${view.bbox.cY})
+            rotate(${view.rotate})
+            translate(${-view.bbox.cX}, ${-view.bbox.cY})
+          `}
+        >
+          {/* 1/3 MAPA PRINCIPAL */}
           <polygon
             points={polygonPoints}
             fill="#d8f3dc"
@@ -294,7 +232,7 @@ export default function SVGMapa({
             strokeWidth={0.1}
           />
 
-          {/* GRID */}
+          {/* 2/3 GRID */}
           <defs>
             <clipPath id="clip-horta">
               <polygon points={polygonPoints} />
@@ -306,16 +244,14 @@ export default function SVGMapa({
             {children}
           </g>
 
-          {/* DRAG PREVIEW */}
-          {dragCoordinates && drag?.preview === "rect" && (
+          {/* 3/3 DRAG PREVIEW */}
+          {dragCoordinates && drag?.previewTag === "rect" && (
             <rect
               {...dragCoordinates}
-              fill="rgba(13,110,253,0.3)"
-              stroke="#0d6efd"
-              strokeDasharray="2"
+              {...drag.style}
             />
           )}
-          {dragCoordinates && drag?.preview === "circle" && (
+          {dragCoordinates && drag?.previewTag === "circle" && (
             <circle
               {...dragCoordinates}
               fill="rgba(13,110,253,0.3)"

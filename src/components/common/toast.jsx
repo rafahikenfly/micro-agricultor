@@ -23,7 +23,7 @@ export function AppToastMensagem({ show, onClose, message, variant }) {
 }
 export function AppToastConfirmacao({ show, onClose, message, variant, onConfirm, onCancel }) {
   return (
-    <ToastContainer position="bottom-end" className="p-3">
+    <ToastContainer position="top-center" className="p-3">
       <Toast bg={variant} show={show} onClose={onClose} autohide={false}>
         <Toast.Header closeButton>
           <strong className="me-auto">{message}</strong>

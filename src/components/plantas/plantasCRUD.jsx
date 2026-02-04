@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import ListaAcoes from "../../common/ListaAcoes";
 import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
 import { Container, Row, Col, Button, } from "react-bootstrap";
-import { useCrudUI } from "../../../services/ui/crudUI";
+import { useCrudUI } from "../../services/ui/crudUI";
 import PlantasModal from "./PlantasModal";
 import { plantasService } from "../../services/crud/plantasService";
 import { NoUser } from "../common/NoUser";

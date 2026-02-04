@@ -1,24 +1,34 @@
 import SVGBussola from "../services/svg/SVGbussola";
 import SVGMapa from "../services/svg/SVGmapa";
-import { useState, useEffect, useMemo, use } from "react";
-import { db } from "../firebase"; // ajuste o caminho conforme seu projeto
+import { useState, useEffect,  } from "react";
+import { db, timestamp } from "../firebase"; // ajuste o caminho conforme seu projeto
 
 import { AppToastMensagem, AppToastConfirmacao } from "../components/common/toast";
 
 import SVGElemento from "../services/svg/SVGelemento";
 import ToolBar from "../components/common/ToolBar";
 
-import { useCrudUI } from "../services/ui/crudUI";
 import { canteirosService } from "../services/crud/canteirosService";
 import { plantasService } from "../services/crud/plantasService";
-import CanteirosModal from "../components/canteiros/CanteirosModal";
-import AcaoCanteiroOffcanvas from "../components/canteiros/AcaoCanteiroOffcanvas";
-import AcaoPlantaOffcanvas from "../components/plantas/AcaoPlantaOffcanvas";
-import PlantasModal from "../components/plantas/plantasModal";
 import { NoUser } from "../components/common/NoUser";
+import { useAuth } from "../services/auth/authContext";
+
+import CanteirosModal from "../components/canteiros/CanteirosModal";
+import PlantasModal from "../components/plantas/plantasModal";
+import AcaoOffcanvas from "../components/actions/AcaoOffcanvas";
+import PlantarOffcanvas from "../components/actions/PlantarOffcanvas";
+import { MapPreview } from "../services/svg/SVGpreview";
+import { getBoundingBox, getMapPointFromPoint, } from "../services/svg/useMapTransform";
+import { plantarVariedade } from "../domain/planta.rules";
+import { eventosService, } from "../services/crud/eventosService";
+import CanteiroCustomTab from "../components/actions/CanteiroCustomTab";
+import { Tab } from "react-bootstrap";
+import { montarLogEvento } from "../domain/evento.rules";
+import { criarCanteiro } from "../domain/canteiro.rules";
 
 
-export default function Mapa({ user, hortaId }) {  
+export default function Mapa({ hortaId }) {
+  const { user } = useAuth();
   if (!user) return <NoUser />;
 
   const [horta, setHorta] = useState(null);
@@ -26,16 +36,32 @@ export default function Mapa({ user, hortaId }) {
   const [plantas, setPlantas] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  const [northUp, setNorthUp] = useState(true);
-  const [mapMode, setMapMode] = useState("edit"); // edit | pan | zoom | drag
-  const [mapDrag, setMapDrag] = useState(null);
+  const [modo, setModo] = useState("edit");                 // edit | plant | draw
+  const [configPlantio, setConfigPlantio] = useState(null); // config plantar
+  const [showPlantar, setShowPlantar] = useState(null);     // show offcanvas plantar
+  const [showEditModal, setShowEditModal] = useState(false);// show modal edit
+
+
+  const [mapPreview, setMapPreview] = useState(false);      // o que fazer no preview
+  const [mapDrag, setMapDrag] = useState(null);             // o que fazer no drag
+  const [hasZooming, setHasZooming] = useState(true);
+  const [gridArray, setGridArray] = useState([]);           // array com os tamanhos dos grids
   const [activeTool, setActiveTool] = useState(null);
+  const [view, setView] = useState({
+    x: 0,
+    y: 0,
+    offset: {
+      x: 0,
+      y: 0,
+    },
+    rotate: 0,
+    scale: 1,
+  });
+  const [mapWorld, setMapWorld] = useState(null);
 
-
-  const [selecionado, setSelecionado] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [selecao, setSelecao] = useState([]);
   const [activeTab, setActiveTab] = useState(null);
-  const [showModal, setShowModal] = useState(false);
+
   const [showToastMensagem, setShowToastMensagem] = useState(false);
   const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
   const [toastMsg, setToastMsg] = useState("");
@@ -77,6 +103,40 @@ export default function Mapa({ user, hortaId }) {
     return unsub;
   }, [hortaId]);
 
+  /* ================== CALCULA MAPA ================== */
+  useEffect(() => {
+    if (!horta?.aparencia?.vertices?.length) return;
+
+    const bbox = getBoundingBox(horta.aparencia.vertices);
+    const diagonal = Math.sqrt(bbox.width ** 2 + bbox.height ** 2);
+
+    const offsetX = (diagonal - bbox.width) / 2 - bbox.minX;
+    const offsetY = (diagonal - bbox.height) / 2 - bbox.minY;
+
+    const cX = (diagonal / 2) - offsetX;
+    const cY = (diagonal / 2) - offsetY;
+
+    setMapWorld({
+      diagonal,
+      offsetX,
+      offsetY,
+      bounds: {
+        minX: 0,
+        minY: 0,
+        maxX: diagonal,
+        maxY: diagonal,
+      }
+    });
+
+    setView(v => ({
+      ...v,
+      bbox: {
+        ...bbox,
+        cX,
+        cY,
+      }
+    }));
+  }, [horta]);
 
   /* ================= TOAST/MODAL/OFFCANVAS ================= */
   const showToast = (msg, variant = "success", confirmacao = false) => {
@@ -86,110 +146,261 @@ export default function Mapa({ user, hortaId }) {
     setShowToastConfirmacao(confirmacao);
   };
 
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão de ${selecionado.tipo} ${data.nome}?`, "danger", true, apagar);
+  const confirmarExclusao = () => {
+    setShowToastConfirmacao(false);
+    try {
+      selecao.forEach(async (item) => {
+        if (item.tipoEntidadeId === "canteiro") {
+          await canteirosService.forParent(horta.id).remove(item.data.id,user);
+        }
+        if (item.tipoEntidadeId === "planta") {
+          await plantasService.remove(item.data.id,user);
+        }
+      });
+      showToast(`Registros apagados com sucesso!`, "success");
+    }
+    catch (err) {
+      console.error(err);
+      showToast(`Erro ao apagar: ${err}`, "danger");
+    }
+    finally {
+      setSelecao([]);
+      setModo("edit");
+    }
   };
   
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
-
   const fecharOffcanvas = () => {
-    setSelecionado(null);
+    setSelecao([]);
     setActiveTab(null);
   }
 
-  const abrirModal = (data) => {
-    setSelecionado(prev => ({ ...prev, data }));
-    setShowModal(true);
+  const abrirModal = () => {
+    setShowEditModal(true);
+  }
+
+  const fecharModal = () => {
+    setShowEditModal(false);
+  }
+
+  const salvarModal = async (data, tipoEntidadeId) => {
+    try {
+      if (tipoEntidadeId === "canteiro") {
+        if (data.id) {
+          await canteirosService.forParent(horta.id).update(data.id, data, user);
+          showToast(`Canteiro atualizado com sucesso`);
+        } else {
+          await canteirosService.forParent(horta.id).create(data, user);
+          showToast(`Canteiro criado com sucesso`);
+        }
+      }
+      if (tipoEntidadeId === "planta") {
+        if (data.id) {
+          await plantasService.update(data.id, data, user);
+          showToast(`Planta atualizada com sucesso`);
+        } else {
+          await plantasService.create(data, user);
+          showToast(`Planta criada com sucesso`);
+        }
+      }
+      setSelecao([]);
+    } catch (err) {
+      console.error("Erro ao salvar alterações:", err);
+      showToast(`Erro ao salvar alterações.`, "danger");
+    } finally {
+      setShowEditModal(false);
+    }
+
+      await atualizar(data);
+    setModo("edit");
   }
 
   /* ================= CRUDS ================= */
-  const crudCanteiro = useCrudUI({
-    crudService: canteirosService.forParent(hortaId),
-    nomeEntidade: "canteiro",
-    masculino: true, // "a característica de planta"
-    user,
-  
-    editando: selecionado?.data,
-    setEditando: selecionado?.tipo === "canteiro" ? selecionado.data : null,
-    setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
-  });
-  const crudPlanta = useCrudUI({
-    crudService: plantasService,
-    nomeEntidade: "planta",
-    masculino: false,
-    user,
-  
-    editando: selecionado?.tipo === "planta" ? selecionado.data : null,
-    setEditando: setSelecionado,
-    setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
-  });
+  const setEditando = (data, tipoEntidadeId) => {
+    if (data === null) {
+      setSelecao([]);
+      return;
+    }
+    setSelecao(prev => {
+      const existe = prev.some(item => item?.data?.id && item.data.id === data.id) ?? false;
 
-  const crudAtivo =
-  selecionado?.tipo === "planta"
-    ? crudPlanta
-    : crudCanteiro;
-  const { criar, editar, atualizar, apagar } = crudAtivo;
+      let novoArray;
+      if (!existe) {
+        // adiciona no final
+        novoArray = [{data, tipoEntidadeId}, ...prev,];
+      } else {
+        // remove
+        novoArray = prev.filter(item => item.data.id !== data.id);
+      }
+      return novoArray;
+    });
+  }
 
   /* ================== CLICK HANDLERS ================== */
-  const onClickCanteiro = (data) => {
-    setSelecionado({tipo: "canteiro", data});
-  };
-  const onClickPlanta = (data) => {
-    setSelecionado({tipo: "planta", data});
-  };
+  const onClickCanteiro = async (data) => {
+    // (MODO EDICAO)
+    if (modo === "edit") {
+      setEditando(data, "canteiro");
+      return;
+    };
+    // MODO PLANTIO
+    if (modo === "plant" && configPlantio) {
+      // TODO ***
+      // Esta função abaixo pode ser generalizada para uma função de criação de entidade.
+      // Para isso, eu tenho uma regra para cada tipo de entidade (ex: plantarVariedade),
+      // que é passada para a função que cria a entidade e depois cria o evento e registra
+      // nas chaves respectivas
+      // Ela será repetida na criação de canteiros e, em tese, na criação de outros tipos
+      // de entidade dentro da horta.
+      let novaPlantaCount = 0;
+      const ts = timestamp();
+      let batch = db.batch();
+      try {
+        const alvos = [];
+        // Cria as plantas conforme o mapPreview
+        for (const ponto of mapPreview.pontos) {
+          novaPlantaCount++;
+          const novaPlanta = plantarVariedade({
+            especie: configPlantio.especie,
+            variedade: configPlantio.variedade,
+            tecnica: configPlantio.tecnica,
+            canteiro: data,
+            posicao: ponto,
+          })
+          novaPlanta.nome = `Nova planta ${novaPlantaCount}`;
+          const novaPlantaRef = plantasService.batchCreate(novaPlanta, user, batch);
 
+          // Adiciona a planta aos alvos do evento
+          alvos.push(novaPlantaRef.id);
+        };
+        if (alvos.length === 0) {
+          showToast(`Nenhuma planta plantada.`);
+          return;
+        }
+
+        // Cria o evento
+        const evento = montarLogEvento({
+          tipoEventoId: "plantio",
+          alvos,
+          origemId: user.id,
+          origemTipo: "usuario",
+          data: {
+            tipoEntidadeId: "planta",
+            tecnicaId: configPlantio.tecnica?.estagioId,
+          }
+        })
+
+        // Atualiza o evento pelo batch se houver alvos
+        if (evento.alvos.length > 0) {
+          eventosService.batchCreate(evento, user, batch);
+        }
+        await batch.commit();
+        showToast(`Plantio de ${novaPlantaCount} planta${novaPlantaCount > 1 ? "s" : ""} registrado com sucesso.`);
+      }
+      catch (err) {
+        console.error (err)
+        showToast(`Erro ao plantar: ${err}`, "danger")
+      }
+      finally {
+        setModo("edit");
+        setConfigPlantio(null);
+        return;
+      }
+    }
+    // MODO NÃO CONFIGURADO
+    console.log("canteiro", modo, data);
+  };
+  const onClickPlanta = async (data) => {
+    // (MODO EDICAO)
+    if (modo === "edit") {
+      setEditando(data, "planta");
+      return;
+    };
+    // MODO NÃO CONFIGURADO
+    console.log("planta", modo, data);
+  };
+  const onClickBussola = (prev) => {
+    const STEP = 22.5;
+    const normalizado = (((prev % 360) + 360) % 360);
+    return Math.round(normalizado / STEP) * STEP;
+  }
   /* ================== DRAG HANDLERS ================== */
-  const novoCanteiroRetangular = (data) => {
-    
-    const novoCanteiro = {
-      nome: "Novo Canteiro",
-      descricao: "Criado a partir do mapa",
-      posicao: {
-        x: Math.round(data.x),
-        y: Math.round(data.y),
-      },
-      dimensao: {
-        x: Math.round(data.width),
-        y: Math.round(data.height),
-      }
+  const novoCanteiro = (data, elipse) => {
+    try {
+      const novoCanteiro = criarCanteiro({
+        horta,
+        nome: "Novo Canteiro",
+        descricao: "Criado a partir do mapa",
+        posicao: {
+          x: Math.round(data.x),
+          y: Math.round(data.y),
+        },
+        dimensao: {
+          x: Math.round(data.width),
+          y: Math.round(data.height),
+        },
+        aparencia: {
+          elipse: elipse || false,
+        },
+      })
+      setEditando(novoCanteiro, "canteiro");
+      setShowEditModal(true);
+    } catch (err) {
+      console.error(err);
+      showToast(`Erro ao criar canteiro.`, "danger");
     }
-    setActiveTool(null);
-    setMapMode("edit");
-    editar(novoCanteiro);
-    //TODO: Esses dados fazem com que o CRUD tente fazer um update, quando não há documento para atualizar.
-  }
-  const novoCanteiroCircular = (data) => {
-    const novoCanteiro = {
-      nome: "Novo Canteiro",
-      posicao: {
-        x: data.x,
-        y: data.y,
-      },
-      dimensao: {
-        x: data.width,
-        y: data.height,
-      },
-      aparencia: {
-        elipse: true,
-      }
-    }
-    setActiveTool(null);
-    setMapMode("edit");
-    editar(novoCanteiro);
   }
 
+
+  /* ================== HOVER HANDLERS ================= */
+const onHoverCanteiro = (canteiro, evt) => {
+  if (modo !== 'plant' || !configPlantio) return;
+
+  function calcularGridPlantio(config, mousePos) {
+    const { linhas, colunas, espacamentoLinha, espacamentoColuna } = config.layout;
+    const pontos = [];
+    const espacamentoColunaScaled = espacamentoColuna * view.scale;
+    const espacamentoLinhaScaled = espacamentoLinha * view.scale;
+
+    // centro do mouse relativo ao canteiro
+    const baseX = mousePos.x;
+    const baseY = mousePos.y;
+
+    // deslocamento para centralizar o grid no mouse
+    const offsetX = (colunas * espacamentoColunaScaled) / 2;
+    const offsetY = (linhas * espacamentoLinhaScaled) / 2;
+    // ponto inicial do grid
+    const startX = baseX - offsetX + espacamentoColunaScaled / 2;
+    const startY = baseY - offsetY + espacamentoLinhaScaled / 2;
+    // monta o grid
+    for (let l = 0; l < linhas; l++) {
+      for (let c = 0; c < colunas; c++) {
+        pontos.push(getMapPointFromPoint({
+          x: startX + c * espacamentoColunaScaled,
+          y: startY + l * espacamentoLinhaScaled,
+        },view,mapWorld));
+      }
+    }
+    return pontos;
+}
+  // posição do mouse no SVG
+  const svg = evt.target.ownerSVGElement;
+  const pt = svg.createSVGPoint();
+  pt.x = evt.clientX;
+  pt.y = evt.clientY;
+  const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+  const pontos = calcularGridPlantio(configPlantio, cursor);
+
+  setMapPreview({
+    radius: 5,
+    fill: "red",
+    canteiroId: canteiro.id,
+    pontos
+  });
+};
+
+const onLeaveCanteiro = () => {
+  setMapPreview(null);
+};
 
   /* ================== LOADING ================== */
   if (!hortaId) {
@@ -203,22 +414,38 @@ export default function Mapa({ user, hortaId }) {
     // MOUSE WHEEL
     { id: "zoom",
       label: "🔎",
-      toggle: mapMode === "zoom",
-      onClick: ()=>{setMapMode(activeTool === "zoom" ? "edit" : "zoom"); setActiveTool(activeTool === "zoom" ? null : "zoom")},
+      toggle: hasZooming,
+      onClick:  () => {
+        setHasZooming(!hasZooming);
+      }
+    },
+    { id: "grid",
+      label: "⬛",
+      toggle: gridArray.length > 0,
+      onClick: () => {
+        setGridArray(gridArray.length > 0 ? [] : [10, 50]);
+      }
     },
     // MOUSE DRAG
     { id: "pan",
       label: "🖐️",
-      toggle: mapMode === "pan",
-      onClick: ()=>{setMapMode(activeTool === "pan" ? "edit" : "pan");  setActiveTool(activeTool === "pan" ? null : "pan")},
+      onClick:  () => {
+        setModo("edit");
+        setActiveTool("pan");
+      }
     },
     { id: "retangulo",
       label: "▭",
       onClick: ()=>{
-        setMapMode("drag");
+        setModo("draw");
         setMapDrag({
-          onDrag: (a)=>novoCanteiroRetangular(a),
-          preview: "rect",
+          onDrag: (a)=>novoCanteiro(a),
+          previewTag: "rect",
+          style: {
+            fill: "rgba(13,110,253,0.3)",
+            stroke: "#0d6efd",
+            strokeDasharray: "2",
+          },
           limit: true,
         });
         setActiveTool("retangulo");
@@ -227,16 +454,56 @@ export default function Mapa({ user, hortaId }) {
     { id: "circulo",
       label: "◯",
       onClick: ()=>{
-        setMapMode("drag");
+        setModo("draw");
         setMapDrag({
-          onDrag: (a)=>novoCanteiroCircular(a),
-          preview: "circle",
+          onDrag: (a)=>novoCanteiro(a, true),
+          previewTag: "circle",
+          style: {
+            fill: "rgba(13,110,253,0.3)",
+            stroke: "#0d6efd",
+            strokeDasharray: "2",
+          },
+          limit: true,
         })
         setActiveTool("circulo");
       },
     },
+    // MOUSE CLICK
+    { id: "plantar",
+      label: "🌱",
+      toggle: modo === "plant",
+      onClick: () => {
+        setShowPlantar(true);
+        setActiveTool("plantar");
+      }
+    },
+    {id: "apagar",
+      label: "🗑️",
+      onClick: () => {
+        if (selecao.length === 0) {
+          showToast("Selecione ao menos um registro para apagar.", "warning");
+        }
+        else {
+          showToast(`Apagar ${selecao.length} registros?`, "warning", true);
+          setModo("view");
+        }
+      }
+    },
   ];
 
+  const customTabsObs = {
+    canteiro: <Tab eventKey="custom" title="Canteiro">
+      <CanteiroCustomTab
+        entidade={selecao?.data}
+        showToast={showToast}
+      />
+      </Tab>,
+    planta: <></>,
+  }
+  const renderArrCanteiros = canteiros // aplicar filtros
+  const renderArrPlantas = plantas     // aplicar filtros
+
+  if (!mapWorld) return null;
   return (
     <div
       style={{
@@ -257,19 +524,40 @@ export default function Mapa({ user, hortaId }) {
       {/* Conteúdo SVG (horta) */}
       <SVGMapa 
         vertices={horta.aparencia.vertices}
-        orientacao={northUp ? horta.orientacao : 0}
-        grid={[100]}
-        mode={mapMode}
-        drag={mapMode === "drag" ? mapDrag : null}
+        mapWorld={mapWorld}
+        view={view}
+        setView={setView}
+        hasPanning={modo !== "draw"}
+        hasZooming={hasZooming}
+        grid={gridArray}
+        drag={modo === "draw" ? mapDrag : null}
       >
         {/* Canteiros */}
-        {canteiros.map(c=>(
-            <SVGElemento key ={c.id} item={c} onClick={mapMode === "edit" ? onClickCanteiro : ()=>{}} />
+        {renderArrCanteiros.map(c=>(
+            <SVGElemento
+              key={c.id}
+              item={c}
+              onClick={onClickCanteiro}
+              onMouseMove ={onHoverCanteiro}
+              onMouseLeave={onLeaveCanteiro}
+              destaque={selecao.some(s=>s.data.id === c.id)}
+            />
         ))}
-        {/* Canteiros */}
-        {plantas.map(c=>(
-            <SVGElemento key ={c.id} item={c} onClick={mapMode === "edit" ? onClickPlanta : ()=>{}} />
+        {/* Plantas */}
+        {renderArrPlantas.map(c=>(
+            <SVGElemento
+              key={c.id}
+              item={c}
+              onClick={onClickPlanta}
+              destaque={selecao.some(s=>s.data.id === c.id)}
+            />
         ))}
+        {/* Preview */}
+        {modo === "plant" &&
+        <MapPreview
+          preview={mapPreview}
+          view={view}
+        />}
 
         </SVGMapa>
 
@@ -283,58 +571,54 @@ export default function Mapa({ user, hortaId }) {
           height: 80,
         }}
       >
-        <SVGBussola diametro={80} orientacao={northUp ? 0 : 360 - horta.orientacao} onClick={()=>setNorthUp(!northUp)}/>
+        <SVGBussola
+          diametro={80}
+          orientacao={view.rotate}
+          onLeftClick={()=>setView(prev => ({...prev, rotate: onClickBussola(prev.rotate + 22.5)}))}
+          onRightClick={()=>setView(prev => ({...prev, rotate: onClickBussola(prev.rotate - 22.5)}))}
+          onDoubleClick={()=>setView(prev => ({...prev, rotate: 0}))}
+        />
       </div>
 
       {/* ================= OFFCANVAS ================= */}
-      {selecionado?.tipo === "canteiro" && (
-        <AcaoCanteiroOffcanvas
-          show
-          data={selecionado.data}
+        <AcaoOffcanvas
+          show = {selecao.length > 0 && modo === 'edit'}
+          entidade={selecao[0]?.data}
+          tipoEntidadeId={selecao[0]?.tipoEntidadeId}
           activeTab={activeTab || "design"}
           onTabChange={setActiveTab}
           onClose={fecharOffcanvas}
-          onModeChange={setMapMode}
           onEdit={abrirModal}
           user={user}
           showToast={showToast}
+          customTabs={customTabsObs[selecao.length > 0 ? selecao[0].tipoEntidadeId : <></>]}
         />
-      )}
-
-      {selecionado?.tipo === "planta" && (
-        <AcaoPlantaOffcanvas
-          show
-          data={selecionado.data}
-          activeTab={activeTab || "design"}
-          onTabChange={setActiveTab}
-          onClose={fecharOffcanvas}
-          onModeChange={setMapMode}
-          onEdit={abrirModal}
-          user={user}
-          showToast={showToast}
+        <PlantarOffcanvas
+          show={showPlantar}
+          onClose={() => setShowPlantar(false)}
+          onConfirm={(config) => {
+            setConfigPlantio(config);
+            setModo("plant");
+          }}
         />
-      )}
 
       {/* ================= MODAL ================= */}
-      {selecionado?.tipo === "canteiro" && (
+      {selecao.length > 0 && selecao[0].tipoEntidadeId === "canteiro" && (
         <CanteirosModal
           restrito={true}
-          show={showModal}
-          data={selecionado.data}
-          onClose={() => setShowModal(false)}
-          onSave={(data) => { atualizar(data); setShowModal(false); }}
+          show={showEditModal}
+          data={selecao[0].data}
+          onClose={fecharModal}
+          onSave={salvarModal}
         />
       )}
-      {selecionado?.tipo === "planta" && (
+      {selecao.length > 0 && selecao[0].tipoEntidadeId === "planta" && (
         <PlantasModal
-          restrito
-          show={showModal}
-          data={selecionado.data}
-          onClose={() => setShowModal(false)}
-          onSave={(data) => {
-            atualizar(data);
-            setShowModal(false);
-          }}
+          restrito={true}
+          show={showEditModal}
+          data={selecao[0].data}
+          onClose={() => setShowEditModal(false)}
+          onSave={salvarModal}
         />
       )}
       {/* ================= TOASTS ================= */}
@@ -347,8 +631,8 @@ export default function Mapa({ user, hortaId }) {
 
       <AppToastConfirmacao
         show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
+        onCancel={() => setShowToastConfirmacao(false)}
+        onConfirm={confirmarExclusao}
         message={toastMsg}
         variant={toastVariant}
       />

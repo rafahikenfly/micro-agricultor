@@ -3,18 +3,18 @@ import React, { useEffect, useState } from "react";
 import ListaAcoes from "../../common/ListaAcoes";
 import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
 import { Container, Row, Col, Button, } from "react-bootstrap";
-import { caracteristicasCanteiroService } from "../../../services/crud/caracteristicasCanteirosService";
-import CaracteristicasCanteiroModal from "./CaracteristicasCanteiroModal";
+import { caracteristicasService } from "../../../services/crud/caracteristicasService";
+import CaracteristicasModal from "./CaracteristicasModal";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
 
-function CaracteristicasCanteiroCRUD() {
+function CaracteristicasCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   
-  const [caracteristicasCanteiro, setCaracteristicasCanteiro] = useState([]);
+  const [caracteristicas, setCaracteristicas] = useState([]);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -27,7 +27,7 @@ function CaracteristicasCanteiroCRUD() {
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = caracteristicasCanteiroService.subscribe(setCaracteristicasCanteiro);
+    const unsub = caracteristicasService.subscribe(setCaracteristicas);
     return unsub;
   }, []);
 
@@ -58,7 +58,7 @@ function CaracteristicasCanteiroCRUD() {
     arquivar,
     desarquivar,
   } = useCrudUI({
-    crudService: caracteristicasCanteiroService,
+    crudService: caracteristicasService,
     nomeEntidade: "característica de canteiro",
     masculino: false, // "a característica de planta"
     user,
@@ -85,7 +85,7 @@ function CaracteristicasCanteiroCRUD() {
         <Col>
           {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={caracteristicasCanteiro}
+            dados={caracteristicas}
             campos={[
               { rotulo: "Nome", data: "nome" },
               { rotulo: "Descrição", data: "descricao" },
@@ -94,13 +94,13 @@ function CaracteristicasCanteiroCRUD() {
             acoes={[
               { rotulo: "Editar", funcao: editar, variant: "warning" },
               { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
-              {toggle: "isArchived",
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />
@@ -108,7 +108,8 @@ function CaracteristicasCanteiroCRUD() {
       </Row>
 
       {/* ================= MODAL ================= */}
-      <CaracteristicasCanteiroModal
+      <CaracteristicasModal
+        key={editando ? editando.id : `create-${Date.now()}`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -138,4 +139,4 @@ function CaracteristicasCanteiroCRUD() {
   );
 }
 
-export default CaracteristicasCanteiroCRUD;
+export default CaracteristicasCRUD;

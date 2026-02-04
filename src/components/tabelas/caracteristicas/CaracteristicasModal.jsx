@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
+import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
 
 export default function CaracteristicasPlantaModal({ show, onSave, onClose, data = {}, }) {
   const [form, setForm] = useState({
@@ -8,16 +9,21 @@ export default function CaracteristicasPlantaModal({ show, onSave, onClose, data
       unidade: data?.unidade || "",
       longevidade: data?.longevidade || 0,
       resolucao: data?.resolucao || 30,
+      aplicavel: data?.aplicavel || {}, 
     }
   );
 
   useEffect(() => {
-      if (data) setForm(data);
+      if (data) setForm({
+        ...data,
+        aplicavel: data.aplicavel || {}
+      });
     }, [data]);
   
     const salvar = () => {
       onSave({
         ...form,
+        aplicavel: form.aplicavel || {}
       });
     };
   
@@ -56,6 +62,30 @@ export default function CaracteristicasPlantaModal({ show, onSave, onClose, data
               value={form.unidade}
               onChange={e => setForm({...form, unidade: e.target.value})}
             />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Aplicável a:</Form.Label>
+
+            <div className="d-flex flex-wrap gap-3 mt-2">
+              {TIPOS_ENTIDADE.map((tipo) => (
+                <Form.Check
+                  key={tipo.id}
+                  type="checkbox"
+                  label={tipo.nome}
+                  checked={!!form.aplicavel?.[tipo.id]}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      aplicavel: {
+                        ...form.aplicavel,
+                        [tipo.id]: e.target.checked
+                      }
+                    })
+                  }
+                />
+              ))}
+            </div>
           </Form.Group>
 
           <Form.Group className="mb-3">

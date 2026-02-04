@@ -1,4 +1,9 @@
-export default function SVGElemento ({item, onClick, destaque}) {
+export default function SVGElemento ({item, destaque,
+  onClick = ()=>{},
+  onMouseEnter = ()=>{},
+  onMouseLeave = ()=>{},
+  onMouseMove = ()=>{},
+}) {
 
   /* ============== CONVERSÃO DE ARRAY DE VERTICES ============== */
 
@@ -18,6 +23,9 @@ export default function SVGElemento ({item, onClick, destaque}) {
         strokeWidth={item.aparencia?.espessura || 0.05}
         opacity = {destaque ? 1 : 0.5}
         onClick={()=>onClick(item)}
+        onMouseEnter={(evt)=>onMouseEnter(item,evt)}
+        onMouseLeave={(evt)=>onMouseLeave(item,evt)}
+        onMouseMove={(evt) =>onMouseMove (item,evt)}
       />
     )
   }
@@ -34,6 +42,9 @@ export default function SVGElemento ({item, onClick, destaque}) {
         strokeWidth={item.aparencia?.espessura || 0.05}
         opacity = {destaque ? 1 : 0.5}
         onClick={()=>onClick(item)}
+        onMouseEnter={(evt)=>onMouseEnter(item,evt)}
+        onMouseLeave={(evt)=>onMouseLeave(item,evt)}
+        onMouseMove={(evt) =>onMouseMove (item,evt)}
       />
     );
   }
@@ -49,6 +60,9 @@ export default function SVGElemento ({item, onClick, destaque}) {
       strokeWidth={item.aparencia?.espessura || 0.05}
       opacity = {destaque ? 1 : 0.5}
       onClick={()=>onClick(item)}
+        onMouseEnter={(evt)=>onMouseEnter(item,evt)}
+        onMouseLeave={(evt)=>onMouseLeave(item,evt)}
+        onMouseMove={(evt) =>onMouseMove (item,evt)}
     />
   );
 }

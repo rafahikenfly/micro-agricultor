@@ -1,13 +1,15 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
+import { renderOptions } from "../../../utils/formUtils";
+import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
 
-export default function CVJobsModal({ show, onSave, onClose, data, }) {
+export default function CVJobsModal({ show, onSave, onClose, data = {}, }) {
     const [form, setForm] = useState({
-        nome: data.nome || "",
-        descricao: data.descricao || "",
-        instrucoes: data.instrucoes || "",
-        parametros: data.parametros || {},
-        tipoEntidade: data.tipoEntidade || "",
+        nome: data?.nome || "",
+        descricao: data?.descricao || "",
+        instrucoes: data?.instrucoes || "",
+        parametros: data?.parametros || {},
+        tipoEntidade: data?.tipoEntidade || "",
       }
     );
   
@@ -66,10 +68,16 @@ export default function CVJobsModal({ show, onSave, onClose, data, }) {
                 value={form.tipoEntidade}
                 onChange={e => setForm({ ...form, tipoEntidade: e.target.value })}
               >
+                {renderOptions({
+                  list: TIPOS_ENTIDADE,
+                  loading: TIPOS_ENTIDADE,
+                  placeholder: "Selecione o tipo de entidade"
+                })}
                 <option disabled>Selecione</option>
-                <option value="canteiro">Canteiro</option>
-                <option value="planta">Planta</option>
-                <option value="horta">Horta</option>
+                
+                <option value="Canteiro">Canteiro</option>
+                <option value="Planta">Planta</option>
+                <option value="Horta">Horta</option>
               </Form.Select>
             </Form.Group>
 

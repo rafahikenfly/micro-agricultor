@@ -1,14 +1,6 @@
 import React from "react";
 
-export default function AparenciaTab({
-  value = {
-    fundo: "#4CAF50",
-    borda: "#1B5E20",
-    espessura: 2,
-    elipse: false
-  },
-  onChange
-}) {
+export default function AparenciaTab({value, onChange}) {
   const update = (field, v) => {
     onChange({
       ...value,

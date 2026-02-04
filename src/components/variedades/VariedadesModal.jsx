@@ -4,9 +4,13 @@ import VerticesTab from "../common/VerticesTab";
 import AparenciaTab from "../common/AparenciaTab";
 import VariedadeDadosTab from "./VariedadesDadosTab";
 import VariedadesEstagioTab from "./VariedadesEstagioTab";
+import { catalogosService } from "../../services/catalogosService";
 
-export default function VariedadesModal({ show, onSave, onClose, data = {}, especies, parametros, caracteristicasPlanta}) {
+export default function VariedadesModal({ show, onSave, onClose, data = {}, }) {
     const [tab, setTab] = useState("dados");
+    const [especies, setEspecies] = useState([]);
+    const [caracteristicas, setCaracteristicas] = useState([]);
+    const [reading, setReading] = useState(false);
     const [form, setForm] = useState({
       especieId: "",
       especieNome: "",
@@ -28,24 +32,51 @@ export default function VariedadesModal({ show, onSave, onClose, data = {}, espe
   useEffect(() => {
       if (data) setForm(data);
     }, [data]);
+
+  // ========== CARREGAR DADOS ==========
+  useEffect(() => {
+    if (!show) return;
   
-    const salvar = () => {
-      onSave({
-        ...form,
-      });
-    };
+    let ativo = true;
+    setReading(true);
+  
+    Promise.all([
+      catalogosService.getCaracteristicas(),
+      catalogosService.getEspecies(),
+    ]).then(([carac, esps]) => {
+      if (!ativo) return;
+      setEspecies(esps);
+      setCaracteristicas(carac);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos da variedade:", err);
+      showToast("Erro ao carregar catálogos.", "danger");
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, [show]);
+
+  
+  const salvar = () => {
+    onSave({
+      ...form,
+    });
+  };
   
   if (!show) return null;
 
   const cicloEspecie = especies.find(e => e.id === form.especieId)?.ciclo ?? [];
 
-  const atualizaCiclo = (data, index) => {
+  const atualizaCiclo = (data, idx) => {
       setForm(prev => {
         const novoCiclo = [...prev.ciclo];
-        novoCiclo[index] = data;
-        novoCiclo[index].estagioId ??= cicloEspecie[index].estagioId
-        novoCiclo[index].estagioNome ??= cicloEspecie[index].estagioNome
-
+        novoCiclo[idx] = data;
+        novoCiclo[idx].estagioId ??= cicloEspecie[idx].estagioId
+        novoCiclo[idx].estagioNome ??= cicloEspecie[idx].estagioNome
+        console.log("no",novoCiclo)
         return {
           ...prev,
           ciclo: novoCiclo
@@ -77,8 +108,13 @@ export default function VariedadesModal({ show, onSave, onClose, data = {}, espe
                 <VerticesTab value={form.aparencia?.vertices} onChange={vertices => setForm(prev => ({...prev, aparencia: {...prev.aparencia,vertices}}))} />
             </Tab>
             {cicloEspecie.map((f,idx)=>(
-                <Tab eventKey={"fase"-idx} title={f.estagioNome}>
-                    <VariedadesEstagioTab value={form.ciclo[idx]} index={idx} onChange={atualizaCiclo} parametros={parametros} caracteristicas={caracteristicasPlanta}/>
+                <Tab eventKey={`fase-${idx}`} title={f.estagioNome}>
+                    <VariedadesEstagioTab
+                      value={form.ciclo[idx]}
+                      index={idx}
+                      onChange={atualizaCiclo}
+                      caracteristicas={caracteristicas}
+                    />
                 </Tab>
             ))}
         </Tabs>

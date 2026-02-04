@@ -15,9 +15,6 @@ function VariedadesCRUD() {
   if (!user) return <NoUser />
 
   const [variedades, setVariedades] = useState([]);
-  const [especies, setEspecies] = useState([]);
-  const [parametros, setParametros] = useState([]);
-  const [caracteristicasPlanta, setCaracteristicasPlanta] = useState([]);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -34,30 +31,6 @@ function VariedadesCRUD() {
     return unsub;
   }, []);
 
-  useEffect(() => {
-    return db.collection("especies")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setEspecies(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
-  useEffect(() => {
-    return db.collection("parametros")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setParametros(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
-  useEffect(() => {
-    return db.collection("caracteristicas_planta")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setCaracteristicasPlanta(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
   /* ================= TOAST/MODAL ================= */
   const showToast = (msg, variant = "success", confirmacao = false) => {
     setToastMsg(msg);
@@ -68,7 +41,7 @@ function VariedadesCRUD() {
 
   const confirmarExclusao = (data) => {
     setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão da variedade ${data.nome}?`, "danger", true, apagar);
+    showToast(`Confirma a exclusão da variedade ${data.nome}?`, "warning", true);
   };
   
   const cancelarExclusao = () => {
@@ -128,7 +101,7 @@ function VariedadesCRUD() {
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />
@@ -144,9 +117,6 @@ function VariedadesCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        especies={especies}
-        parametros={parametros}
-        caracteristicasPlanta={caracteristicasPlanta}
       />
 
       {/* ================= TOASTS ================= */}

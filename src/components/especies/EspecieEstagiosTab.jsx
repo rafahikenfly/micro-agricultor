@@ -1,18 +1,25 @@
 import { useEffect, useState } from "react";
 import { Form, Button, InputGroup } from "react-bootstrap";
 import ListaAcoes from "../common/ListaAcoes";
+import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
+import InputGroupText from "react-bootstrap/esm/InputGroupText";
 
 export default function EspecieEstagiosTab({
   value = [],
   estagios = [],
+  loading,
   onChange,
 }) {
-  const [estagioId, setEstadoId] = useState("");
+  const [estagio, setEstagio] = useState("");
+  const [plantavel, setPlantavel] = useState("");
+  const [instrucoes, setInstrucoes] = useState("");
 
   const adicionar = () => {
     const newValue = [...value, {
-      estagioId: estagioId,
-      estagioNome: estagios.find(e => e.id === estagioId ).nome,
+      estagioId: estagio.id,
+      estagioNome: estagio.nome,
+      plantavel: plantavel,
+      instrucoes: instrucoes,
     }];
     onChange(newValue)
   };
@@ -27,17 +34,35 @@ export default function EspecieEstagiosTab({
       {/* Inserção */}
       <InputGroup >
         <Form.Select
-          value={estagioId}
-          onChange={e => setEstadoId(e.target.value)}
+          value={estagio.id}
+          onChange={e => handleSelectIdNome(e,{
+            list: estagios,
+            setForm: setEstagio,
+            fieldId: "id",
+            fieldNome: "nome",
+          })}
           required
         >
-          <option value="">Selecione o estágio</option>
-          {estagios.map(e => (
-            <option key={e.id} value={e.id}>
-              {e.nome}
-            </option>
-          ))}
+        {renderOptions({
+          list: estagios,
+          loading: loading,
+          placeholder: "Selecione o estágio"
+        })}
         </Form.Select>
+
+        <Form.Check 
+          value={plantavel}
+          label="Plantável"
+          onChange={e => setPlantavel(e.target.checked)}
+        />
+      </InputGroup>
+      <InputGroup>
+      <InputGroupText>Instruções de plantio</InputGroupText>
+      <Form.Control
+        type="textarea"
+        value={instrucoes}
+        onchange={setInstrucoes}
+      />
       </InputGroup>
 
       <Button onClick={adicionar}>
@@ -49,6 +74,7 @@ export default function EspecieEstagiosTab({
         dados={Object.values(value)}
         campos={[
           {rotulo: "Estágio", data: "estagioNome"},
+          {rotulo: "Plantável?", data: "plantavel", boolean: true},
         ]}
         acoes={[
           {rotulo: "Excluir", funcao: remover, variant: "danger"},

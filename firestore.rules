@@ -7,10 +7,19 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+// Características de histórico
+    match /caracteristicas/{caracteristicaId} {
+      allow read, write: if true;
+    }    
+
+
 // Plantas
     match /plantas/{plantaID} {
       allow read, write: if true;
+      match /medicoes/{medicaoId} {
+    	  allow read, write: if true;
       }
+    }
 	// Espécies
     match /especies/{especieId} {
       allow read, write: if true;
@@ -28,9 +37,6 @@ service cloud.firestore {
     match /estados_planta/{estadoId} {
       allow read, write: if true;
     }
-    match /caracteristicas_planta/{caracteristicaId} {
-      allow read, write: if true;
-    }    
 
 // Hortas
     match /hortas/{doc} {
@@ -38,16 +44,16 @@ service cloud.firestore {
 		// Canteiros
       match /canteiros/{canteiroID} {
         allow read, write: if true;
+        match /medicoes/{medicaoId} {
+          allow read, write: if true;
         }
+      }
     }    
     match /estados_canteiro/{estadoId} {
       allow read, write: if true;
     }
-    match /caracteristicas_canteiro/{caracteristicaId} {
-      allow read, write: if true;
-    }    
 
-// Manejos
+// Manejos, Eventos
     match /manejos/{doc} {
       allow read, write: if true;
       match /efeitos/{paramentroId} {
@@ -56,6 +62,12 @@ service cloud.firestore {
       match /entradas/{entradaId} {
       	allow read, write: if true;
       }
+    }
+    match /eventos/{eventoId} {
+    	allow read, write: if true;
+    }
+    match /efeitosEvento/{efeitoEventoId} {
+    	allow read, write: if true;
     }
 
 

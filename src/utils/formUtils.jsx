@@ -4,7 +4,6 @@ export const handleSelectIdNome = (
     list,
     idKey = "id",
     nomeKey = "nome",
-    form,
     setForm,
     fieldId,
     fieldNome,
@@ -13,11 +12,11 @@ export const handleSelectIdNome = (
   const selectedId = e.target.value;
   const selectedItem = list.find(i => i[idKey] === selectedId);
 
-  setForm({
-    ...form,
+  setForm(prev => ({
+    ...prev,
     [fieldId]: selectedId,
     [fieldNome]: selectedItem ? selectedItem[nomeKey] : "",
-  });
+  }));
 };
 
 export const renderOptions = ({
