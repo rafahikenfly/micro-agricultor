@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
 
   /* =================== HELPERS =================== */
   const hasAccess = (ambiente) => {
-    return user?.acessos?.[ambiente] === true;
+    return user?.acesso?.[ambiente] === true;
   };  
   
   /* =================== AUTH ACTIONS =================== */

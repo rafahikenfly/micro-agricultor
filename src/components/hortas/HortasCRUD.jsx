@@ -1,109 +1,85 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { hortaService } from "../../services/crud/hortaService";
 import HortaModal from "./HortaModal";
-import { db } from "../../firebase";
-import { Button, Col, Container, Row } from "react-bootstrap";
 import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../services/ui/crudUI";
-import { useAuth } from "../../services/auth/authContext";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
+
 
 export default function HortasCRUD() {
-    const { user } = useAuth();
-    if (!user) return <NoUser />
-  
+  const { user } = useAuth();
+  if (!user) return <NoUser />
+
   const [hortas, setHortas] = useState([]);
-  const [climas, setClimas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
-  
+
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
-
-
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = hortaService.subscribe(setHortas);
+    setLoading(true);
+
+    const unsub = hortaService.subscribe((data) => {
+      setHortas(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
-
-  useEffect(() => {
-    return db.collection("climas_hortas")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setClimas(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão da horta ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: hortaService,
     nomeEntidade: "horta",
-    masculino: true,
+    masculino: false, // "a horta"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
-  });  
-
+    setRegistroParaExcluir,
+    setShowToast,
+  });
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Nova Horta</Button>
+          <Button variant="outline-success" onClick={criar}>+ Nova horta</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          <ListaAcoes 
+          <ListaAcoes
             dados = {hortas}
-            campos = {[
-              {rotulo: "Nome", data: "nome",},
-              {rotulo: "Clima", data: "climaNome",},
-              {rotulo: "Apagado",   data: "isDeleted",  boolean: true},
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger"},
-              {toggle: "isArchived",
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
@@ -117,6 +93,7 @@ export default function HortasCRUD() {
       </Row>
 
       <HortaModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -124,23 +101,23 @@ export default function HortasCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        climas={climas}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
       {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
+
     </Container>
   );
 }

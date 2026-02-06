@@ -10,6 +10,7 @@ export function createCRUDService(
   {
     softDelete = true,
     useArchive = true,
+    collectionGroup = false,
   } = {}
 ){
   if (!collection) throw new Error("createCRUDService: collectionName é obrigatório")
@@ -18,6 +19,11 @@ export function createCRUDService(
     // função customizada
     if (typeof collection === "function") {
       return collection(db);
+    }
+
+    // collection group
+    if (collectionGroup) {
+      return db.collectionGroup(collection);
     }
 
     // subcoleção

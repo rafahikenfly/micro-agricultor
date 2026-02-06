@@ -5,6 +5,7 @@ import { Navbar, Nav, Container, NavDropdown } from "react-bootstrap";
 
 import EspeciesCRUD from "../components/especies/EspeciesCRUD";
 import HortasCRUD from "../components/hortas/HortasCRUD";
+import PlantasCRUD from "../components/plantas/PlantasCRUD";
 import ManejosCRUD from "../components/manejos/ManejosCRUD";
 import UsuariosCRUD from "../components/usuarios/UsuariosCRUD";
 import EstagiosEspecieCRUD from "../components/tabelas/estagios/EstagiosEspecieCRUD";
@@ -15,10 +16,12 @@ import VariedadesCRUD from "../components/variedades/variedadesCRUD";
 import CaracteristicasCRUD from "../components/tabelas/caracteristicas/CaracteristicasCRUD";
 import NoAccess from "../components/common/NoAccess";
 import Perfil from "../views/Perfil";
+import CanteirosCRUD from "../components/canteiros/CanteirosCRUD";
+import CategoriasCRUD from "../components/tabelas/categorias/CategoriasCRUD";
 
 function AppAdmin() {
   const {user} = useAuth();
-  if (!user?.acessos?.usuario) return <NoAccess ambiente={"admin"}/>;
+  if (!user?.acesso?.usuario) return <NoAccess ambiente={"admin"}/>;
 
   const [telaAtiva, setTelaAtiva] = useState("especies");
 
@@ -30,10 +33,16 @@ function AppAdmin() {
         return <VariedadesCRUD />;
       case "hortas":
         return <HortasCRUD />;
+      case "canteiros":
+        return <CanteirosCRUD />;
+      case "plantas":
+        return <PlantasCRUD />;
       case "manejos":
         return <ManejosCRUD />;
       case "usuarios":
         return <UsuariosCRUD />;
+      case "categorias_especie":
+        return <CategoriasCRUD />;
       case "caracteristicas":
         return <CaracteristicasCRUD />;
       case "estagiosEspecie":
@@ -73,6 +82,12 @@ function AppAdmin() {
               <NavDropdown.Item onClick={() => setTelaAtiva("hortas")}>
                 Gerenciar Hortas
               </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTelaAtiva("canteiros")}>
+                Gerenciar Canteiros
+              </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTelaAtiva("plantas")}>
+                Gerenciar Plantas
+              </NavDropdown.Item>
             </NavDropdown>
 
             {/* Espécies e Variedades */}
@@ -97,6 +112,9 @@ function AppAdmin() {
 
             {/* Estágios, Características */}
             <NavDropdown title="Configurações Agrícolas" id="nav-config">
+              <NavDropdown.Item onClick={() => setTelaAtiva("categorias_especie")}>
+                Categorias
+              </NavDropdown.Item>
               <NavDropdown.Item onClick={() => setTelaAtiva("estagiosEspecie")}>
                 Estágios
               </NavDropdown.Item>

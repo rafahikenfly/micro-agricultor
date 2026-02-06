@@ -13,7 +13,7 @@ import NoAccess from "../components/common/NoAccess";
 
 export default function AppUsuario() {
   const {user} = useAuth();
-  if (!user?.acessos?.usuario) return <NoAccess ambiente={ambiente} />;
+  if (!user?.acesso?.usuario) return <NoAccess ambiente={ambiente} />;
 
   const [hortas, setHortas] = useState([]);
 

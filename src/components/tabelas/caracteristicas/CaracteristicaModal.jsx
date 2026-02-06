@@ -1,29 +1,24 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
+import { validarCaracteristica } from "../../../domain/estados.rules";
+import { renderOptions } from "../../../utils/formUtils";
 import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
-export default function CaracteristicasPlantaModal({ show, onSave, onClose, data = {}, }) {
-  const [form, setForm] = useState({
-      nome: data?.nome || "",
-      descricao: data?.descricao || "",
-      unidade: data?.unidade || "",
-      longevidade: data?.longevidade || 0,
-      resolucao: data?.resolucao || 30,
-      aplicavel: data?.aplicavel || {}, 
-    }
-  );
+export default function CaracteristicaModal({ show, onSave, onClose, data = {}, }) {
+  const [form, setForm] = useState(validarCaracteristica(data))
 
   useEffect(() => {
-      if (data) setForm({
-        ...data,
-        aplicavel: data.aplicavel || {}
-      });
-    }, [data]);
+    if (!data) {
+      setForm(validarCaracteristica({}));   // nova caracteristica limpo
+    } else {
+      setForm(validarCaracteristica(data)); // edição
+    }
+  }, [data]);
   
     const salvar = () => {
       onSave({
         ...form,
-        aplicavel: form.aplicavel || {}
       });
     };
   
@@ -31,7 +26,7 @@ export default function CaracteristicasPlantaModal({ show, onSave, onClose, data
   return (
   <Modal show onHide={onClose} size="lg">
     <Modal.Header closeButton>
-      <Modal.Title>{data ? "Editar Característica de Canteiro" : "Nova Característica de Canteiro"}</Modal.Title>
+      <Modal.Title>{data ? "Editar Característica" : "Nova Característica"}</Modal.Title>
     </Modal.Header>
 
       <Modal.Body>
@@ -102,6 +97,21 @@ export default function CaracteristicasPlantaModal({ show, onSave, onClose, data
               value={form.resolucao}
               onChange={e => setForm({...form, resolucao: Number(e.target.value)})}
             />
+          </Form.Group>
+
+          <Form.Group className="mb-3">
+            <Form.Label>Cor da Tag</Form.Label>
+            <Form.Select
+              value={form.tagVariant}
+              onChange={e => setForm({...form, tagVariant: e.target.value})}
+              label="Cor da Tag"
+              required
+            >
+              {renderOptions({
+                list: VARIANTS,
+                placeholder: "Selecione a cor da tag",
+              })}
+            </Form.Select>
           </Form.Group>
 
         </Form>

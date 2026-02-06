@@ -15,19 +15,48 @@ export default function EspecieEstagiosTab({
   const [instrucoes, setInstrucoes] = useState("");
 
   const adicionar = () => {
-    const newValue = [...value, {
+    const novoEstagio = [...value, {
       estagioId: estagio.id,
       estagioNome: estagio.nome,
       plantavel: plantavel,
       instrucoes: instrucoes,
     }];
-    onChange(newValue)
+    onChange(novoEstagio)
   };
 
-  const remover =  (data, idx) => {
-    value.splice(idx, 1)
-    onChange(value)
+  const removerEstagio =  (data, idx) => {
+    const novoArray = [...value];
+    novoArray.splice(idx, 1)
+    onChange(novoArray)
   }
+
+  const moverEstagioParaCima = (data, idx) => {
+    if (idx <= 0) return;
+
+    const novoArray = [...value];
+    [novoArray[idx - 1], novoArray[idx]] =
+      [novoArray[idx], novoArray[idx - 1]];
+  
+    onChange(novoArray);
+  };
+
+  const moverEstagioParaBaixo = (data, idx) => {
+    if (idx >= value.length - 1) return;
+  
+    const novoArray = [...value];
+    [novoArray[idx], novoArray[idx + 1]] =
+      [novoArray[idx + 1], novoArray[idx]];
+  
+    onChange(novoArray);
+  };
+
+  const duplicarEstagio = (data, idx) => {
+    console.log(data)
+    setEstagio(estagios.find(e => e.id === data.estagioId));
+    setPlantavel(data.plantavel);
+    setInstrucoes(data.instrucoes);
+  }
+
 
   return (
     <>
@@ -51,7 +80,7 @@ export default function EspecieEstagiosTab({
         </Form.Select>
 
         <Form.Check 
-          value={plantavel}
+          checked={plantavel}
           label="Plantável"
           onChange={e => setPlantavel(e.target.checked)}
         />
@@ -59,9 +88,10 @@ export default function EspecieEstagiosTab({
       <InputGroup>
       <InputGroupText>Instruções de plantio</InputGroupText>
       <Form.Control
-        type="textarea"
+        as="textarea"
+        rows={3}
         value={instrucoes}
-        onchange={setInstrucoes}
+        onChange={(e) => setInstrucoes(e.target.value)}
       />
       </InputGroup>
 
@@ -72,12 +102,17 @@ export default function EspecieEstagiosTab({
       {/* LISTA */}
       <ListaAcoes
         dados={Object.values(value)}
-        campos={[
-          {rotulo: "Estágio", data: "estagioNome"},
-          {rotulo: "Plantável?", data: "plantavel", boolean: true},
+        colunas={[
+          {rotulo: "Estágio", dataKey: "estagioNome"},
+          {rotulo: "Plantável?", dataKey: "plantavel", boolean: true},
+          {rotulo: "Instruções", dataKey: "instrucoes"},
         ]}
         acoes={[
-          {rotulo: "Excluir", funcao: remover, variant: "danger"},
+          {rotulo: "▲", funcao: moverEstagioParaCima, variant: "outline-warning"},
+          {rotulo: "▼", funcao: moverEstagioParaBaixo, variant: "outline-warning"},
+          {rotulo: "Duplicar", funcao: duplicarEstagio, variant: "outline-success"},
+          {rotulo: "Excluir", funcao: removerEstagio, variant: "danger"},
+
         ]}
       />
     </>

@@ -1,115 +1,131 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
-import { useCrudUI } from "../../services/ui/crudUI";
-import PlantasModal from "./PlantasModal";
+import { useEffect, useState } from "react";
 import { plantasService } from "../../services/crud/plantasService";
+import { catalogosService } from "../../services/catalogosService";
+import PlantaModal from "./PlantaModal";
+import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
 
 
-function PlantasCRUD({ user }) {
-  if (!user) return <NoUser />;
+export default function PlantasCRUD() {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
 
   const [plantas, setPlantas] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [estados_planta, setEstados_planta] = useState([]);
+  const [estagios_especie, setEstagios_especie] = useState([]);
+  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
+    setLoading(true);
 
-    filtros = [
-        {field: "isDeleted", op: "==", value: false},
-    ]
-    const unsub = plantasService.subscribe(setPlantas, filtros);
+    const unsub = plantasService.subscribe((data) => {
+      setPlantas(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
 
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
+  useEffect(() => {
 
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do estágio de planta ${data.nome}?`, "danger", true, apagar);
-  };
+    let ativo = true;
+    setReading(true);
   
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
+    Promise.all([
+      catalogosService.getEstados_planta(),
+      catalogosService.getEstagios_especie(),
+    ]).then(([estp, este]) => {
+      if (!ativo) return;
+      setEstados_planta(estp);
+      setEstagios_especie(este)
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos da planta:", err);
+      showToast("Erro ao carregar catálogos.", "danger");
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, []);
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: plantasService,
     nomeEntidade: "planta",
-    masculino: false, // "a característica de planta"
+    masculino: false, // "a planta"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading || reading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Nova Planta</Button>
+          <Button variant="outline-success" onClick={criar}>+ Nova planta</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={plantas}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Descrição", data: "descricao" }
+            dados = {plantas}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Horta", dataKey: "hortaNome",},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: estados_planta,},
+              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: estagios_especie,},
+              {rotulo: "Apagado", dataKey: "isDeleted", boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
-              {toggle: "isArchived",
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
-      <PlantasModal
+      <PlantaModal
+        key={editando?.id}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -117,26 +133,23 @@ function PlantasCRUD({ user }) {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default PlantasCRUD;

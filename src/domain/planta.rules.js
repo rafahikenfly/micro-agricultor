@@ -1,7 +1,68 @@
+import { mergeComValidacao } from "../utils/rulesUtils";
+
 const estadoInicial = {
   id: "HLRvq5eExZAiKSZOcnaF",
   nome: "Prevista",
 }
+const aparenciaPadrao = {
+    fundo: "#4CAF50",
+    borda: "#1B5E20",
+    espessura: 2,
+    geometria: "circle",
+    vertices: [],
+};
+
+const plantaPadrao = {
+    aparencia: aparenciaPadrao,
+    ciclo: [
+//    cicloPadrao      
+    ],
+    descricao: "",
+    dimensao: { x: 1, y: 1, z: 0 },
+    posicao: { x: 0, y: 0, z: 0 },
+    estadoId: "",
+    estadoNome: "",
+    estagioId: "",
+    estagioNome: "",
+    canteiroId: "",
+    canteiroNome: "",
+    hortaId: "",
+    hortaNome: "",
+    nome: "Nova planta",
+    especieId: "",
+    especieNome: "",
+    variedadeId: "",
+    variedadeNome: ""}
+
+const cicloPadrao = {
+  estagioId: "",
+  estagioNome: "",
+  dimensao: {x: 0, y: 0, z: 0},
+  ambiente: {
+    regras: {
+      //    [caracteristicaId]: { min: 6, max: 10 },
+    }
+  },
+  tarefas: {
+    regras: [
+//    { caracteristicaId: $caracteristicaId,
+//      operador: ">=",
+//      limite: 4,
+//      manejos: [
+//        { ...manejoId: $manejoId, manejoNome: $manejoNome },
+//        ...
+//      ]
+//    }
+    ]},
+  transicoes: {
+    regras: [
+//    { caracteristicaId: $caracteristicaId,
+//      operador: ">=",
+//      limite: 4, }
+//      ...
+    ]},
+  };
+
 
 import { timestamp } from "../firebase";
 
@@ -208,4 +269,15 @@ export function plantarVariedade({especie, variedade, tecnica, canteiro, posicao
     variedadeNome: variedade.nome,
   }
   return novaPlanta
+}
+
+
+export function validarPlanta(dataObj) {
+    const valid = mergeComValidacao(plantaPadrao, dataObj);
+    return valid;
+}
+
+export function validarCiclo(dataObj) {
+    const valid = mergeComValidacao(cicloPadrao, dataObj);
+    return valid;
 }

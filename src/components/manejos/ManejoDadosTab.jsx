@@ -25,76 +25,76 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
      {/* ===== Tipo de Entidade (novo padrão) ===== */}
       <InputGroup className="mb-3">
         <InputGroup.Text style={{ width: "140px" }}>Aplicável a</InputGroup.Text>
-        <Form.Select
-          value={form.tipoEntidade}
-          onChange={e => setForm({ ...form, tipoEntidade: e.target.value })}
-        >
-          {renderOptions({
-            list: TIPOS_ENTIDADE,
-            loading: false,
-            placeholder: "Selecione a entidade",
-          })}
-        </Form.Select>
+        {TIPOS_ENTIDADE.map(te => (
+          <Form.Check
+            key={te.id}
+            label={te.nome}
+            checked={form.aplicavel?.[te.id] === true ?? false}
+            onChange={e => setForm({ ...form, aplicavel: { ...form.aplicavel, [te.id]: e.target.checked } })}
+          />
+        ))}
       </InputGroup>
       <InputGroup className="mb-3">
         <InputGroup.Text style={{ width: "140px" }}>Estado</InputGroup.Text>
         <Form.Select
-          disabled={(form.tipoEntidade) === "Horta"}
+          disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoOrigemId}
           onChange={e => handleSelectIdNome(e,{
-            list:
-              form.tipoEntidade === "Canteiro" ? estados_canteiro : 
-              form.tipoEntidade === "Planta" ? estados_planta : 
-              [],
+            list: form?.aplicavel.canteiro ? estados_canteiro :
+                  form?.aplicavel.planta ? estados_planta :
+                  [],
             setForm: setForm,
             fieldId: "estadoOrigemId",
             fieldNome: "estadoOrigemNome",
           })}
         >
           {renderOptions({
-            list: 
-              form.tipoEntidade === "Canteiro" ? estados_canteiro : 
-              form.tipoEntidade === "Planta" ? estados_planta : 
-              [],
+            list: form?.aplicavel.canteiro ? estados_canteiro :
+                  form?.aplicavel.planta ? estados_planta :
+                  [],
             loading,
             placeholder: "Nenhum estado de origem",
             nullOption: true,
           })}
         </Form.Select>
         <Form.Select
-          disabled={(form.tipoEntidade) === "Horta"}
+          disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoDestinoId}
           onChange={e => handleSelectIdNome(e,{
-            list:
-              form.tipoEntidade === "Canteiro" ? estados_canteiro : 
-              form.tipoEntidade === "Planta" ? estados_planta : 
-              [],
+            list: form?.aplicavel.canteiro ? estados_canteiro :
+                  form?.aplicavel.planta ? estados_planta :
+                  [],
             setForm: setForm,
             fieldId: "estadoDestinoId",
             fieldNome: "estadoDestinoNome",
           })}
         >
           {renderOptions({
-            list:
-              form.tipoEntidade === "Canteiro" ? estados_canteiro :
-              form.tipoEntidade === "Planta" ? estados_planta :
-              [],
+            list: form?.aplicavel.canteiro ? estados_canteiro :
+                  form?.aplicavel.planta ? estados_planta :
+                  [],
             loading,
             placeholder: "Nenhum estado de destino",
             nullOption: true,
           })}
         </Form.Select>
       </InputGroup>
+      <InputGroup>
+        <Form.Check
+          label="Tem efeitos?"
+          checked={form.temEfeitos}
+          onChange={e =>
+            setForm({ ...form, temEfeitos: e.target.checked })
+          }
+        />
+        <Form.Check
+          label="Requer Entrada"
+          checked={form.requerEntrada}
+          onChange={e =>
+            setForm({ ...form, requerEntrada: e.target.checked })
+          }
+        />
+      </InputGroup>
     </>
   );
 }
-
-/**
-      <Form.Check
-        label="Requer Entrada"
-        checked={form.requerEntrada}
-        onChange={e =>
-          setForm({ ...form, requerEntrada: e.target.checked })
-        }
-      />
-      */

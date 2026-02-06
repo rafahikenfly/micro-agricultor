@@ -1,58 +1,76 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
+import { validarEstagio } from "../../../domain/estados.rules";
+import { renderOptions } from "../../../utils/formUtils";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
-export default function EstagiosEspecieModal({ show, onSave, onClose, data, }) {
-  const [form, setForm] = useState({
-      nome: "",
-      descricao: "",
-    }
-  );
-
-  useEffect(() => {
-      if (data) setForm(data);
+export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, }) {
+    const [form, setForm] = useState(validarEstagio(data))
+  
+    useEffect(() => {
+      if (!data) {
+        setForm(validarEstagio({}));   // novo estagio limpo
+      } else {
+        setForm(validarEstagio(data)); // edição
+      }
     }, [data]);
-  
-    const salvar = () => {
-      onSave({
-        ...form,
-      });
-    };
-  
-  if (!show) return null;
-  return (
-  <Modal show onHide={onClose} size="lg">
-    <Modal.Header closeButton>
-      <Modal.Title>{data ? "Editar Estágio de Planta" : "Novo Estágio de Planta"}</Modal.Title>
-    </Modal.Header>
+    
+      const salvar = () => {
+        onSave({
+          ...form,
+        });
+      };
+    
+    if (!show) return null;
+    return (
+    <Modal show onHide={onClose} size="lg">
+      <Modal.Header closeButton>
+        <Modal.Title>{data ? "Editar Estágio de Planta" : "Novo Estágio de Planta"}</Modal.Title>
+      </Modal.Header>
 
-      <Modal.Body>
-        <Form onSubmit={salvar}>
+        <Modal.Body>
+          <Form onSubmit={salvar}>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Nome</Form.Label>
-            <Form.Control
-              value={form.nome}
-              onChange={e => setForm({...form, nome: e.target.value})}
-              required
-            />
-          </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Nome</Form.Label>
+              <Form.Control
+                value={form.nome}
+                onChange={e => setForm({...form, nome: e.target.value})}
+                required
+              />
+            </Form.Group>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Descrição</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              value={form.descricao}
-              onChange={e => setForm({...form, descricao: e.target.value})}
-            />
-          </Form.Group>
-        </Form>
-      </Modal.Body>
-      
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-        <Button variant="success" onClick={salvar}>Salvar</Button>
-      </Modal.Footer>
-    </Modal>
-  )
+            <Form.Group className="mb-3">
+              <Form.Label>Descrição</Form.Label>
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={form.descricao}
+                onChange={e => setForm({...form, descricao: e.target.value})}
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Select
+                value={form.tagVariant}
+                onChange={e => setForm({...form, tagVariant: e.target.value})}
+                label="Cor da Tag"
+                required
+              >
+                {renderOptions({
+                  list: VARIANTS,
+                  placeholder: "Selecione a cor da tag",
+                })}
+              </Form.Select>
+            </Form.Group>
+
+          </Form>
+        </Modal.Body>
+        
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="success" onClick={salvar}>Salvar</Button>
+        </Modal.Footer>
+      </Modal>
+    )
 }

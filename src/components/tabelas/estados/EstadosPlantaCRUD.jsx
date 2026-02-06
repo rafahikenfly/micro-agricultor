@@ -1,62 +1,50 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
+import { useEffect, useState } from "react";
 import { estadosPlantaService } from "../../../services/crud/estadosPlantaService";
 import EstadosPlantaModal from "./EstadosPlantaModal";
+import ListaAcoes from "../../common/ListaAcoes";
+import Loading from "../../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
+import { setToast } from "../../../services/ui/toast";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
 
-function EstadosPlantaCRUD() {
+export default function EstadosPlantaCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
-  const [estadosPlanta, setEstadosPlanta] = useState([]);
+  const [estados_planta, setEstados_planta] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = estadosPlantaService.subscribe(setEstadosPlanta);
+    setLoading(true);
+
+    const unsub = estadosPlantaService.subscribe((data) => {
+      setEstados_planta(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
-
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do manejo ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: estadosPlantaService,
     nomeEntidade: "estado de planta",
@@ -64,36 +52,35 @@ function EstadosPlantaCRUD() {
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Novo Estado de Planta</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo Estado de Canteiro</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={estadosPlanta}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Descrição", data: "descricao" },
-              { rotulo: "Apagado", data: "isDeleted", boolean: true },
+            dados = {estados_planta}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: VARIANTS},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -107,8 +94,8 @@ function EstadosPlantaCRUD() {
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
       <EstadosPlantaModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -116,26 +103,23 @@ function EstadosPlantaCRUD() {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default EstadosPlantaCRUD;

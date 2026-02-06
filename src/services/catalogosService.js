@@ -6,6 +6,7 @@ let cache = {
   estadosPlanta: null,
   CVJobs: null,
   categorias_especie: null,
+  canteiros: null,
   estagios_especie: null,
   estados_planta: null,
   estados_canteiro: null,
@@ -21,6 +22,16 @@ const fetchCollection = async (path) => {
     .get();
   return snap.docs.map(d => ({ id: d.id, ...d.data() }));
 };
+
+const fetchCollectionGroup = async (path) => {
+  const snap = await db
+    .collectionGroup(path)
+    .where("isDeleted", "==", false)
+    .orderBy("nome")
+    .get();
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};
+
 
 export const catalogosService = {
   async getEspecies() {
@@ -98,6 +109,14 @@ export const catalogosService = {
     }
     if (!filter) return cache.caracteristicas;
     return cache.caracteristicas.filter(item => item[filter.field] === filter.value);    
+  },
+
+    async getCanteiros(filter = null) {
+    if (!cache.canteiros) {
+      cache.canteiros = await fetchCollectionGroup("canteiros");
+    }
+    if (!filter) return cache.canteiros;
+    return cache.canteiros.filter(item => item[filter.field] === filter.value);    
   },
 
   // útil se um dia precisar forçar reload

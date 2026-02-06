@@ -1,18 +1,21 @@
+import { setToast } from "./toast";
+
 export function useCrudUI({
     crudService,
     nomeEntidade,
     masculino = true, // "o" ou "a"
     user,
   
-    // estados e setters
+    // estados
     editando,
+    registroParaExcluir,
+//    cancelarExclusao,
+
+    // setters
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    // feedback
-    showToast,
+    setRegistroParaExcluir, 
+    setShowToast,
   }) {
 
     if (!crudService) {
@@ -37,21 +40,17 @@ export function useCrudUI({
       try {
         if (data.id) {
           await crudService.update(editando.id, data, user);
-          showToast(
-            `${nomeCapitalizado} atualizad${masculino ? "o" : "a"} com sucesso`
-          );
+          setToast({ body: `${nomeCapitalizado} atualizad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
         } else {
           await crudService.create(data, user);
-          showToast(
-            `${nomeCapitalizado} criad${masculino ? "o" : "a"} com sucesso`
-          );
+          setToast({ body: `${nomeCapitalizado} criad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
         }
       } catch (err) {
         console.error(err);
-        showToast(
-          `Erro ao ${editando ? "atualizar" : "criar"} ${masculino ? "o" : "a"} ${nomeEntidade}`,
-          "danger"
-        );
+        setToast({
+          body: `Erro ao ${editando ? "atualizar" : "criar"} ${masculino ? "o" : "a"} ${nomeEntidade}`,
+          variant: "danger"
+        }, setShowToast);
       } finally {
         setShowModal(false);
         setEditando(null);
@@ -63,12 +62,13 @@ export function useCrudUI({
   
       try {
         await crudService.remove(registroParaExcluir.id, user);
-        showToast(
-          `${nomeCapitalizado} removid${masculino ? "o" : "a"} com sucesso`
-        );
+        setShowToast({ body: `${nomeCapitalizado} removid${masculino ? "o" : "a"} com sucesso` }, setShowToast);
       } catch (err) {
         console.error(err);
-        showToast(`Erro ao remover ${masculino ? "o" : "a"} ${nomeEntidade}`, "danger");
+        setShowToast({
+          body: `Erro ao remover ${masculino ? "o" : "a"} ${nomeEntidade}`,
+          variant: "danger"
+        }, setShowToast);
       } finally {
         cancelarExclusao();
       }
@@ -77,27 +77,46 @@ export function useCrudUI({
     const arquivar = async (data) => {
       try {
         await crudService.archive(data.id, user);
-        showToast(
-          `${nomeCapitalizado} arquivad${masculino === "o" ? "o" : "a"} com sucesso`
-        );
+        setShowToast({ body: `${nomeCapitalizado} arquivad${masculino === "o" ? "o" : "a"} com sucesso` }, setShowToast);
       } catch (err) {
         console.error(err);
-        showToast(`Erro ao arquivar ${masculino} ${nomeEntidade}`, "danger");
+        setShowToast({
+          body: `Erro ao arquivar ${masculino ? "o" : "a"} ${nomeEntidade}`,
+          variant: "danger"
+        }, setShowToast);
       }
     };
   
     const desarquivar = async (data) => {
       try {
         await crudService.restore(data.id, user);
-        showToast(
-          `${nomeCapitalizado} desarquivad${masculino === "o" ? "o" : "a"} com sucesso`
-        );
+        setShowToast({ body: `${nomeCapitalizado} desarquivad${masculino === "o" ? "o" : "a"} com sucesso` }, setShowToast);
       } catch (err) {
         console.error(err);
-        showToast(`Erro ao desarquivar ${masculino} ${nomeEntidade}`, "danger");
+        setShowToast({
+          body: `Erro ao desarquivar ${masculino ? "o" : "a"} ${nomeEntidade}`,
+          variant: "danger"
+        });
       }
     };
   
+    const apagarComConfirmacao = (data) => {
+      setRegistroParaExcluir(data);
+      setShowToast({
+        body: `Confirma a exclusão do ${nomeEntidade} ${data.nome}?`,
+        variant: "danger",
+        confirmacao: true,
+        onConfirm: apagar,
+        onCancel: cancelarExclusao,
+      });
+    };
+    
+    const cancelarExclusao = () => {
+      setRegistroParaExcluir(null);
+      setShowToast({show: false});
+    };
+
+
     return {
       criar,
       editar,
@@ -105,5 +124,7 @@ export function useCrudUI({
       apagar,
       arquivar,
       desarquivar,
+      apagarComConfirmacao,
+      cancelarExclusao,
     };
   }

@@ -13,8 +13,8 @@ import { plantasService } from "../services/crud/plantasService";
 import { NoUser } from "../components/common/NoUser";
 import { useAuth } from "../services/auth/authContext";
 
-import CanteirosModal from "../components/canteiros/CanteirosModal";
-import PlantasModal from "../components/plantas/plantasModal";
+import CanteiroModal from "../components/canteiros/CanteiroModal";
+import PlantaModal from "../components/plantas/plantaModal";
 import AcaoOffcanvas from "../components/actions/AcaoOffcanvas";
 import PlantarOffcanvas from "../components/actions/PlantarOffcanvas";
 import { MapPreview } from "../services/svg/SVGpreview";
@@ -604,7 +604,7 @@ const onLeaveCanteiro = () => {
 
       {/* ================= MODAL ================= */}
       {selecao.length > 0 && selecao[0].tipoEntidadeId === "canteiro" && (
-        <CanteirosModal
+        <CanteiroModal
           restrito={true}
           show={showEditModal}
           data={selecao[0].data}
@@ -613,7 +613,7 @@ const onLeaveCanteiro = () => {
         />
       )}
       {selecao.length > 0 && selecao[0].tipoEntidadeId === "planta" && (
-        <PlantasModal
+        <PlantaModal
           restrito={true}
           show={showEditModal}
           data={selecao[0].data}

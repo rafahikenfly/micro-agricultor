@@ -1,108 +1,115 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
+import { useEffect, useState } from "react";
 import { especiesService } from "../../services/crud/especiesService";
-import EspeciesModal from "./EspeciesModal";
-import { db } from "../../firebase";
+import { catalogosService } from "../../services/catalogosService";
+import EspecieModal from "./EspecieModal";
+import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
 import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
 
-function EspeciesCRUD() {
+
+export default function EspeciesCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [especies, setEspecies] = useState([]);
-  const [estagiosEspecie, setEstagiosEspecie] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [categorias_especie, setCategorias_especie] = useState([]);
+  const [estagios_especie, setEstagios_especie] = useState([]);
+  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = especiesService.subscribe(setEspecies);
+    setLoading(true);
+
+    const unsub = especiesService.subscribe((data) => {
+      setEspecies(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
 
   useEffect(() => {
-    return db.collection("estagios_planta") //TODO: ARRUMAR A SEMANTICA DA COLECAO ==> ESTAGIOS_ESPECIE
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setEstagiosEspecie(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
 
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão da espécie ${data.nome}?`, "danger", true, apagar);
-  };
+    let ativo = true;
+    setReading(true);
   
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
+    Promise.all([
+      catalogosService.getCategorias_especie(),
+      catalogosService.getEstagios_especie(),
+    ]).then(([cate, este]) => {
+      if (!ativo) return;
+      setCategorias_especie(cate);
+      setEstagios_especie(este);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos da espécie:", err);
+      showToast("Erro ao carregar catálogos.", "danger");
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, []);
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: especiesService,
     nomeEntidade: "espécie",
-    masculino: false,
+    masculino: true, // "a espécie"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading || reading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Nova Espécie</Button>
+          <Button variant="outline-success" onClick={criar}>+ Nova espécie</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={especies}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Categoria", data: "categoriaNome" },
-              { rotulo: "Apagado", data: "isDeleted", boolean: true },
+            dados = {especies}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: categorias_especie, },
+              {rotulo: "Estágios", dataKey: "ciclo", contar: true, },
+              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -116,8 +123,8 @@ function EspeciesCRUD() {
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
-      <EspeciesModal
+      <EspecieModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -125,27 +132,23 @@ function EspeciesCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        estagiosEspecie={estagiosEspecie}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default EspeciesCRUD;

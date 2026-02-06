@@ -1,32 +1,24 @@
-import { Modal, Tabs, Tab, Button } from "react-bootstrap";
 import { useState, useEffect } from "react";
+import { Modal, Tabs, Tab, Button } from "react-bootstrap";
+import { catalogosService } from "../../services/catalogosService";
+import { validarManejo } from "../../domain/manejo.rules";
 import ManejoDadosTab from "./ManejoDadosTab";
 import ManejoEfeitosTab from "./ManejoEfeitosTab";
 import EntradasTab from "../common/EntradasTab";
-import { catalogosService } from "../../services/catalogosService";
 
-export default function ManejoModal({ show, onSave, onClose, data = {}, showToast}) {
+export default function ManejoModal({ show, onSave, onClose, data = {}, setToast}) {
+  // Controle de tab
   const [tab, setTab] = useState("dados");
+  // Catalogos
   const [estados_planta, setEstados_planta] = useState([]);
   const [estados_canteiro, setEstados_canteiro] = useState([]);
   const [caracteristicas, setCaracteristicas] = useState([]);
   const [reading, setReading] = useState(false);
-
-  const [form, setForm] = useState({
-    descricao: data?.descricao || "",
-    efeitos: data?.efeitos || {},
-    entradas: data?.entradas || [],
-    estadoDestinoId: data?.estadoDestinoId || "",
-    estadoDestinoNome: data?.estadoDestinoNome || "",
-    estadoOrigemId: data?.estadoOrigemId || "",
-    estadoOrigemNome: data?.estadoOrigemNome || "",
-    nome: data?.nome || "",
-    requerEntrada: data?.requerEntrada || false,
-    tipoEntidade: data?.tipoEntidade || "Canteiro",
-  });
+  // Formulário
+  const [form, setForm] = useState(validarManejo(data));
 
   useEffect(() => {
-    if (data) setForm(data);
+    if (data) setForm(validarManejo(data));
   }, [data]);
 
   useEffect(() => {
@@ -48,7 +40,7 @@ export default function ManejoModal({ show, onSave, onClose, data = {}, showToas
     })
     .catch((err) => {
       console.error("Erro ao carregar catálogos do manejo:", err);
-      showToast("Erro ao carregar catálogos.", "danger");
+      setToast({ body: "Erro ao carregar catálogos.", variant: "danger" });
     })
     .finally(() => {
       if (ativo) setReading(false);
@@ -61,7 +53,7 @@ export default function ManejoModal({ show, onSave, onClose, data = {}, showToas
   const salvar = () => {
     onSave({
       ...form,
-    });
+    }, "manejo");
   };
 
   if (!show) return null;
@@ -87,7 +79,11 @@ export default function ManejoModal({ show, onSave, onClose, data = {}, showToas
             />
           </Tab>
 
-          <Tab eventKey="efeitos" title="Efeitos">
+          <Tab
+            eventKey="efeitos"
+            title="Efeitos"
+            disabled={!form.temEfeitos ?? true}
+          >
             <ManejoEfeitosTab 
               efeitos={form.efeitos || []}
               onChange={efeitos => setForm({ ...form, efeitos }) }
@@ -99,7 +95,7 @@ export default function ManejoModal({ show, onSave, onClose, data = {}, showToas
           <Tab
             eventKey="entradas"
             title="Entradas"
-            disabled={true || !form.requerEntrada}
+            disabled={!form.requerEntrada ?? true}
           >
             <EntradasTab
               value={form.entradas}

@@ -1,98 +1,79 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
+import { catalogosService } from "../../services/catalogosService";
 import PlantaDadosTab from "./PlantaDadosTab";
 import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
-import VetorTab from "../common/PosicaoTab";
+import VetorTab from "../common/VetorTab";
 import PlantaSistemaTab from "./PlantaSistemaTab";
+import { validarPlanta } from "../../domain/planta.rules";
 
-import { catalogosService } from "../../services/catalogosService";
-
-
-export default function PlantasModal({ show, onSave, onClose, data, restrito = false}) {
+export default function PlantaModal({ show, onSave, onClose, data, restrito = false, setToast}) {
+  // Controle de tab
   const [tab, setTab] = useState("dados");
+  // Catalogos
+  const [estados_planta, setEstados_planta] = useState([]);
+  const [estagios_especie, setEstagios_especie] = useState([]);
   const [especies, setEspecies] = useState([]);
   const [variedades, setVariedades] = useState([]);
-  const [estadosPlantas, setEstadosPlantas] = useState([]);
-  const [loadingCatalogos, setLoadingCatalogos] = useState(false);
-
-  const [form, setForm] = useState({
-    nome: data.nome || "",
-    descricao: data.descricao || "",
-    estadoId: data.estadoId || "",
-    estadoNome: data.estadoNome || "",
-    estagioId: data.estagioId || "",
-    estagioNome: data.estagioNome || "",
-    aparencia: data.aparencia || {
-      fundo: "#4CAF50",
-      borda: "#1B5E20",
-      espessura: 2,
-      elipse: false,
-      vertices: [],
-    },
-    dimensao: data.dimensao || {
-      x: 0,
-      y: 0,
-      z: 0,
-      confianca: 0,
-    },
-    posicao: data.posicao || {
-      x: 0,
-      y: 0,
-      z: 0,
-      confianca: 0,
-    },
-    especieId: data.especieId || "",
-    especieNome: data.especieNome || "",
-    variedadeId: data.variedadeId || "",
-    variedadeNome: data.variedadeNome || "",
-
-    // RESTRITO
-    canteiroId: data.canteiroId || "",
-    canteiroNome: data.canteiroNome || "",
-    hortaId: data.hortaId || "",
-    hortaNome: data.hortaNome || "",
-  }
-);
+  const [canteiros, setCanteiros] = useState([]);
+  const [reading, setReading] = useState(false);
+  // Formulário
+  const [form, setForm] = useState(validarPlanta(data));
 
   useEffect(() => {
-      if (data) setForm(data);
+    if (!data) {
+      setForm(validarPlanta({}));   // nova planta limpa
+    } else {
+      setForm(validarPlanta(data)); // edição
+    }
     }, [data]);
-  
-    const salvar = () => {
-      onSave({
-        ...form,
-      });
-    };
-  
+
+    // ========== CARREGAR DADOS ==========
   useEffect(() => {
     if (!show) return;
   
     let ativo = true;
-    setLoadingCatalogos(true);
+    setReading(true);
   
     Promise.all([
+      catalogosService.getEstados_planta(),
+      catalogosService.getEstagios_especie(),
       catalogosService.getEspecies(),
       catalogosService.getVariedades(),
-      catalogosService.getEstadosPlanta(),
-    ]).then(([esps, vars, estados]) => {
+      catalogosService.getCanteiros(),
+    ]).then(([estp, este, espe, vari, cant]) => {
       if (!ativo) return;
-  
-      setEspecies(esps);
-      setVariedades(vars);
-      setEstadosPlantas(estados);
-      setLoadingCatalogos(false);
+      setEspecies(espe);
+      setVariedades(vari);
+      setCanteiros(cant);
+      setEstados_planta(estp);
+      setEstagios_especie(este);
+      console.log("Catalogos planta carregados no modal.",estp,este);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos da planta:", err);
+      setToast({ body: "Erro ao carregar catálogos.", variant: "danger" });
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
     });
   
     return () => { ativo = false };
   }, [show]);
-    
 
+
+  const salvar = () => {
+    onSave({
+      ...form,
+    }, "planta");
+  };
+  
   if (!show) return null;
   return (
   <Modal show onHide={onClose} size="lg">
     <Modal.Header closeButton>
-      <Modal.Title>{data ? "Editar Planta" : "Novo Planta"}</Modal.Title>
+      <Modal.Title>{data ? "Editar Planta" : "Nova Planta"}</Modal.Title>
     </Modal.Header>
 
       <Modal.Body>
@@ -103,20 +84,18 @@ export default function PlantasModal({ show, onSave, onClose, data, restrito = f
             onSelect={(k) => k && setTab(k)}
             className="mb-3"
           >
-            <Tab eventKey="dados" title="Planta">
+            <Tab eventKey="dados" title="Canteiro">
               <PlantaDadosTab
                 form={form}
                 setForm={setForm}
-                estadosPlantas={estadosPlantas}
-                canteirosHorta={[]}
+                estados_planta={estados_planta}
+                estagios_especie={estagios_especie}
                 especies={especies}
+                canteiros={canteiros}
                 variedades={variedades}
-                loading={loadingCatalogos}
+                loading={reading}
               />
-            </Tab>
-            <Tab eventKey="confianca" title="Confiança">
-              TAB CONFIANCA
-            </Tab>
+           </Tab>
             <Tab eventKey="posicao" title="Posição">
               <VetorTab value={form.posicao} onChange={posicao => setForm({ ...form, posicao })} />
             </Tab>

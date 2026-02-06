@@ -1,34 +1,53 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Button, Form, Tabs, Tab } from "react-bootstrap";
+// import { catalogosService } from "../../services/catalogosService";
+import { validarHorta } from "../../domain/horta.rules";
 import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
 
-export default function HortaModal({ show, onClose, onSave, data, climas, }) {
-  const [tab, setTab] = useState("dados");
 
-  const [form, setForm] = useState({
-    nome: "",
-    descricao: "",
-    posicao: { lat: "", long: "" },
-    altitude: "",
-    climaId: "",
-    climaNome: "",
-    aparencia: {
-      fundo: "#4CAF50",
-      borda: "#1B5E20",
-      espessura: 2,
-      elipse: false,
-      vertices: [],
-    }
-  });
+export default function HortaModal({ show, onClose, onSave, data, setToast}) {
+  // Controle de tab
+  const [tab, setTab] = useState("dados");
+  // Catalogos
+  const [reading, setReading] = useState(false);
+  // Formulário
+  const [form, setForm] = useState(validarHorta(data));
 
   useEffect(() => {
-    if (data) setForm(data);
+    if (!data) {
+      setForm(validarHorta({}));   // nova horta limpa
+    } else {
+      setForm(validarHorta(data)); // edição
+    }
   }, [data]);
 
-  const salvar = () => {
-    const clima = climas.find(c => c.id === form.climaId);
+  useEffect(() => {
+    if (!show) return;
+  
+    let ativo = true;
+    setReading(true);
+  
+    Promise.all([
+//      catalogosService.getEstados_planta(),
+    ]).then(([plns, ]) => {
+      if (!ativo) return;
+  
+//      setEstados_planta(plns);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos da horta:", err);
+      setToast({ body: "Erro ao carregar catálogos.", variant: "danger" });
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, [show]);
 
+
+  const salvar = () => {
     onSave({
       ...form,
       posicao: {
@@ -36,8 +55,7 @@ export default function HortaModal({ show, onClose, onSave, data, climas, }) {
         long: Number(form.posicao.long)
       },
       altitude: Number(form.altitude),
-      climaNome: clima?.nome || ""
-    });
+    }, "horta");
   };
 
   if (!show) return null;
@@ -49,14 +67,14 @@ export default function HortaModal({ show, onClose, onSave, data, climas, }) {
       </Modal.Header>
 
       <Modal.Body>
-        <Tabs
-          activeKey={tab}
-          onSelect={(k) => setTab(k)}
-          className="mb-3"
-        >
-          {/* TAB DADOS */}
-          <Tab eventKey="dados" title="Dados">
-            <Form>
+        <Form>
+          <Tabs
+            activeKey={tab}
+            onSelect={(k) => setTab(k)}
+            className="mb-3"
+          >
+            {/* TAB DADOS */}
+            <Tab eventKey="dados" title="Dados">
               <Form.Group className="mb-3">
                 <Form.Label>Nome</Form.Label>
                 <Form.Control
@@ -126,51 +144,44 @@ export default function HortaModal({ show, onClose, onSave, data, climas, }) {
               </Form.Group>
 
               <Form.Group className="mb-3">
-                <Form.Label>Clima</Form.Label>
-                <Form.Select
-                  value={form.climaId}
+                <Form.Label>Orientação (graus)</Form.Label>
+                <Form.Control
+                  type="number"
+                  value={form.orientacao}
                   onChange={e =>
-                    setForm({ ...form, climaId: e.target.value })
+                    setForm({ ...form, orientacao: Number(e.target.value) })
                   }
-                >
-                  <option value="">Selecione o clima</option>
-                  {climas.map(c => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </Form.Select>
+                />
               </Form.Group>
-            </Form>
-          </Tab>
+            </Tab>
 
-          {/* TAB APARÊNCIA */}
-          <Tab eventKey="aparencia" title="Aparência">
-            <AparenciaTab
-              value={form.aparencia}
-              onChange={aparencia =>
-                setForm({ ...form, aparencia })
-              }
-            />
-          </Tab>
-          {/* TAB VERTICES */}
-          <Tab eventKey="vertices" title="Vértices">
-            <VerticesTab
-              value={form.aparencia.vertices}
-              onChange={vertices =>
-                setForm(prev => ({
-                  ...prev,
-                  aparencia: {
-                    ...prev.aparencia,
-                    vertices
-                  }
-                }))
-              }
-            />
-          </Tab>
-        </Tabs>
+            {/* TAB APARÊNCIA */}
+            <Tab eventKey="aparencia" title="Aparência">
+              <AparenciaTab
+                value={form.aparencia}
+                onChange={aparencia =>
+                  setForm({ ...form, aparencia })
+                }
+              />
+            </Tab>
+            {/* TAB VERTICES */}
+            <Tab eventKey="vertices" title="Vértices">
+              <VerticesTab
+                value={form.aparencia.vertices}
+                onChange={vertices =>
+                  setForm(prev => ({
+                    ...prev,
+                    aparencia: {
+                      ...prev.aparencia,
+                      vertices
+                    }
+                  }))
+                }
+              />
+            </Tab>
+          </Tabs>
+        </Form>
       </Modal.Body>
-
       <Modal.Footer>
         <Button variant="secondary" onClick={onClose}>
           Cancelar

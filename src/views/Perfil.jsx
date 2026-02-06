@@ -17,6 +17,7 @@ import UsuarioPreferenciasTab from "../components/usuarios/UsuarioPreferenciasTa
 import { AppToastConfirmacao, AppToastMensagem } from "../components/common/toast";
 import UsuarioAcessosTab from "../components/usuarios/UsuarioAcessosTab";
 import UsuarioAmbienteTab from "../components/actions/UsuarioAmbienteTab";
+import { validarUsuario } from "../domain/usuarios.rules"
 
 export default function Perfil() {
   const { user, login, logout } = useAuth();
@@ -29,13 +30,8 @@ export default function Perfil() {
   const [toastVariant, setToastVariant] = useState("success");
 
 
-  const [form, setForm] = useState({
-    nome: "",
-    apelido: "",
-    email: "",
-    ambienteAtivo: "",
-  });
-  const [acessos, setAcessos] = useState({
+  const [form, setForm] = useState(validarUsuario(user));
+  const [acesso, setAcesso] = useState({
     admin: false,
     usuario: true,
   });
@@ -44,17 +40,7 @@ export default function Perfil() {
   useEffect(() => {
     if (!user) return;
 
-    setForm({
-      nome: user.nome ?? "",
-      descricao: user.descricao ?? "",
-      apelido: user.apelido ?? "",
-      email: user.email ?? "",
-      ambienteAtivo: user.ambienteAtivo ?? "",
-    });
-    setAcessos({
-      admin: user.acessos?.admin || false,
-      usuario: user.acessos?.usuario ?? true,
-    });
+    setForm(validarUsuario(user));
   }, [user]);
 
   /* =================== HANDLERS =================== */
@@ -72,9 +58,9 @@ export default function Perfil() {
       email: user.email ?? "",
       ambienteAtivo: user.ambienteAtivo ?? "",
     });
-    setAcessos({
-      admin: user.acessos?.admin || false,
-      usuario: user.acessos?.usuario ?? true,
+    setAcesso({
+      admin: user.acesso?.admin || false,
+      usuario: user.acesso?.usuario ?? true,
     });
   };
 
@@ -86,14 +72,12 @@ export default function Perfil() {
 
     await db.collection("usuarios").doc(user.id).update({
       ...form,
-      acessos: acessos,
       updatedAt: timestamp(),
     });
 
     login({
       ...user,
       ...form,
-      acessos,
     });
 
     setSaving(false);
@@ -142,13 +126,13 @@ export default function Perfil() {
               <Tab eventKey="usuario" title="Usuário">
                 <UsuarioDadosTab
                   form={form}
-                  onChange={handleFieldChange}
+                  setForm={setForm}
                 />
               </Tab>
               <Tab eventKey="acessos" title="Acessos">
                 <UsuarioAcessosTab
-                  acessos={acessos}
-                  setAcessos={setAcessos}
+                  form={form}
+                  setForm={setForm}
                 />
               </Tab>
               <Tab eventKey="preferencias" title="Preferências">
@@ -156,7 +140,7 @@ export default function Perfil() {
               </Tab>
               <Tab eventKey="ambiente" title="Ambiente">
                 <UsuarioAmbienteTab
-                  acessos={acessos}
+                  acesso={acesso}
                   ambienteAtivo={form.ambienteAtivo}
                   onSelect={(ambiente)=>handleFieldChange("ambienteAtivo",ambiente)}
                 />

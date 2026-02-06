@@ -1,0 +1,11 @@
+- Um catálogo deve ser carregado sempre pelo elemento de UI que inicia a interação com o usuário.
+Ex: se um CRUD vai chamar um modal/offcanvas para fazer uma edição que contém vários tabs que
+dependem de load de catálogo, a abertura do modal é que vai carregar esses catálogos (não o CRUD,
+nem o tab).
+
+- Nenhum componente deve assinar chaves que não precise em tempo real. Isso é especialmente importante
+nos views, para garantir que haja o menor número de consultas possível. CRUDs devem assinar apenas a
+chave principal.
+
+
+--- ***

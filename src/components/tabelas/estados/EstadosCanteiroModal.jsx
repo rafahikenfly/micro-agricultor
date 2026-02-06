@@ -1,16 +1,19 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
+import { validarEstado } from "../../../domain/estados.rules";
+import { renderOptions } from "../../../utils/formUtils";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
 export default function EstadosCanteiroModal({ show, onSave, onClose, data = {}, }) {
-    const [form, setForm] = useState({
-        nome: data?.nome || "",
-        descricao: data?.descricao || "",
-      }
-    );
+    const [form, setForm] = useState(validarEstado(data))
   
     useEffect(() => {
-        if (data) setForm(data);
-      }, [data]);
+      if (!data) {
+        setForm(validarEstado({}));   // novo estado limpo
+      } else {
+        setForm(validarEstado(data)); // edição
+      }
+    }, [data]);
     
       const salvar = () => {
         onSave({
@@ -46,6 +49,21 @@ export default function EstadosCanteiroModal({ show, onSave, onClose, data = {},
                 onChange={e => setForm({...form, descricao: e.target.value})}
               />
             </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Select
+                value={form.tagVariant}
+                onChange={e => setForm({...form, tagVariant: e.target.value})}
+                label="Cor da Tag"
+                required
+              >
+                {renderOptions({
+                  list: VARIANTS,
+                  placeholder: "Selecione a cor da tag",
+                })}
+              </Form.Select>
+            </Form.Group>
+
           </Form>
         </Modal.Body>
         

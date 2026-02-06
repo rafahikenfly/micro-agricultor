@@ -1,97 +1,86 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
+import { useEffect, useState } from "react";
 import { usuariosService } from "../../services/crud/usuariosService";
-import UsuariosModal from "./UsuariosModal"
+import UsuarioModal from "./UsuarioModal"
+import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../services/ui/crudUI";
-import { useAuth } from "../../services/auth/authContext";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
+import { TIPOS_ACESSO } from "../../utils/consts/TIPOS_ACESSO";
 
-function UsuariosCRUD () {
+
+export default function UsuariosCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [usuarios, setUsuarios] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = usuariosService.subscribe(setUsuarios);
+    setLoading(true);
+
+    const unsub = usuariosService.subscribe((data) => {
+      setUsuarios(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
 
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do usuario ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
-
-  /* ================= CRUD HOOK ================= */
+  /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: usuariosService,
-    nomeEntidade: "usuário",
-    masculino: true,
+    nomeEntidade: "usuarios",
+    masculino: true, // "o usuario"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Novo Usuário</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo Usuário</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={usuarios}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Apelido", data: "apelido" },
-              { rotulo: "Apagado", data: "isDeleted", boolean: true },
+            dados = {usuarios}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Acessos", dataKey: "acesso", tagVariantList: TIPOS_ACESSO},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -105,8 +94,8 @@ function UsuariosCRUD () {
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
-      <UsuariosModal
+      <UsuarioModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -114,26 +103,23 @@ function UsuariosCRUD () {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default UsuariosCRUD;

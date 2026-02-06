@@ -1,13 +1,13 @@
 import { nowTimestamp, timestamp } from "../firebase";
 const estadoInicial = {
-  id: "HLRvq5eExZAiKSZOcnaF",
-  nome: "Prevista",
+  id: "Gcam9slyNqHMx2flaGfP",
+  nome: "Vazio",
 }
 const aparenciaPadrao = {
     fundo: "#4CAF50",
     borda: "#1B5E20",
     espessura: 2,
-    elipse: false,
+    geometria: "circle",
     vertices: [],
 };
 const vetorPadrao = {
@@ -15,6 +15,24 @@ const vetorPadrao = {
   y: 0,
   z: 0,
 };
+
+const canteiroPadrao = {
+  aparencia: aparenciaPadrao,
+  posicao: vetorPadrao,
+  dimensao: { x: 30, y: 30, z: 0},
+  estadoId: estadoInicial.id,
+  estadoNome: estadoInicial.nome,
+  nome: "Novo canteiro",
+  descricao: "",
+  hortaId: "",
+  hortaNome: "",
+  estadoAtual: {},
+}
+
+export const validarCanteiro = (dataObj = {}) => {
+    const valid = mergeComValidacao(canteiroPadrao, dataObj);
+    return valid;
+}
 
 /**
  * Aplica um manejo já registrado em um canteiro, retornando o canteiro modificado.

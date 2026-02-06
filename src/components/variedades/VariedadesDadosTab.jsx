@@ -1,18 +1,22 @@
 import { Form, FormGroup, InputGroup } from "react-bootstrap";
+import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
 
-export default function VariedadeDadosTab({ form, setForm, especies}) {
+export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
   return (
     <>
       <Form.Group>
         <Form.Select
           value={form.especieId}
-          onChange={e => setForm({ ...form, especieId: e.target.value, especieNome: especies.find(s => s.id === e.target.value).nome})}
+          onChange={e => handleSelectIdNome(e,{
+            list: especies,
+            setForm: setForm,
+          })}
         >
-          <option>Selecione</option>
-          {especies.map((s)=>(
-              <option key={s.id} value={s.id}>{s.nome}</option>
-              ))
-          }
+          {renderOptions({
+            list: especies,
+            loading,
+            placeholder: "Selecione a espécie",
+          })}
         </Form.Select>
       </Form.Group>
 

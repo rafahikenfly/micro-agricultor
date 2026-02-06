@@ -1,110 +1,127 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
-import { canteirosService } from "../../../services/crud/canteirosService";
-import { useCrudUI } from "../../../services/ui/crudUI";
-import CanteirosModal from "./CanteirosModal";
+import { useEffect, useState } from "react";
+import { canteirosService } from "../../services/crud/canteirosService";
+import { catalogosService } from "../../services/catalogosService";
+import CanteiroModal from "./CanteiroModal";
+import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
 
-function CanteirosCRUD({ user }) {
-  if (!user) return <NoUser />;
+
+export default function CanteirosCRUD() {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
 
   const [canteiros, setCanteiros] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const [estados_canteiro, setEstados_canteiro] = useState([]);
+  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = canteirosService.subscribe(setCanteiros);
+    setLoading(true);
+
+    const unsub = canteirosService.group().subscribe((data) => {
+      setCanteiros(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
 
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
+  useEffect(() => {
 
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do estágio de planta ${data.nome}?`, "danger", true, apagar);
-  };
+    let ativo = true;
+    setReading(true);
   
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
+    Promise.all([
+      catalogosService.getEstados_canteiro(),
+    ]).then(([estc, ]) => {
+      if (!ativo) return;
+      setEstados_canteiro(estc);
+    })
+    .catch((err) => {
+      console.error("Erro ao carregar catálogos do canteiro:", err);
+      showToast("Erro ao carregar catálogos.", "danger");
+    })
+    .finally(() => {
+      if (ativo) setReading(false);
+    });
+  
+    return () => { ativo = false };
+  }, []);
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: canteirosService,
     nomeEntidade: "canteiro",
-    masculino: true, // "a característica de planta"
+    masculino: true, // "o canteiro"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading || reading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Nova Característica</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo canteiro</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={canteiros}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Descrição", data: "descricao" }
+            dados = {canteiros}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Horta", dataKey: "hortaNome",},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: estados_canteiro,},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
-              {toggle: "isArchived",
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
                 variant: "secondary",
                 rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "light"
+                variantFalse: "dark"
               },
             ]}
           />
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
-      <CanteirosModal
+      <CanteiroModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -112,26 +129,23 @@ function CanteirosCRUD({ user }) {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default CanteirosCRUD;

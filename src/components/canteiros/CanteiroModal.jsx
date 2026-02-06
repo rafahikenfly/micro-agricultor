@@ -3,18 +3,26 @@ import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
 import CanteiroDadosTab from "./CanteiroDadosTab";
 import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
-import VetorTab from "../common/PosicaoTab";
+import VetorTab from "../common/VetorTab";
 import CanteiroSistemaTab from "./CanteiroSistemaTab";
 import { catalogosService } from "../../services/catalogosService";
+import { validarCanteiro } from "../../domain/canteiro.rules";
 
-export default function CanteirosModal({ show, onSave, onClose, data, restrito = false}) {
+export default function CanteiroModal({ show, onSave, onClose, data, setToast, restrito = false}) {
+  // Controle de tab
   const [tab, setTab] = useState("dados");
-  const [form, setForm] = useState({aparencia: {}, posicao: {}, dimensao: {}});
+  // Catalogos
   const [estados_canteiro, setEstados_canteiro] = useState([]);
   const [reading, setReading] = useState(false);
+  // Formulário
+  const [form, setForm] = useState(validarCanteiro(data));
 
   useEffect(() => {
-      if (data) setForm(data);
+    if (!data) {
+      setForm(validarCanteiro({}));   // novo canteiro limpa
+    } else {
+      setForm(validarCanteiro(data)); // edição
+    }
     }, [data]);
 
     // ========== CARREGAR DADOS ==========
@@ -32,7 +40,7 @@ export default function CanteirosModal({ show, onSave, onClose, data, restrito =
     })
     .catch((err) => {
       console.error("Erro ao carregar catálogos do canteiro:", err);
-      showToast("Erro ao carregar catálogos.", "danger");
+      setToast({ body: "Erro ao carregar catálogos.", variant: "danger" });
     })
     .finally(() => {
       if (ativo) setReading(false);

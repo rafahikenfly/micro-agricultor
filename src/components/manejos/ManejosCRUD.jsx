@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { manejoService } from "../../services/crud/manejoService";
 import ManejoModal from "./ManejoModal";
 import ListaAcoes from "../common/ListaAcoes";
+import Loading from "../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { db } from "../../firebase";
 import { useCrudUI } from "../../services/ui/crudUI";
 import { NoUser } from "../common/NoUser";
 import { useAuth } from "../../services/auth/authContext";
+import { setToast } from "../../services/ui/toast";
+import { TIPOS_ENTIDADE } from "../../utils/consts/TIPOS_ENTIDADE";
 
 
 export default function ManejosCRUD() {
@@ -15,70 +17,34 @@ export default function ManejosCRUD() {
   if (!user) return <NoUser />
 
   const [manejos, setManejos] = useState([]);
-  const [estadosCanteiro, setEstadosCanteiro] = useState([]);
-  const [estadosPlanta, setEstadosPlanta] = useState([]);
-  const [parametros, setParametros] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
-
-
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = manejoService.subscribe(setManejos);
+    setLoading(true);
+
+    const unsub = manejoService.subscribe((data) => {
+      setManejos(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
-
-  useEffect(() => {
-    return db.collection("estados_planta")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setEstadosPlanta(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
-  useEffect(() => {
-    return db.collection("estados_canteiro")
-      .orderBy("nome")
-      .onSnapshot(s =>
-        setEstadosCanteiro(s.docs.map(d => ({ id: d.id, ...d.data() })))
-      );
-  }, []);
-
-
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do manejo ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: manejoService,
     nomeEntidade: "manejo",
@@ -86,15 +52,15 @@ export default function ManejosCRUD() {
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
@@ -107,14 +73,15 @@ export default function ManejosCRUD() {
         <Col>
           <ListaAcoes
             dados = {manejos}
-            campos = {[
-              {rotulo: "Nome", data: "nome",},
-              {rotulo: "Aplicável à", data: "tipoEntidade",},
-              {rotulo: "Apagado", data: "isDeleted", boolean: true },
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Aplicável à", dataKey: "aplicavel", tagVariantList: TIPOS_ENTIDADE},
+              {rotulo: "Apagado", dataKey: "isDeleted", boolean: true },
+              
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -129,6 +96,7 @@ export default function ManejosCRUD() {
       </Row>
 
       <ManejoModal
+        key={editando ? editando.id : `create-${Date.now()}`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -136,21 +104,21 @@ export default function ManejosCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        showToast={showToast}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
       {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>

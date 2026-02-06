@@ -1,58 +1,44 @@
-import { Row, Col, Form } from "react-bootstrap";
 
-export default function UsuarioDadosTab({ form, onChange }) {
-  const handleChange = (field) => (e) => {
-    onChange(field, e.target.value);
-  };
+import { Form } from "react-bootstrap";
 
+export default function UsuarioDadosTab({ form, setForm, }) {
   return (
-    <>
-      <Row className="mb-3">
-        <Col md={6}>
-          <Form.Group controlId="perfilNome">
-            <Form.Label>Nome</Form.Label>
-            <Form.Control
-              value={form.nome}
-              onChange={handleChange("nome")}
-              required
-            />
-          </Form.Group>
-        </Col>
+      <>
+        <Form.Group className="mb-3">
+          <Form.Label>Nome</Form.Label>
+          <Form.Control
+            value={form.nome}
+            onChange={e => setForm({...form, nome: e.target.value})}
+            required
+          />
+        </Form.Group>
 
-        <Col md={6}>
-          <Form.Group controlId="perfilApelido">
-            <Form.Label>Apelido</Form.Label>
-            <Form.Control
-              value={form.apelido}
-              onChange={handleChange("apelido")}
-            />
-          </Form.Group>
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <Form.Group controlId="perfilDescricao">
-            <Form.Label>Sobre você</Form.Label>
-            <Form.Control
-              value={form.descricao}
-              onChange={handleChange("descricao")}
-            />
-          </Form.Group>
-        </Col>
-      </Row>
+            <Form.Group className="mb-3">
+              <Form.Label>Apelido</Form.Label>
+              <Form.Control
+                value={form.nomeExibicao}
+                onChange={e => setForm({...form, apelido: e.target.value})}
+                required
+              />
+            </Form.Group>
 
-      <Row>
-        <Col md={6}>
-          <Form.Group controlId="perfilEmail">
-            <Form.Label>Email</Form.Label>
-            <Form.Control
-              type="email"
-              value={form.email}
-              onChange={handleChange("email")}
-            />
-          </Form.Group>
-        </Col>
-      </Row>
+            <Form.Group className="mb-3">
+              <Form.Label>Descrição</Form.Label>
+              <Form.Control
+                value={form.descricao}
+                onChange={e => setForm({...form, descricao: e.target.value})}
+                required
+              />
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>email</Form.Label>
+              <Form.Control
+                value={form.email}
+                onChange={e => setForm({...form, email: e.target.value})}
+                required
+              />
+            </Form.Group>
     </>
-  );
+  )
 }

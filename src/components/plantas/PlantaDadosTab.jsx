@@ -2,7 +2,18 @@ import { Form, } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
 import { mudarVariedade } from "../../domain/planta.rules";
 
-export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], canteirosHorta = [], especies = [], variedades = [], loading}) {
+export default function PlantaDadosTab({
+  form,
+  setForm,
+  estados_planta=[],
+  estagios_especie=[],
+  canteiros=[],
+  especies=[],
+  variedades = [],
+  loading}) {
+
+  // TODO: filtrar os estágios pela espécie selecionada (ou pelo menos indicar quais são compatíveis)
+
   return (
     <>
       <Form.Group>
@@ -17,6 +28,7 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
         <Form.Label>Descrição</Form.Label>
         <Form.Control
           as="textarea"
+          rows={3}
           value={form.descricao}
           onChange={e => setForm({ ...form, descricao: e.target.value })}
         />
@@ -28,14 +40,14 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
           value={form.estadoId}
           onChange={e =>
             handleSelectIdNome(e, {
-              list: estadosPlantas,
+              list: estados_planta,
               setForm,
               fieldId: "estadoId",
               fieldNome: "estadoNome",
             })}
         >
           {renderOptions({
-            list: estadosPlantas,
+            list: estados_planta,
             loading,
             placeholder: "Selecione o estado",
           })}
@@ -46,16 +58,25 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
         <Form.Label>Canteiro</Form.Label>
         <Form.Select
           value={form.canteiroId}
-          onChange={e =>
+          onChange={e =>{
             handleSelectIdNome(e, {
-              list: canteirosHorta,
+              list: canteiros,
               setForm,
               fieldId: "canteiroId",
               fieldNome: "canteiroNome",
-            })}
+            });
+            handleSelectIdNome(e, {
+              list: canteiros,
+              setForm,
+              idKey: "hortaId",
+              nameKey: "hortaNome",
+              fieldId: "hortaId",
+              fieldNome: "hortaNome",
+            });
+            }}
         >
           {renderOptions({
-            list: canteirosHorta,
+            list: canteiros,
             loading,
             placeholder: "Selecione o canteiro",
           })}
@@ -76,6 +97,11 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
             const variedadesDaEspecie = variedades.filter((v) => v.especieId === e.target.value)
             if (variedadesDaEspecie.length === 1) {
               setForm (mudarVariedade(form, variedadesDaEspecie[0]))
+            } else {
+              setForm (prev => ({ ...prev,
+                variedadeId: "", variedadeNome: "",
+                estagioId: "", estagioNome: "",
+              }))
             }
           }}
         >
@@ -102,6 +128,21 @@ export default function PlantaDadosTab({ form, setForm, estadosPlantas = [], can
         </Form.Select>
       </Form.Group>
 
+      <Form.Group>
+        <Form.Label>Estagio</Form.Label>
+        <Form.Select
+          value={form.estagioId}
+          onChange={e => setForm({ ...form, estagioId: e.target.value })}
+        >
+          {renderOptions({
+            list: especies.find(e => e.id === form.especieId)?.ciclo || [],
+            loading,
+            valueKey: "estagioId",
+            labelKey: "estagioNome",
+            placeholder: "Selecione o estágio",
+          })}
+        </Form.Select>
+      </Form.Group>
     </>
   );
 }

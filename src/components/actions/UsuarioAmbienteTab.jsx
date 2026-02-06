@@ -1,7 +1,8 @@
 import { Container, Button, Row, Col } from "react-bootstrap";
+import { TIPOS_ACESSO } from "../../utils/consts/TIPOS_ACESSO";
 
 export default function UsuarioAmbienteTab({
-  acessos = {},
+  acesso = {},
   ambienteAtivo,
   onSelect,
 }) {
@@ -23,9 +24,7 @@ export default function UsuarioAmbienteTab({
     },
   ];
 
-  const ambientesDisponiveis = ambientes.filter(
-    (a) => acessos[a.key]
-  );
+  const ambientesDisponiveis = TIPOS_ACESSO.filter((a) => acesso[a.id]);
 
   if (!ambientesDisponiveis.length) {
     return (
@@ -39,20 +38,20 @@ export default function UsuarioAmbienteTab({
     <Container fluid>
       <Row className="justify-content-center">
         <Col md={8} className="d-grid gap-3">
-          {ambientesDisponiveis.map((ambiente) => (
+          {ambientesDisponiveis.map((modulo) => (
             <Button
-              key={ambiente.key}
+              key={modulo.id}
               size="lg"
               variant={
-                ambienteAtivo === ambiente.key
-                  ? ambiente.variant
+                ambienteAtivo === modulo.id
+                  ? modulo.variant
                   : "outline-secondary"
               }
               style={{ height: 100, fontSize: "1.2rem" }}
-              onClick={() => onSelect(ambiente.key)}
+              onClick={() => onSelect(modulo.id)}
             >
-              {ambiente.label}
-              {ambienteAtivo === ambiente.key && " ✓"}
+              {modulo.ambiente}
+              {ambienteAtivo === modulo.key && " ✓"}
             </Button>
           ))}
         </Col>

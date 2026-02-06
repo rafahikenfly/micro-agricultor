@@ -6,27 +6,28 @@ import {
     Card
   } from "react-bootstrap";
   
-function ListaAcoes ({campos, dados, acoes,}) {
+function ListaAcoes ({colunas, dados, acoes,}) {
   /**
    * Renderiza uma lista a partir de um array de dados, com campos configuráveis e ações.
    * - Um campo marcado como boolean renderiza um badge conforme o valor sim/não.
    * - Um campo marcado como contar renderiza a contagem de uma coleção no campo de valor.
-   * - Uma acao marcada como toogle (passando uma propriedade condicionante), renderiza um botão condicionado.
-   * @param campos array de objetos do tipo: {rotulo: String, data: String, boolean?: Boolean}
+   * - Um campo com tagVariantList renderiza um badge com a cor definida na prop tagVariant.
+   * - Um campo marcado como toogle (passando uma propriedade condicionante), renderiza um botão condicionado.
+   * @param colunas array de objetos do tipo: {rotulo: String, dataKey: String, rotulo?: String, boolean?: Boolean, toggle: string, tagVariantList: array}
    * @param dados array com os dados a serem representados na lista
    * @param acoes array de objetos do tipo: {rotulo: String, funcao: function, variant?: String, toggle?: String, rotuloFalse?: String, funcaoFalse: function, variantFalse: String }
    */
   const [ordem, setOrdem] = useState({
-    campo: null,      // ex: "nome"
+    orderKey: null,      // ex: "nome"
     direcao: "asc"    // "asc" | "desc"
   });
 
   const dadosOrdenados = useMemo(() => {
-    if (!ordem.campo) return dados;
+    if (!ordem.orderKey) return dados;
 
     return [...dados].sort((a, b) => {
-      const v1 = a[ordem.campo];
-      const v2 = b[ordem.campo];
+      const v1 = a[ordem.orderKey];
+      const v2 = b[ordem.orderKey];
 
       if (v1 == null) return 1;
       if (v2 == null) return -1;
@@ -44,8 +45,8 @@ function ListaAcoes ({campos, dados, acoes,}) {
   }, [dados, ordem]);
 
 
-  if (!Array.isArray(campos)) {
-    console.error("ListaCRUD: campos não é um array", campos);
+  if (!Array.isArray(colunas)) {
+    console.error("ListaCRUD: colunas não é um array", colunas);
     return null;
   }
   if (!Array.isArray(dados)) {
@@ -57,15 +58,15 @@ function ListaAcoes ({campos, dados, acoes,}) {
     return null;
   }
 
-  const handleOrdenar = (campo) => {
+  const handleOrdenar = (orderKey) => {
     setOrdem((prev) => {
-      if (prev.campo === campo) {
+      if (prev.orderKey === orderKey) {
         return {
-          campo,
+          orderKey,
           direcao: prev.direcao === "asc" ? "desc" : "asc"
         };
       }
-      return { campo, direcao: "asc" };
+      return { orderKey, direcao: "asc" };
     });
   };
 
@@ -76,14 +77,14 @@ function ListaAcoes ({campos, dados, acoes,}) {
           <Table bordered hover responsive>
             <thead>
               <tr>
-                {campos.map(campo => (
+                {colunas.map(col => (
                   <th
-                    key={campo.data}
-                    style={{ cursor: "pointer", userSelect: "none" }}
-                    onClick={() => handleOrdenar(campo.data)}
+                    key={col.dataKey}
+//                    style={{ cursor: "pointer", userSelect: "none" }}
+                    onClick={() => handleOrdenar(col.dataKey)}
                   >
-                    {campo.rotulo}
-                    {ordem.campo === campo.data && (
+                    {col.rotulo || col.dataKey}
+                    {ordem.orderKey === col.dataKey && (
                       <span className="ms-1">
                         {ordem.direcao === "asc" ? "▲" : "▼"}
                       </span>
@@ -94,33 +95,55 @@ function ListaAcoes ({campos, dados, acoes,}) {
               </tr>
             </thead>
             <tbody>
-              {dadosOrdenados.map((data, idx) => (
-                <React.Fragment key={data.id}>
+              {dadosOrdenados.map((dado, dado_idx) => (
+                <React.Fragment key={dado.id}>
                   <tr>
-                    {campos.map((campo, i) => {
-                      if (campo.boolean) return (
-                        <td key = {i}>
-                          <Badge bg={data[campo.data] ? "info" : "danger"}>{data[campo.data] ? "Sim" : "Não"}</Badge>
+                    {colunas.map((col, col_idx) => {
+                      if (col.boolean) return (
+                        <td key = {`${col.dataKey}-${col_idx}`}>
+                          <Badge bg={dado[col.dataKey] ? "info" : "danger"}>{dado[col.dataKey] ? "Sim" : "Não"}</Badge>
                         </td>
                       )
-                      if (campo.contar) return (
-                        <td key = {i}>{Object.values(data[campo.data]).length}</td> //TODO e se for um array?
+                      if (col.contar) return (
+                        <td key = {`${col.dataKey}-${col_idx}`}>{Object.values(dado[col.dataKey]).length}</td> //TODO e se for um array?
                       )
+                      if (col?.tagVariantList?.length > 0) {
+                        const rawValue = dado[col.dataKey];
+                        let badges = [];
+                        if (typeof rawValue === "object") {
+                          // {id1:true, id2: true...} ==> [id1, id2...]}
+                          badges = Object.keys(rawValue).filter(key => rawValue[key] === true);
+                        }
+                        else if (typeof rawValue === "string") {
+                          badges = [rawValue];
+                        }                         return (
+                          <td key={`${col.dataKey}-${col_idx}`}>
+                            {badges.map((item, idx) => {
+                              const badge = col.tagVariantList.find(tv => tv.id === item);
+                              return (
+                                <Badge key={`${col.dataKey}-${col_idx}-${idx}`} bg={badge?.tagVariant || "dark"} className="me-1">
+                                  {badge?.nome || item}
+                                </Badge>
+                              );
+                            })}
+                          </td>
+                        )
+                      }
                       return(
-                        <td key = {i}>{data[campo.data]}</td>
+                        <td key = {col_idx}>{dado[col.dataKey]}</td>
                       )
                       })}
                     <td>
                     {acoes.map((acao, i) => {
                       if (acao.toggle) return (
                         <Button
-                        key = {data[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
+                        key = {dado[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
                         size="sm"
-                        variant= {data[acao.toggle] ? acao?.variant || "primary" : acao?.variantFalse || "primary"}
+                        variant= {dado[acao.toggle] ? acao?.variant || "primary" : acao?.variantFalse || "primary"}
                         className="me-1"
-                        onClick={data[acao.toggle] ? () => acao.funcao(data, idx) : () => acao.funcaoFalse(data, idx)}
+                        onClick={dado[acao.toggle] ? () => acao.funcao(dado, dado_idx) : () => acao.funcaoFalse(dado, dado_idx)}
                       >
-                        {data[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
+                        {dado[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
                       </Button>
                       )
                       return (
@@ -129,7 +152,7 @@ function ListaAcoes ({campos, dados, acoes,}) {
                         size="sm"
                         variant= {acao?.variant || "primary"}
                         className="me-1"
-                        onClick={() => acao.funcao(data, idx)}
+                        onClick={() => acao.funcao(dado, dado_idx)}
                       >
                         {acao.rotulo}
                       </Button>

@@ -1,98 +1,86 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
+import { useEffect, useState } from "react";
 import { estagiosPlantaService } from "../../../services/crud/estagiosPlantaService";
 import EstagiosEspecieModal from "./EstagiosEspecieModal";
+import ListaAcoes from "../../common/ListaAcoes";
+import Loading from "../../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { useAuth } from "../../../services/auth/authContext";
 import { NoUser } from "../../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
+import { setToast } from "../../../services/ui/toast";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
-function EstagiosEspecieCRUD() {
-    const { user } = useAuth();
-    if (!user) return <NoUser />
-  
-  const [estagiosPlanta, setEstagiosPlanta] = useState([]);
+
+export default function EstagiosEspecieCRUD() {
+  const { user } = useAuth();
+  if (!user) return <NoUser />
+
+  const [estagios_especie, setEstagios_especie] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = estagiosPlantaService.subscribe(setEstagiosPlanta);
+    setLoading(true);
+
+    const unsub = estagiosPlantaService.subscribe((data) => {
+      setEstagios_especie(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
-
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do estágio de planta ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: estagiosPlantaService,
-    nomeEntidade: "estágio",
-    masculino: true, // "o estágio"
+    nomeEntidade: "estágio de planta",
+    masculino: true, // "o estágio de planta"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Novo Estágio de Planta</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo Estágio de Planta</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={estagiosPlanta}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Descrição", data: "descricao" },
-              { rotulo: "Apagado",   data: "isDeleted",  boolean: true},
+            dados = {estagios_especie}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: VARIANTS},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -106,8 +94,8 @@ function EstagiosEspecieCRUD() {
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
       <EstagiosEspecieModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -115,26 +103,23 @@ function EstagiosEspecieCRUD() {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default EstagiosEspecieCRUD;

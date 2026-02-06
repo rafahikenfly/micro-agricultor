@@ -1,99 +1,88 @@
-import React, { useEffect, useState } from "react";
-
-import ListaAcoes from "../../common/ListaAcoes";
-import { AppToastMensagem, AppToastConfirmacao } from "../../common/toast";
-import { Container, Row, Col, Button, } from "react-bootstrap";
+import { useEffect, useState } from "react";
 import { caracteristicasService } from "../../../services/crud/caracteristicasService";
-import CaracteristicasModal from "./CaracteristicasModal";
+import CaracteristicaModal from "./CaracteristicaModal";
+import ListaAcoes from "../../common/ListaAcoes";
+import Loading from "../../common/Loading";
+import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
+import { setToast } from "../../../services/ui/toast";
+import { VARIANTS } from "../../../utils/consts/VARIANTS";
+import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
 
-function CaracteristicasCRUD() {
+
+export default function CaracteristicasCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
-  
   const [caracteristicas, setCaracteristicas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToastMensagem, setShowToastMensagem] = useState(false);
-  const [showToastConfirmacao, setShowToastConfirmacao] = useState(false);
-  const [toastMsg, setToastMsg] = useState("");
-  const [toastVariant, setToastVariant] = useState("success");
+  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
-    const unsub = caracteristicasService.subscribe(setCaracteristicas);
+    setLoading(true);
+
+    const unsub = caracteristicasService.subscribe((data) => {
+      setCaracteristicas(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
     return unsub;
   }, []);
-
-  /* ================= TOAST/MODAL ================= */
-  const showToast = (msg, variant = "success", confirmacao = false) => {
-    setToastMsg(msg);
-    setToastVariant(variant);
-    setShowToastMensagem(!confirmacao);
-    setShowToastConfirmacao(confirmacao);
-  };
-
-  const confirmarExclusao = (data) => {
-    setRegistroParaExcluir(data);
-    showToast(`Confirma a exclusão do estágio de canteiro ${data.nome}?`, "danger", true, apagar);
-  };
-  
-  const cancelarExclusao = () => {
-    setRegistroParaExcluir(null);
-    setShowToastConfirmacao(false);
-  };
 
   /* ================= CRUD ================= */
   const {
     criar,
     editar,
     atualizar,
-    apagar,
     arquivar,
     desarquivar,
+    apagarComConfirmacao,
   } = useCrudUI({
     crudService: caracteristicasService,
-    nomeEntidade: "característica de canteiro",
-    masculino: false, // "a característica de planta"
+    nomeEntidade: "característica",
+    masculino: false, // "a característica"
     user,
   
     editando,
+    registroParaExcluir,
+    
     setEditando,
     setShowModal,
-    registroParaExcluir,
-    cancelarExclusao,
-  
-    showToast,
+    setRegistroParaExcluir,
+    setShowToast,
   });
-  
   /* ================= RENDER ================= */
+  if (loading) return <Loading />
   return (
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button onClick={criar}>+ Nova Característica</Button>
+          <Button variant="outline-success" onClick={criar}>+ Nova Característica</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          {/* ================= LISTA ================= */}
           <ListaAcoes
-            dados={caracteristicas}
-            campos={[
-              { rotulo: "Nome", data: "nome" },
-              { rotulo: "Descrição", data: "descricao" },
-              { rotulo: "Apagado", data: "isDeleted", boolean: true },
+            dados = {caracteristicas}
+            colunas = {[
+              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: VARIANTS},
+              {rotulo: "Aplicável a", dataKey: "aplicavel", tagVariantList: TIPOS_ENTIDADE},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
-            acoes={[
-              { rotulo: "Editar", funcao: editar, variant: "warning" },
-              { rotulo: "Excluir", funcao: confirmarExclusao, variant: "danger" },
+            acoes = {[
+              {rotulo: "Editar", funcao: editar, variant: "warning"},
+              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
                 funcao: desarquivar,
@@ -107,9 +96,8 @@ function CaracteristicasCRUD() {
         </Col>
       </Row>
 
-      {/* ================= MODAL ================= */}
-      <CaracteristicasModal
-        key={editando ? editando.id : `create-${Date.now()}`}
+      <CaracteristicaModal
+        key={editando ? editando.id : `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -117,26 +105,23 @@ function CaracteristicasCRUD() {
         }}
         onSave={atualizar}
         data={editando}
+        setToast={(toast) => setToast(toast, setShowToast)}
       />
-
-      {/* ================= TOASTS ================= */}
+      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
       <AppToastMensagem
-        show={showToastMensagem}
-        onClose={() => setShowToastMensagem(false)}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && !showToast.confirmacao}
+        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
+        body={showToast.body}
+        variant={showToast.variant}
       />
-
       <AppToastConfirmacao
-        show={showToastConfirmacao}
-        onCancel={cancelarExclusao}
-        onConfirm={apagar}
-        message={toastMsg}
-        variant={toastVariant}
+        show={showToast.show && showToast.confirmacao}
+        onCancel={showToast.onCancel}
+        onConfirm={showToast.onConfirm}
+        body={showToast.body}
+        variant={showToast.variant}
       />
 
     </Container>
   );
 }
-
-export default CaracteristicasCRUD;
