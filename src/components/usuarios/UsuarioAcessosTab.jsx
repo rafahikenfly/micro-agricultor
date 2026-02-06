@@ -19,16 +19,3 @@ export default function UsuarioAcessosTab({ form, setForm }) {
     </>
   );
 }
-
-/*
-
-      <Form.Group>
-        <Form.Check
-          type="checkbox"
-          id="acesso-usuario"
-          label="Usuário"
-          checked={!!form.acesso?.usuario}
-          onChange={(e) => setForm({...form, acesso: {...form.acesso, usuario: e.target.checked}})}
-        />
-      </Form.Group>
-*/
