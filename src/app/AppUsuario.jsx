@@ -3,7 +3,7 @@ import { useAuth} from "../services/auth/authContext"
 
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
 import { Container, Nav, Navbar, Dropdown } from "react-bootstrap";
-import Mapa from "../views/Mapa";
+import { Mapa } from "../views/mapa/Mapa";
 import Calendario from "../views/Calendario";
 import Perfil from "../views/Perfil";
 
@@ -16,7 +16,6 @@ export default function AppUsuario() {
   if (!user?.acesso?.usuario) return <NoAccess ambiente={ambiente} />;
 
   const [hortas, setHortas] = useState([]);
-
   const [hortaSelecionada, setHortaSelecionada] = useState(null);
 
   /* ================== CARREGAR DADOS ================== */
@@ -124,7 +123,7 @@ export default function AppUsuario() {
       <Container className="mt-4">
         <Routes>
           <Route index element={<Navigate to="mapa" />} />
-          <Route path="mapa" element={<Mapa user={user} hortaId={hortaSelecionada?.id}/>} setHortaSelecionadaNavbar={setHortaSelecionada}/>
+          <Route path="mapa" element={<Mapa user={user} horta={hortaSelecionada}/>} setHortaSelecionadaNavbar={setHortaSelecionada}/>
           <Route path="calendario" element={<Calendario />} />
           <Route path="perfil" element={<Perfil />} />
         </Routes>

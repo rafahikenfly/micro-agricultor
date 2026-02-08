@@ -1,31 +1,40 @@
-import SVGBussola from "../services/svg/SVGbussola";
-import SVGMapa from "../services/svg/SVGmapa";
+import SVGBussola from "../../services/svg/SVGbussola";
+import SVGMapa from "../../services/svg/SVGmapa";
 import { useState, useEffect,  } from "react";
-import { db, timestamp } from "../firebase"; // ajuste o caminho conforme seu projeto
+import { db, timestamp } from "../../firebase"; // ajuste o caminho conforme seu projeto
 
-import { AppToastMensagem, AppToastConfirmacao } from "../components/common/toast";
+import { AppToastMensagem, AppToastConfirmacao } from "../../components/common/toast";
 
-import SVGElemento from "../services/svg/SVGelemento";
-import ToolBar from "../components/common/ToolBar";
+import SVGEntidade from "../../services/svg/SVGelemento";
 
-import { canteirosService } from "../services/crud/canteirosService";
-import { plantasService } from "../services/crud/plantasService";
-import { NoUser } from "../components/common/NoUser";
-import { useAuth } from "../services/auth/authContext";
+import { canteirosService } from "../../services/crud/canteirosService";
+import { plantasService } from "../../services/crud/plantasService";
+import { NoUser } from "../../components/common/NoUser";
+import { useAuth } from "../../services/auth/authContext";
 
-import CanteiroModal from "../components/canteiros/CanteiroModal";
-import PlantaModal from "../components/plantas/plantaModal";
-import AcaoOffcanvas from "../components/actions/AcaoOffcanvas";
-import PlantarOffcanvas from "../components/actions/PlantarOffcanvas";
-import { MapPreview } from "../services/svg/SVGpreview";
-import { getBoundingBox, getMapPointFromPoint, } from "../services/svg/useMapTransform";
-import { plantarVariedade } from "../domain/planta.rules";
-import { eventosService, } from "../services/crud/eventosService";
-import CanteiroCustomTab from "../components/actions/CanteiroCustomTab";
+import CanteiroModal from "../../components/canteiros/CanteiroModal";
+import PlantaModal from "../../components/plantas/plantaModal";
+import AcaoOffcanvas from "../../components/actions/AcaoOffcanvas";
+import PlantarOffcanvas from "../../components/actions/PlantarOffcanvas";
+import { SVGPreview } from "../../services/svg/SVGPreview";
+import { getBoundingBox, getMapPointFromPoint, } from "../../services/svg/useMapTransform";
+import { plantarVariedade } from "../../domain/planta.rules";
+import { eventosService, } from "../../services/crud/eventosService";
+import CanteiroCustomTab from "../../components/actions/CanteiroCustomTab";
 import { Tab } from "react-bootstrap";
-import { montarLogEvento } from "../domain/evento.rules";
-import { criarCanteiro } from "../domain/canteiro.rules";
+import { montarLogEvento } from "../../domain/evento.rules";
+import { criarCanteiro } from "../../domain/canteiro.rules";
+import { MapaProvider } from "./MapaContexto";
 
+
+/**
+ * - carregar dados (horta, canteiros, plantas)
+- regras de domínio (plantar, criar canteiro, eventos)
+- modais
+- offcanvas
+- toast
+- auth
+ */
 
 export default function Mapa({ hortaId }) {
   const { user } = useAuth();
@@ -46,8 +55,7 @@ export default function Mapa({ hortaId }) {
   const [mapDrag, setMapDrag] = useState(null);             // o que fazer no drag
   const [hasZooming, setHasZooming] = useState(true);
   const [gridArray, setGridArray] = useState([]);           // array com os tamanhos dos grids
-  const [activeTool, setActiveTool] = useState(null);
-  const [view, setView] = useState({
+  /**/const [view, setView] = useState({
     x: 0,
     y: 0,
     offset: {
@@ -324,22 +332,22 @@ export default function Mapa({ hortaId }) {
     return Math.round(normalizado / STEP) * STEP;
   }
   /* ================== DRAG HANDLERS ================== */
-  const novoCanteiro = (data, elipse) => {
+  const novoCanteiro = (data, geometria) => {
     try {
       const novoCanteiro = criarCanteiro({
         horta,
         nome: "Novo Canteiro",
         descricao: "Criado a partir do mapa",
         posicao: {
-          x: Math.round(data.x),
-          y: Math.round(data.y),
+          x: Math.round(data.x + (data.width/2)),
+          y: Math.round(data.y + (data.height/2)),
         },
         dimensao: {
           x: Math.round(data.width),
           y: Math.round(data.height),
         },
         aparencia: {
-          elipse: elipse || false,
+          geometria: geometria,
         },
       })
       setEditando(novoCanteiro, "canteiro");
@@ -410,87 +418,6 @@ const onLeaveCanteiro = () => {
     return <div>Carregando horta...</div>;
   }
 
-  const tools = [
-    // MOUSE WHEEL
-    { id: "zoom",
-      label: "🔎",
-      toggle: hasZooming,
-      onClick:  () => {
-        setHasZooming(!hasZooming);
-      }
-    },
-    { id: "grid",
-      label: "⬛",
-      toggle: gridArray.length > 0,
-      onClick: () => {
-        setGridArray(gridArray.length > 0 ? [] : [10, 50]);
-      }
-    },
-    // MOUSE DRAG
-    { id: "pan",
-      label: "🖐️",
-      onClick:  () => {
-        setModo("edit");
-        setActiveTool("pan");
-      }
-    },
-    { id: "retangulo",
-      label: "▭",
-      onClick: ()=>{
-        setModo("draw");
-        setMapDrag({
-          onDrag: (a)=>novoCanteiro(a),
-          previewTag: "rect",
-          style: {
-            fill: "rgba(13,110,253,0.3)",
-            stroke: "#0d6efd",
-            strokeDasharray: "2",
-          },
-          limit: true,
-        });
-        setActiveTool("retangulo");
-      },
-    },
-    { id: "circulo",
-      label: "◯",
-      onClick: ()=>{
-        setModo("draw");
-        setMapDrag({
-          onDrag: (a)=>novoCanteiro(a, true),
-          previewTag: "circle",
-          style: {
-            fill: "rgba(13,110,253,0.3)",
-            stroke: "#0d6efd",
-            strokeDasharray: "2",
-          },
-          limit: true,
-        })
-        setActiveTool("circulo");
-      },
-    },
-    // MOUSE CLICK
-    { id: "plantar",
-      label: "🌱",
-      toggle: modo === "plant",
-      onClick: () => {
-        setShowPlantar(true);
-        setActiveTool("plantar");
-      }
-    },
-    {id: "apagar",
-      label: "🗑️",
-      onClick: () => {
-        if (selecao.length === 0) {
-          showToast("Selecione ao menos um registro para apagar.", "warning");
-        }
-        else {
-          showToast(`Apagar ${selecao.length} registros?`, "warning", true);
-          setModo("view");
-        }
-      }
-    },
-  ];
-
   const customTabsObs = {
     canteiro: <Tab eventKey="custom" title="Canteiro">
       <CanteiroCustomTab
@@ -505,6 +432,8 @@ const onLeaveCanteiro = () => {
 
   if (!mapWorld) return null;
   return (
+    <MapaProvider>
+
     <div
       style={{
         position: "relative",   // para a bússola ficar relativa a esta div
@@ -514,11 +443,7 @@ const onLeaveCanteiro = () => {
         background: "#f0f0f0",
       }}
     >
-      {/* Barra de Ferramentas */}
-      <ToolBar
-        tools={tools}
-        activeTool={activeTool}
-      />
+
 
       
       {/* Conteúdo SVG (horta) */}
@@ -534,7 +459,7 @@ const onLeaveCanteiro = () => {
       >
         {/* Canteiros */}
         {renderArrCanteiros.map(c=>(
-            <SVGElemento
+            <SVGEntidade
               key={c.id}
               item={c}
               onClick={onClickCanteiro}
@@ -545,7 +470,7 @@ const onLeaveCanteiro = () => {
         ))}
         {/* Plantas */}
         {renderArrPlantas.map(c=>(
-            <SVGElemento
+            <SVGEntidade
               key={c.id}
               item={c}
               onClick={onClickPlanta}
@@ -554,7 +479,7 @@ const onLeaveCanteiro = () => {
         ))}
         {/* Preview */}
         {modo === "plant" &&
-        <MapPreview
+        <SVGPreview
           preview={mapPreview}
           view={view}
         />}
@@ -638,5 +563,6 @@ const onLeaveCanteiro = () => {
       />
 
     </div>
+    </MapaProvider>
   );
 }

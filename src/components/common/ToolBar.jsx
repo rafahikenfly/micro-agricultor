@@ -1,6 +1,6 @@
-import { ButtonGroup, Button } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 
-export default function ToolBar({ tools, activeTool, toggle = false }) {
+export default function ToolBar({ tools, activeTool }) {
 
   return (
     <div
@@ -17,7 +17,7 @@ export default function ToolBar({ tools, activeTool, toggle = false }) {
       {tools.map(tool => (
         <Button
           key={tool.id}
-          variant={activeTool === tool.id || tool.toggle ? "primary" : "outline-secondary"}
+          variant={activeTool === tool.id ? "primary" : "outline-secondary"}
           onClick={() => tool.onClick(tool)}
         >
           {tool.label}

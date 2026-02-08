@@ -71,7 +71,7 @@ export default function CanteirosCRUD() {
     desarquivar,
     apagarComConfirmacao,
   } = useCrudUI({
-    crudService: canteirosService,
+    crudService: canteirosService.group(),
     nomeEntidade: "canteiro",
     masculino: true, // "o canteiro"
     user,

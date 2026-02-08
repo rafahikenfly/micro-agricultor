@@ -1,4 +1,5 @@
 import { nowTimestamp, timestamp } from "../firebase";
+import { mergeComValidacao } from "../utils/rulesUtils";
 const estadoInicial = {
   id: "Gcam9slyNqHMx2flaGfP",
   nome: "Vazio",

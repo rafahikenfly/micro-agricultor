@@ -4,7 +4,7 @@ import { catalogosService } from "../../services/catalogosService";
 import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
 
-export default function PlantarOffcanvas({ show, onClose, onConfirm }) {
+export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel }) {
   const [especie, setEspecie] = useState(null);
   const [variedade, setVariedade] = useState(null);
   const [tecnica, setTecnica] = useState(null);
@@ -68,6 +68,11 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm }) {
     onConfirm(configPlantio);
     onClose();
   };
+
+  const handleCancel =() => {
+    onCancel();
+    onClose();
+  }
 
   return (
     <Offcanvas show={show} onHide={onClose} placement="end">
@@ -194,7 +199,15 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm }) {
               disabled={!especie || !tecnica || !variedade}
               onClick={handleConfirm}
             >
-              Entrar em modo plantio
+              Plantar
+            </Button>
+          </div>
+          <div className="d-grid">
+            <Button
+              variant="danger"
+              onClick={handleCancel}
+            >
+              Cancelar
             </Button>
           </div>
         </Form>

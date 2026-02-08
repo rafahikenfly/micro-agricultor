@@ -30,7 +30,7 @@ export default function VariedadeCicloAccordion({
         [key]: {
           ...item[key],
           regras: {
-            ...(replace ? {} : item[key].regras || {}),
+            ...(replace ? {} : item[key]?.regras || {}),
             ...payload,
           }
         }
@@ -52,12 +52,7 @@ export default function VariedadeCicloAccordion({
     });
     onChange(novoCiclo);
   };
-
-  const removerCaracteristica = (data) => {
-    const {[data.caracteristicaId]: removed, ...novoObjCaracteristicas} = form.caracteristicas;
-    onChange({...form, caracteristicas: novoObjCaracteristicas}, index);
-  }
-
+  console.log("form", form)
   return (
     <Accordion defaultActiveKey={null} className="mt-3">
       {data.map((f, idx) => (
@@ -75,65 +70,71 @@ export default function VariedadeCicloAccordion({
                 <InputGroup>
                   <InputGroup.Text>X</InputGroup.Text>
                   <Form.Control
-                    type="number"
-                    placeholder="0"
+                    placeholder="X"
                     value={form[idx]?.dimensao?.x ?? 0}
-                    onChange={(e) =>
-                      setForm(
-                        {
-                          ...form[idx],
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      const novoCiclo = data.map((item, i) => {
+                        if (i !== idx) return item;
+                        return {
+                          ...item,
                           dimensao: {
-                            ...form[idx].dimensao,
-                            x: Number(e.target.value)
+                            ...(item.dimensao || {}),
+                            x: value,
                           }
-                        },
-                        "estagio"
-                      )
-                    }
+                        };
+                      });
+
+                      onChange(novoCiclo);
+                    }}
                   />
                 </InputGroup>
 
                 <InputGroup>
                   <InputGroup.Text>Y</InputGroup.Text>
                   <Form.Control
-                    type="number"
-                    placeholder="0"
+                    placeholder="Y"
                     value={form[idx]?.dimensao?.y ?? 0}
-                    onChange={(e) =>
-                      setForm(
-                        {
-                          ...form[idx],
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      const novoCiclo = data.map((item, i) => {
+                        if (i !== idx) return item;
+                        return {
+                          ...item,
                           dimensao: {
-                            ...form[idx].dimensao,
-                            y: Number(e.target.value)
+                            ...(item.dimensao || {}),
+                            y: value,
                           }
-                        },
-                        "estagio"
-                      )
-                    }
+                        };
+                      });
+
+                      onChange(novoCiclo);
+                    }}
                   />
                 </InputGroup>
 
                 <InputGroup>
                   <InputGroup.Text>Z</InputGroup.Text>
                   <Form.Control
-                    type="number"
-                    placeholder="0"
+                    placeholder="Z"
                     value={form[idx]?.dimensao?.z ?? 0}
-                    onChange={(e) =>
-                      setForm(
-                        {
-                          ...form[idx],
+                    onChange={(e) => {
+                      const value = Number(e.target.value);
+                      const novoCiclo = data.map((item, i) => {
+                        if (i !== idx) return item;
+                        return {
+                          ...item,
                           dimensao: {
-                            ...form[idx].dimensao,
-                            z: Number(e.target.value)
+                            ...(item.dimensao || {}),
+                            z: value,
                           }
-                        },
-                        "estagio"
-                      )
-                    }
+                        };
+                      });
+
+                      onChange(novoCiclo);
+                    }}
                   />
-                </InputGroup>
+                  </InputGroup>
 
               </div>
             </Form.Group>

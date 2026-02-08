@@ -1,5 +1,6 @@
 import { Form, FormGroup, InputGroup } from "react-bootstrap";
-import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
+import { handleSelectWithRule, renderOptions } from "../../utils/formUtils";
+import { alteraEspecieDaVariedade } from "../../domain/variedades.rules";
 
 export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
   return (
@@ -7,15 +8,19 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
       <Form.Group>
         <Form.Select
           value={form.especieId}
-          onChange={e => handleSelectIdNome(e,{
+          onChange={e => handleSelectWithRule(e,{
             list: especies,
             setForm: setForm,
+            regra: alteraEspecieDaVariedade,
+            refEntityKey: "especie",
+            targetEntityKey: "variedade",
           })}
         >
           {renderOptions({
             list: especies,
             loading,
             placeholder: "Selecione a espécie",
+            isOptionDisabled: (a)=>(a?.ciclo || []).length === 0
           })}
         </Form.Select>
       </Form.Group>
@@ -43,7 +48,7 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
             <FormGroup >
               <Form.Label>X</Form.Label>
               <Form.Control
-                  value={form.espacamento.x}
+                  value={form?.espacamento?.x || 0}
                   onChange={e =>
                     setForm(prev => ({ ...prev, espacamento: {
                         ...prev.espacamento, x: Number(e.target.value)
@@ -55,7 +60,7 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
             <FormGroup>
               <Form.Label>Y</Form.Label>
               <Form.Control
-                  value={form.espacamento.y}
+                  value={form?.espacamento?.y || 0}
                   onChange={e =>
                     setForm(prev => ({ ...prev, espacamento: {
                         ...prev.espacamento, y: Number(e.target.value)
@@ -67,7 +72,7 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
             <FormGroup>
               <Form.Label>Z</Form.Label>
               <Form.Control
-                  value={form.espacamento.z}
+                  value={form?.espacamento?.z || 0}
                   onChange={e =>
                     setForm(prev => ({ ...prev, espacamento: {
                         ...prev.espacamento, z: Number(e.target.value)

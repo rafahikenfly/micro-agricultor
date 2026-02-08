@@ -18,7 +18,6 @@ export default function VariedadeModal({ show, onSave, onClose, data, setToast, 
   const [reading, setReading] = useState(false);
   // Formulário
   const [form, setForm] = useState(validarVariedade(data));
-  const [cicloEspecie, setCicloEspecie] = useState([]);
 
   useEffect(() => {
     if (!data) {
@@ -27,22 +26,6 @@ export default function VariedadeModal({ show, onSave, onClose, data, setToast, 
       setForm(validarVariedade(data)); // edição
     }
   }, [data]);
-
-  useEffect(() => {
-  if (!form?.especieId) {
-    setCicloEspecie([]);
-    return;
-  }
-
-  const especieSelecionada = especies.find( e => e.id === form.especieId );
-
-  if (!especieSelecionada) {
-    setCicloEspecie([]);
-    return;
-  }
-  setCicloEspecie(especieSelecionada.ciclo || []);
-
-}, [form.especieId, especies]);
 
     // ========== CARREGAR DADOS ==========
   useEffect(() => {
@@ -74,23 +57,11 @@ export default function VariedadeModal({ show, onSave, onClose, data, setToast, 
 
 
   const salvar = () => {
+    console.log(form)
     onSave({
       ...form,
     }, "variedade");
   };
-
-    const atualizaCiclo = (data, idx) => {
-      setForm(prev => {
-        const novoCiclo = [...prev.ciclo];
-        novoCiclo[idx] = data;
-        novoCiclo[idx].estagioId ??= cicloEspecie[idx].estagioId
-        novoCiclo[idx].estagioNome ??= cicloEspecie[idx].estagioNome
-        return {
-          ...prev,
-          ciclo: novoCiclo
-        };
-      })
-    }
   
   if (!show) return null;
   return (

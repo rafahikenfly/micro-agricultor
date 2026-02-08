@@ -132,13 +132,20 @@ export function createCRUDService(
       return docRef;
     },
     async update(id, data, user = { tipo: "usuario", id: "anônimo" },) {
-      const col = getCollection();
-      return col.doc(id).update({
-        ...data,
-        updatedAt: timestamp(),
-        version: increment(1),
-        updatedBy: {nome: user.nome, id: user.id}
-      });
+      if (collectionGroup) {
+        console.error("update não funciona com collectionGroup")
+        return;
+      }
+      else {
+        const col = getCollection();
+        return col.doc(id).update({
+          ...data,
+          updatedAt: timestamp(),
+          version: increment(1),
+          updatedBy: {nome: user.nome, id: user.id}
+        });
+
+      }
     },
 
     /**

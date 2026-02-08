@@ -205,7 +205,6 @@ export default function SVGMapa({
   const polygonPoints = vertices.map(v => `${v.x},${v.y}`).join(" ");
 
   if (!mapWorld) return;
-  console.log(view.scale)
   return (
     <svg
       viewBox={`0 0 ${mapWorld.diagonal} ${mapWorld.diagonal}`}

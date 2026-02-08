@@ -1,16 +1,14 @@
-export const handleSelectIdNome = (
-  e,
-  {
+export const handleSelectIdNome = (e, {
     list,
-    idKey = "id",
-    nomeKey = "nome",
     setForm,
     fieldId,
     fieldNome,
+    idKey = "id",
+    nomeKey = "nome",
   }
 ) => {
   const selectedId = e.target.value;
-  const selectedItem = list.find(i => i[idKey] === selectedId);
+  const selectedItem = list.find(i => String(i[idKey]) === String(selectedId));
 
   setForm(prev => ({
     ...prev,
@@ -39,7 +37,7 @@ export const renderOptions = ({
         {placeholder}
       </option>
 
-      {list.map((item) => {
+      {(list || []).map((item) => {
         const disabled =
           (disabledKey && item[disabledKey]) ||
           (isOptionDisabled && isOptionDisabled(item));
@@ -56,4 +54,27 @@ export const renderOptions = ({
       })}
     </>
   );
+};
+
+export function handleSelectWithRule(e, {
+  list,
+  setForm,
+  regra,          // função de domínio
+  refEntityKey,
+  targetEntityKey,
+  idKey = "id",   // campo id padrão
+}) {
+  const selectedId = e.target.value;
+  const selectedItem = list.find(i => String(i[idKey]) === String(selectedId));
+  if (!selectedItem) throw new Error (`Não foi encontrado ${refEntity} com ${idKey} ${selectedId} em ${list}`)
+
+  
+  setForm(prev => {
+    const novoData = regra({
+      [refEntity]: selectedItem,
+      [targetEntity]: prev,   // padrão do seu domínio
+    });
+
+    return { ...novoData }; // garante nova referência
+  });
 };
