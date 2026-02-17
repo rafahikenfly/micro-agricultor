@@ -6,7 +6,7 @@ import VerticesTab from "../common/VerticesTab";
 import VetorTab from "../common/VetorTab";
 import CanteiroSistemaTab from "./CanteiroSistemaTab";
 import { catalogosService } from "../../services/catalogosService";
-import { validarCanteiro } from "../../domain/canteiro.rules";
+import { validarCanteiro } from "@domain/canteiro.rules";
 
 export default function CanteiroModal({ show, onSave, onClose, data, setToast, restrito = false}) {
   // Controle de tab

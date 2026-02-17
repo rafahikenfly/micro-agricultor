@@ -2,15 +2,15 @@ import { useEffect, useState } from "react";
 import { Form, Button, Alert } from "react-bootstrap";
 import { catalogosService } from "../../services/catalogosService";
 import { renderOptions } from "../../utils/formUtils";
-import { manejarCanteiro, monitorarCanteiro } from "../../domain/canteiro.rules";
-import { manejarPlanta} from "../../domain/planta.rules";
 import { useAuth } from "../../services/auth/authContext";
 import { canteirosService } from "../../services/crud/canteirosService";
 import { plantasService } from "../../services/crud/plantasService";
 import { eventosService, } from "../../services/crud/eventosService";
 import { historicoEfeitosService, } from "../../services/crud/historicoEfeitosService";
-import { calcularEfeitosDoEvento, montarLogEvento } from "../../domain/evento.rules";
-import { db } from "../../firebase";
+import { manejarCanteiro, monitorarCanteiro } from "@domain/canteiro.rules";
+import { manejarPlanta} from "@domain/planta.rules";
+import { calcularEfeitosDoEvento, montarLogEvento } from "@domain/evento.rules";
+import { db, nowTimestamp, } from "../../firebase";
 
 export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
   const { user } = useAuth();
@@ -70,7 +70,8 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
         entidadeManejada = manejarCanteiro ({
           canteiro: entidade,
           manejo: manejoSelecionado,
-          eventoId: eventoRef.id
+          eventoId: eventoRef.id,
+          timestamp: nowTimestamp(),
         });
         entidadeRef = canteirosService.forParent(entidade.hortaId).getRefById(entidade.id);
       } else if (tipoEntidadeId === "planta") {

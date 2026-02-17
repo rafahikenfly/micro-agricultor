@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
-import { validarUsuario } from "../../domain/usuarios.rules";
+import { validarUsuario } from "@domain/usuarios.rules";
 import UsuarioDadosTab from "./UsuarioDadosTab";
 import UsuarioAcessosTab from "./UsuarioAcessosTab";
 

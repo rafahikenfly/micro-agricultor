@@ -17,7 +17,7 @@ import UsuarioPreferenciasTab from "../components/usuarios/UsuarioPreferenciasTa
 import { AppToastConfirmacao, AppToastMensagem } from "../components/common/toast";
 import UsuarioAcessosTab from "../components/usuarios/UsuarioAcessosTab";
 import UsuarioAmbienteTab from "../components/actions/UsuarioAmbienteTab";
-import { validarUsuario } from "../domain/usuarios.rules"
+import { validarUsuario } from "@domain/usuarios.rules"
 
 export default function Perfil() {
   const { user, login, logout } = useAuth();

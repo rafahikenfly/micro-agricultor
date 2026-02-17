@@ -39,14 +39,14 @@ export function useCrudUI({
     const atualizar = async (data) => {
       try {
         if (data.id) {
-          await crudService.update(editando.id, data, user);
+          await crudService.update(crudService.getRefById(editando.id), data, user);
           setToast({ body: `${nomeCapitalizado} atualizad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
         } else {
           await crudService.create(data, user);
           setToast({ body: `${nomeCapitalizado} criad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
         }
       } catch (err) {
-        console.error(err);
+        console.error(err,data,user);
         setToast({
           body: `Erro ao ${editando ? "atualizar" : "criar"} ${masculino ? "o" : "a"} ${nomeEntidade}`,
           variant: "danger"

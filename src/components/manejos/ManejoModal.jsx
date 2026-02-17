@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Tabs, Tab, Button } from "react-bootstrap";
 import { catalogosService } from "../../services/catalogosService";
-import { validarManejo } from "../../domain/manejo.rules";
+import { validarManejo } from "@domain/manejo.rules";
 import ManejoDadosTab from "./ManejoDadosTab";
 import ManejoEfeitosTab from "./ManejoEfeitosTab";
 import EntradasTab from "../common/EntradasTab";

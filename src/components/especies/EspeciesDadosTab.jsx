@@ -1,38 +1,20 @@
-import { Form, InputGroup } from "react-bootstrap";
-import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
+import { Form } from "react-bootstrap";
+import { handleSelectIdNome, renderOptions, StandardInput } from "../../utils/formUtils";
+import BaseTab from "../common/BaseTab";
 
 export default function EspecieDadosTab({ form, setForm, categorias_especie = [], loading}) {
   return (
-    <Form className="p-3">
-      <Form.Group>
-        <Form.Label>Nome</Form.Label>
+    <BaseTab
+    form = {form}
+    setForm = {setForm}>
+      <StandardInput label="Nome Científico">
         <Form.Control
-          value={form.nome}
-          onChange={e => setForm({ ...form, nome: e.target.value })}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Nome Científico</Form.Label>
-        <Form.Control
-          as="textarea"
           value={form.nomeCientifico}
           onChange={e => setForm({ ...form, nomeCientifico: e.target.value })}
         />
-      </Form.Group>
+      </StandardInput>
+      <StandardInput label="Categoria">
 
-      <Form.Group>
-        <Form.Label>Descrição</Form.Label>
-        <Form.Control
-          as="textarea"
-          value={form.descricao}
-          onChange={e => setForm({ ...form, descricao: e.target.value })}
-        />
-      </Form.Group>
-
-      <Form.Group>
-        <Form.Label>Categoria</Form.Label>
-        {}
         <Form.Select
           value={form.categoriaId}
           onChange={e =>
@@ -49,7 +31,7 @@ export default function EspecieDadosTab({ form, setForm, categorias_especie = []
             placeholder: "Selecione a categoria",
           })}
         </Form.Select>
-      </Form.Group>
-    </Form>
+      </StandardInput>
+    </BaseTab>
   );
 }

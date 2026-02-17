@@ -5,7 +5,7 @@ import EspecieDadosTab from "./EspeciesDadosTab";
 import EspecieEstagiosTab from "./EspecieEstagiosTab";
 import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
-import { validarEspecie } from "../../domain/especie.rules";
+import { validarEspecie } from "@domain/especie.rules";
 
 export default function EspecieModal({ show, onSave, onClose, data, setToast, restrito = false}) {
   // Controle de tab
@@ -90,10 +90,9 @@ export default function EspecieModal({ show, onSave, onClose, data, setToast, re
               />
             </Tab>
             <Tab eventKey="aparencia" title="Aparência Padrão">
-              <AparenciaTab value={form.aparencia} onChange={aparencia => setForm({ ...form, aparencia })} />
-            </Tab>
-            <Tab eventKey="vertices" title="Vértices">
-              <VerticesTab value={form.aparencia?.vertices} onChange={vertices => setForm(prev => ({...prev, aparencia: {...prev.aparencia,vertices}}))} />
+              <AparenciaTab
+                formAparencia={form.aparencia}
+                setFormAparencia={(aparencia) => setForm({ ...form, aparencia })} />
             </Tab>
           </Tabs>
         </Form>

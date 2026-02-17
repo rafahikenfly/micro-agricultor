@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
-import { validarEstado } from "../../../domain/estados.rules";
+import { validarEstado } from "@domain/estados.rules";
 import { renderOptions } from "../../../utils/formUtils";
 import { VARIANTS } from "../../../utils/consts/VARIANTS";
 

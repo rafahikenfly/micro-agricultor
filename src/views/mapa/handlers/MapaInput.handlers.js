@@ -35,13 +35,15 @@ export function createMapaInputHandler(engine, state) {
       }
 
       // TRACK MOUSE (preview, snap, hover, etc)
-      const pt = svg.createSVGPoint();
-      pt.x = e.clientX;
-      pt.y = e.clientY;
-
-      const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
-
-      engine.setMousePos(cursor);
+      if (state.actionConfig?.preview?.show) {
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+  
+        const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
+  
+        engine.setMousePos(cursor);
+      }
     }
   };
 }

@@ -5,9 +5,13 @@ export default function MapaToolbar() {
   const {
     state,
     isPlantMode,
-    showActionPanel,
+    isEditMode,
+    isViewMode,
     openConfigPanel,
     activatePlantTool,
+    activateMonitorTool,
+    activateInspectTool,
+    activateHandleTool,
     isForceRotate,
     activateRotateTool,
     isForcePan,
@@ -44,9 +48,8 @@ export default function MapaToolbar() {
       id: "plantar",
       label: "🌱",
       onClick: !isPlantMode ? activatePlantTool
-        : !showActionPanel ? openConfigPanel
+        : !state.showConfigPanel ? openConfigPanel
         : resetTools
-
     },
     {
       id: "pan",
@@ -58,7 +61,28 @@ export default function MapaToolbar() {
       label: "R",
       onClick: isForceRotate ? resetTools : activateRotateTool,
     },
+    {
+      id: "monitor",
+      label: "M",
+      onClick: state.activeTool !== "monitor" ? activateMonitorTool
+        : !state.showConfigPanel ? openConfigPanel
+        : resetTools
+    },
+    {
+      id: "inspect",
+      label: "I",
+      onClick: state.activeTool !== "inspect"  ? activateInspectTool
+        : !state.showConfigPanel ? openConfigPanel
+        : resetTools
+    },
 
+    {
+      id: "handle",
+      label: "H",
+      onClick:  state.activeTool !== "handle"  ? activateHandleTool
+        : !state.showConfigPanel ? openConfigPanel
+        : resetTools
+    },
   ];
 
   return <ToolBar tools={tools} activeTool={state.activeTool} />;

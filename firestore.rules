@@ -7,7 +7,7 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-// Características de histórico
+// Características para histórico
     match /caracteristicas/{caracteristicaId} {
       allow read, write: if true;
     }    
@@ -44,11 +44,14 @@ service cloud.firestore {
 		// Canteiros
       match /canteiros/{canteiroID} {
         allow read, write: if true;
-        match /medicoes/{medicaoId} {
-          allow read, write: if true;
-        }
       }
-    }    
+    }
+    // Canteiros Collection Group
+    match /{path=**}/canteiros/{canteiroId} {
+      allow read, write: if true;
+      allow read, write: if true;
+    }
+    // Canteiros (estados)
     match /estados_canteiro/{estadoId} {
       allow read, write: if true;
     }
@@ -66,17 +69,20 @@ service cloud.firestore {
     match /eventos/{eventoId} {
     	allow read, write: if true;
     }
-    match /efeitosEvento/{efeitoEventoId} {
+    match /historicoEfeitos/{historicoEfeitoId} {
     	allow read, write: if true;
     }
 
 
 // Jobs
-		match /cvQueue/{jobId} {
+		match /cvJobRuns/{jobRunId} {
     	allow read, write: if true;
     }
-		match /cvJobs/{jobId} {
+		match /cvJobSpecs/{jobSpecId} {
     	allow read, write: if true;
+    }
+    match /cvModelos/{modeloId} {
+	    allow read, write: if true;
     }
 
 

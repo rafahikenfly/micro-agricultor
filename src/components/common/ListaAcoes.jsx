@@ -78,10 +78,7 @@ function ListaAcoes ({colunas, dados, acoes,}) {
             <thead>
               <tr>
                 {colunas.map(col => (
-                  <th
-                    key={col.dataKey}
-//                    style={{ cursor: "pointer", userSelect: "none" }}
-                    onClick={() => handleOrdenar(col.dataKey)}
+                  <th key={col.dataKey} style={{ width: col.width }} onClick={() => handleOrdenar(col.dataKey)}
                   >
                     {col.rotulo || col.dataKey}
                     {ordem.orderKey === col.dataKey && (
@@ -91,7 +88,7 @@ function ListaAcoes ({colunas, dados, acoes,}) {
                     )}
                   </th>
                 ))}
-                <th width="240">Ações</th>
+                <th width="20%">Ações</th>
               </tr>
             </thead>
             <tbody>

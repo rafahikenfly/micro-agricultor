@@ -19,12 +19,12 @@ export default function AppUsuario() {
   const [hortaSelecionada, setHortaSelecionada] = useState(null);
 
   /* ================== CARREGAR DADOS ================== */
+  //TODO: USAR CRUD SERVICES
   useEffect(() => {
     if (!user) return;
   
     return db
       .collection("hortas")
-//      .where("usuarioId", "==", user.id) TODO: Filtrar lista de hortas por usuario
       .onSnapshot((snap) => {
         const lista = snap.docs.map(doc => ({
           id: doc.id,

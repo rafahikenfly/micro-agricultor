@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
-import { validarEstagio } from "../../../domain/estados.rules";
+import { validarEstagio } from "@domain/estados.rules";
 import { renderOptions } from "../../../utils/formUtils";
 import { VARIANTS } from "../../../utils/consts/VARIANTS";
 

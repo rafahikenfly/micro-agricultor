@@ -6,7 +6,7 @@ import VariedadeDadosTab from "./VariedadesDadosTab";
 import VariedadeCicloAccordion from "./VariedadeCicloAccordion";
 import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
-import { validarVariedade } from "../../domain/variedades.rules";
+import { validarVariedade } from "@domain/variedades.rules";
 
 export default function VariedadeModal({ show, onSave, onClose, data, setToast, restrito = false}) {
   // Controle de tab

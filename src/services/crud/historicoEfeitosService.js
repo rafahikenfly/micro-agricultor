@@ -1,3 +1,8 @@
-import { createCRUDService } from "./crudService";
+import { createCRUDService } from "@shared/infra/crudFactory";
+import { firebaseAdapter } from "./firebaseAdapter";
 
-export const historicoEfeitosService = createCRUDService("historicoEfeitos");
+export const historicoEfeitosService = createCRUDService(firebaseAdapter, {
+  collection: "historicoEfeitos",
+  softDelete: true,
+  useArchive: true,
+});

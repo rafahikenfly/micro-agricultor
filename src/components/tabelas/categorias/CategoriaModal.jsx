@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
-import { validarCategoria } from "../../../domain/estados.rules";
+import { validarCategoria } from "@domain/estados.rules";
 import { renderOptions } from "../../../utils/formUtils";
-import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
 import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
 export default function CategoriaModal({ show, onSave, onClose, data = {}, }) {

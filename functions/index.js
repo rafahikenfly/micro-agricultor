@@ -1,20 +1,27 @@
-const { onSchedule } = require("firebase-functions/v2/scheduler");
-const admin = require("firebase-admin");
-const { degradarCaracteristicasCanteiro, montarLogEvento, calcularEfeitosDoEvento } = require("./domainFunctions");
-const { Timestamp } = require("@google-cloud/firestore");
+//import "module-alias/register.js"; // entry point (ESM)
+
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import admin from "firebase-admin";
+import { Timestamp } from "@google-cloud/firestore";
+
+import { recalcularCaracteristicasCanteiro } from "../shared/domain/canteiro.rules.js";
+import { processarEventoComEfeitos } from "../shared/domain/evento.rules.js";
+import { createCRUDService } from "../shared/infra/crudFactory.js";
+import { firebaseAdapter } from "./firebaseAdapter.js";
 
 admin.initializeApp();
 const db = admin.firestore();
-
 /* ---------- Função agendada ---------- */
-exports.timeEffect = onSchedule(
+export const timeEffect = onSchedule(
   {
-    schedule: "every 6 hours",
+    schedule: "every 12 hours",
     timeZone: "America/Sao_Paulo",
   },
   async () => {
-    console.log("Iniciando degradação de características");
-    const now = Timestamp.now();
+    console.log("Iniciando atualização de características de canteiros");
+    const user = {id: "timeEffect", nome: "firebase functions" }
+
+    const ts = Timestamp.now();
 
     // Carrega catálogo uma única vez
     const catalogoSnap = await db.collection("caracteristicas").get();
@@ -23,91 +30,67 @@ exports.timeEffect = onSchedule(
       ...d.data(),
     }));
 
-    // Busca todas as hortas
+    // Monta services 
+    const eventosService = createCRUDService(firebaseAdapter, {
+      collection: "eventos",
+      softDelete: true,
+      useArchive: true,
+    });
+    const historicoEfeitosService = createCRUDService(firebaseAdapter, {
+      collection: "historicoEfeitos",
+      softDelete: true,
+      useArchive: true,
+    });
+
+      // Busca todas as hortas
     const hortasSnap = await db.collection("hortas").get();
 
-    for (const hortaDoc of hortasSnap.docs) {
+      for (const hortaDoc of hortasSnap.docs) {
+      const entidadeService = createCRUDService(firebaseAdapter, {
+        collection: "hortas",
+        parentId: hortaDoc.id,
+        subCollection: "canteiros",
+        softDelete: true,
+        useArchive: true,
+      });
+
+
+      // Monta alvos
+      const alvos = [];
+
+      // Busca todos os canteiros da horta
+      const canteirosSnap = await hortaDoc.ref
+        .collection("canteiros")
+        .get();
+      // Inclui todos no formato de [data: {}, tipoEntidadeId: "canteiro"]
+      for (const canteiroDoc of canteirosSnap.docs) {
+        // ignora entidades mortas
+        if (canteiroDoc.data().isDeleted) continue;
+        if (canteiroDoc.data().isArchived) continue;        
+        // inclui no array
+        alvos.push({ data: canteiroDoc.data(), tipoEntidadeId: "canteiro" });
+      }
+
       try {
-        // Cria o eventoRef imediatamente para obter Id e monta o log (sem efeitos)
-        const eventoRef = db.collection("eventos").doc(); // ID gerado aqui
-        const evento = montarLogEvento({
-          tipoEventoId: "degradacao",
-          alvos: [],
-          origemId: "scheduler",
-          origemTipo: "sistema",
-          efeitos: [],
-        })
-
-        let batch = db.batch();
-        let opCount = 0;
-
-        // Busca todos os canteiros da horta
-        const canteirosSnap = await hortaDoc.ref
-          .collection("canteiros")
-          .get();
-    
-        for (const canteiroDoc of canteirosSnap.docs) {
-          const canteiro = canteiroDoc.data();
-  
-          // Se não há estado atual, não há atualização
-          if (!canteiro.estadoAtual) continue;
-  
-          // Atualiza conforme função de domínio
-          const canteiroAtualizado = await degradarCaracteristicasCanteiro({
-            canteiro: canteiro,
+        const results = await  processarEventoComEfeitos({
+          tipoEventoId: "atualizacao",
+          alvos,
+          origem: {id: "scheduler", tipo: "sistema"},
+          regra: recalcularCaracteristicasCanteiro,
+          contexto: {
             catalogo: catalogo,
-            eventoId: eventoRef.id,
-          });
-    
-          // Calcula os efeitos para o canteiro
-          const efeitosCanteiro = calcularEfeitosDoEvento({
-            entidadeId: eventoRef.id,
-            eventoId: eventoRef.id,
-            tipoEventoId: "degradação",
-            estadoAntes: canteiro.estadoAtual,
-            estadoDepois: canteiroAtualizado.estadoAtual,
-            tipoEntidade: "Canteiro",
-          });
-            
-          // Se há efeitos no canteiro
-          if (efeitosCanteiro.length) {
-            // Atualiza somente estadoAtual do canteiro no batch
-            batch.update(canteiroDoc.ref, { estadoAtual: canteiroAtualizado.estadoAtual, });
-            opCount++;
-            // Adiciona o canteiro ao rol de alvos
-            if (!evento.alvos.some(alvo => alvo.id === canteiroDoc.id)) {
-              evento.alvos.push({ id: canteiroDoc.id, tipo: "Canteiro" });
-            }
-            // Denormalização efeitos para o histórico
-            efeitosCanteiro.forEach((efeito) => {
-              const efeitoRef = db.collection("historicoEfeitos").doc();
-              batch.set(efeitoRef, {...efeito, createdAt: now});
-              opCount++;
-            });
-          }
-
-          // Adiciona os efeitos do canteiro ao evento
-          evento.efeitos = [...evento.efeitos, ...efeitosCanteiro]
-
-          // Commit a cada 450 ops
-          if (opCount >= 450) {
-            await batch.commit();
-            batch = db.batch();
-            opCount = 0;
-          }
-        }
-        // Atualiza o evento pelo batch se houver efeitos
-        if (evento.efeitos.length > 0) {
-          batch.set(eventoRef, {...evento, createdAt: now});
-          opCount++;
-        }
-
-        //
-        if (opCount > 0) await batch.commit();
-        console.log(`Degradação finalizada na horta ${hortaDoc.id}`);
+            timestamp: ts,
+          },
+          user,
+          db, 
+          services: { eventosService, historicoEfeitosService, entidadeService },
+          createdAt: ts,
+        })
+        console.log(`Atualização de canteiros finalizada na horta ${hortaDoc.id}. ${results.opCount} operações registradas.`);
+        console.log(results.evento);
       }
       catch (err) {
-        console.log (`Erro degradando horta ${hortaDoc.id}:`, err);
+        console.log (`Erro atualizando canteiros da horta ${hortaDoc.id}:`, err);
       }
     }
   }

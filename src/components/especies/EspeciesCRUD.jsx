@@ -102,10 +102,10 @@ export default function EspeciesCRUD() {
           <ListaAcoes
             dados = {especies}
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: categorias_especie, },
-              {rotulo: "Estágios", dataKey: "ciclo", contar: true, },
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
+              {rotulo: "Nome", dataKey: "nome", },
+              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: categorias_especie, width: "100px"},
+              {rotulo: "Estágios", dataKey: "ciclo", contar: true, width: "50px"},
+              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, width: "50px"},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

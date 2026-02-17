@@ -4,7 +4,7 @@ let cache = {
   especies: null,
   variedades: null,
   estadosPlanta: null,
-  CVJobs: null,
+  cvJobSpecs: null,
   categorias_especie: null,
   canteiros: null,
   estagios_especie: null,
@@ -12,6 +12,7 @@ let cache = {
   estados_canteiro: null,
   caracteristicas: null,
   manejos: null,
+  cvModelos: null,
 };
 
 const fetchCollection = async (path) => {
@@ -55,12 +56,12 @@ export const catalogosService = {
     return cache.estadosPlanta;
   },
 
-  async getCVJobs(filter = null) {
-    if (!cache.CVJobs) {
-      cache.CVJobs = await fetchCollection("cvJobs");
+  async getCVJobSpecs(filter = null) {
+    if (!cache.cvJobSpecs) {
+      cache.cvJobSpecs = await fetchCollection("cvJobSpecs");
     }
-    if (!filter) return cache.CVJobs;
-    return cache.CVJobs.filter(item => item[filter.field] === filter.value);    
+    if (!filter) return cache.cvJobSpecs;
+    return cache.cvJobSpecs.filter(item => item[filter.field] === filter.value);    
   },
 
   async getCategorias_especie(filter = null) {
@@ -111,6 +112,14 @@ export const catalogosService = {
     return cache.caracteristicas.filter(item => item[filter.field] === filter.value);    
   },
 
+    async getCvModelos(filter = null) {
+    if (!cache.cvModelos) {
+      cache.cvModelos = await fetchCollection("cvModelos");
+    }
+    if (!filter) return cache.cvModelos;
+    return cache.cvModelos.filter(item => item[filter.field] === filter.value);    
+  },
+
     async getCanteiros(filter = null) {
     if (!cache.canteiros) {
       cache.canteiros = await fetchCollectionGroup("canteiros");
@@ -125,7 +134,7 @@ export const catalogosService = {
       especies: null,
       variedades: null,
       estadosPlanta: null,
-      CVJobs: null,
+      cvJobSpecs: null,
       categorias_especie: null,
       estagios_especie: null,
       estados_planta: null,

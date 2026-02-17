@@ -11,13 +11,15 @@ import UsuariosCRUD from "../components/usuarios/UsuariosCRUD";
 import EstagiosEspecieCRUD from "../components/tabelas/estagios/EstagiosEspecieCRUD";
 import EstadosPlantaCRUD from "../components/tabelas/estados/EstadosPlantaCRUD";
 import EstadosCanteiroCRUD from "../components/tabelas/estados/EstadosCanteiroCRUD";
-import CVJobsCRUD from "../components/tabelas/cvJobs/CVJobsCRUD";
 import VariedadesCRUD from "../components/variedades/variedadesCRUD";
 import CaracteristicasCRUD from "../components/tabelas/caracteristicas/CaracteristicasCRUD";
 import NoAccess from "../components/common/NoAccess";
 import Perfil from "../views/Perfil";
 import CanteirosCRUD from "../components/canteiros/CanteirosCRUD";
 import CategoriasCRUD from "../components/tabelas/categorias/CategoriasCRUD";
+import CvJobSpecsCRUD from "../components/cvJobsSpecs/CVJobSpecsCRUD";
+import CvJobRunsCRUD from "../components/cvJobRuns/CvJobRunsCRUD";
+import CvModelosCRUD from "../components/cvModelos/CvModelosCRUD";
 
 function AppAdmin() {
   const {user} = useAuth();
@@ -51,8 +53,12 @@ function AppAdmin() {
         return <EstadosPlantaCRUD />;
       case "estadosCanteiro":
         return <EstadosCanteiroCRUD />;
-      case "cvJobs":
-        return <CVJobsCRUD />
+      case "cvJobSpecs":
+        return <CvJobSpecsCRUD />
+      case "cvJobRuns":
+        return <CvJobRunsCRUD />
+      case "cvModelos":
+        return <CvModelosCRUD />
       case "perfil":
         return <Perfil />
       default:
@@ -125,8 +131,11 @@ function AppAdmin() {
 
             {/* Manejos */}
             <NavDropdown title="Manejos" id="nav-manejos">
-              <NavDropdown.Item onClick={() => setTelaAtiva("cvJobs")}>
-                Tarefas de Visão Computacional
+              <NavDropdown.Item onClick={() => setTelaAtiva("cvJobSpecs")}>
+                Definições de Tarefas de Visão Computacional
+              </NavDropdown.Item>
+              <NavDropdown.Item onClick={() => setTelaAtiva("cvModelos")}>
+                Modelos de Visão Computacional
               </NavDropdown.Item>
               <NavDropdown.Item onClick={() => setTelaAtiva("manejos")}>
                 Tipos de Manejo
@@ -137,6 +146,12 @@ function AppAdmin() {
             <NavDropdown title="Usuários" id="nav-usuarios">
               <NavDropdown.Item onClick={() => setTelaAtiva("usuarios")}>
                 Gerenciar Usuários
+              </NavDropdown.Item>
+            </NavDropdown>
+
+            <NavDropdown title="Tarefas" id="nav-tarefas">
+              <NavDropdown.Item onClick={() => setTelaAtiva("cvJobRuns")}>
+                Tarefas de Visão Computacional
               </NavDropdown.Item>
             </NavDropdown>
 

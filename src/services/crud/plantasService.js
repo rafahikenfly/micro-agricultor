@@ -1,22 +1,8 @@
-import { createCRUDService } from "./crudService";
-import { db, timestamp } from "../../firebase";
+import { createCRUDService } from "@shared/infra/crudFactory";
+import { firebaseAdapter } from "./firebaseAdapter";
 
-export const plantasService = createCRUDService("plantas");
-
-export async function systemUpdatePlanta(
-  plantaId,
-  data,
-  systemId = null,
-) {
-  if (!plantaId) throw new Error("plantaId é obrigatório");
-
-  return db
-    .collection("plantas")
-    .doc(plantaId)
-    .update({
-      ...data,
-      updatedAt: timestamp(),
-      version: (data.version || 0) + 1,
-      updatedBy: {nome: "sistema", id: systemId}
-    });
-}
+export const plantasService = createCRUDService(firebaseAdapter, {
+  collection: "plantas",
+  softDelete: true,
+  useArchive: true,
+});

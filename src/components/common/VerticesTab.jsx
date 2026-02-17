@@ -2,22 +2,17 @@ import { Button, Form, Row, Col, Table } from "react-bootstrap";
 
 export default function VerticesTab({ value = [], onChange }) {
 
-  const atualizar = (idx, campo, val) => {
-    const novo = [...value];
-    novo[idx] = {
-      ...novo[idx],
-      [campo]: Number(val)
-    };
-    onChange(novo);
+  const onChangeArrElement = (idx, campo, val) => {
+    const novoArr = [...value];
+    novoArr[idx] = { ...novoArr[idx], [campo]: Number(val) };
+    onChange(novoArr);
   };
 
-  const adicionar = () => {
-    onChange([...value, { x: 0, y: 0 }]);
-  };
+  const onAddArrElement = () => { onChange([...value, { x: 0, y: 0 }]); };
 
-  const remover = (idx) => {
-    const novo = value.filter((_, i) => i !== idx);
-    onChange(novo);
+  const onRemoveArrElement = (idx) => {
+    const novoArr = value.filter((_, i) => i !== idx);
+    onChange(novoArr);
   };
 
   /* ====== SVG ====== */
@@ -61,7 +56,7 @@ export default function VerticesTab({ value = [], onChange }) {
                     size="sm"
                     value={v.x}
                     onChange={e =>
-                      atualizar(idx, "x", e.target.value)
+                      onChangeArrElement(idx, "x", e.target.value)
                     }
                   />
                 </td>
@@ -71,7 +66,7 @@ export default function VerticesTab({ value = [], onChange }) {
                     size="sm"
                     value={v.y}
                     onChange={e =>
-                      atualizar(idx, "y", e.target.value)
+                      onChangeArrElement(idx, "y", e.target.value)
                     }
                   />
                 </td>
@@ -79,7 +74,7 @@ export default function VerticesTab({ value = [], onChange }) {
                   <Button
                     size="sm"
                     variant="outline-danger"
-                    onClick={() => remover(idx)}
+                    onClick={() => onRemoveArrElement(idx)}
                   >
                     ✕
                   </Button>
@@ -89,7 +84,7 @@ export default function VerticesTab({ value = [], onChange }) {
           </tbody>
         </Table>
 
-        <Button size="sm" onClick={adicionar}>
+        <Button size="sm" onClick={onAddArrElement}>
           + Adicionar ponto
         </Button>
       </Col>

@@ -4,16 +4,15 @@ const aparenciaPadrao = {
   espessura: 3,
 }
 
-export default function SVGEntidade ({entidade, style, eventos}) {
+export default function SVGEntidade ({key, entidade, style, eventos}) {
+  //console.log("SVGENTIDADE RENDER:", entidade.nome);
   /* ============== CONVERSÃO DE ARRAY DE VERTICES ============== */
   if (entidade.aparencia?.geometria === "polygon" && entidade.aparencia?.vertices?.length > 2) {
     const polygonPoints = entidade.aparencia.vertices
     .map(v => `${v.x},${v.y}`)
     .join(" ");
-  
     return (
       <polygon
-//        key={item.id}
         points={polygonPoints}
         fill={entidade.aparencia?.fundo || aparenciaPadrao.fundo}
         stroke={entidade.aparencia?.borda || aparenciaPadrao.borda}

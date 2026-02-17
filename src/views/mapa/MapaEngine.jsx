@@ -36,6 +36,15 @@ export function useMapaEngine() {
   const activatePlantTool = () => {
     dispatch({ type: ACOES_MAPA.TOOL_PLANT });
   };
+  const activateInspectTool = () => {
+    dispatch({ type: ACOES_MAPA.TOOL_INSPECT });
+  };
+  const activateHandleTool = () => {
+    dispatch({ type: ACOES_MAPA.TOOL_HANDLE });
+  };
+  const activateMonitorTool = () => {
+    dispatch({ type: ACOES_MAPA.TOOL_MONITOR });
+  };
   const resetTools = () => {
     dispatch({ type: ACOES_MAPA.TOOL_RESET });
   };
@@ -177,17 +186,30 @@ export function useMapaEngine() {
       type: ACOES_MAPA.MOUSE_MOVE,
       payload: p,
     });
-  };
+  }
+  const setPreviewPoints = (pontos) => {
+    dispatch({
+      type: ACOES_MAPA.ACTION_SET_PREVIEW_POINTS,
+      payload: pontos
+    });
+  }
+  const setSelecao = (selecao) => {
+    dispatch({
+      type: ACOES_MAPA.SELECTION_SET,
+      payload: selecao
+    });
+  }
+  
 
   // ==== SELECTORS (DERIVED STATS) === //
 
 //  const isEditMode = state.modo === MODOS_MAPA.EDIT;
 //  const isDrawMode = state.modo === MODOS_MAPA.DRAW;
   const isPlantMode = state.modo === MODOS_MAPA.PLANT;
+  const isEditMode = state.modo === MODOS_MAPA.EDIT;
   const isViewMode = state.modo === MODOS_MAPA.VIEW;
   const isForcePan = state.activeTool === "pan";
   const isForceRotate = state.activeTool === "rotate";
-  const showActionPanel = state.showActionPanel
 
   const scale = state.transform.scale;
   const rotation = state.transform.rotate;
@@ -215,7 +237,10 @@ export function useMapaEngine() {
       //utils
     activateRotateTool,
     activatePlantTool,
+    activateMonitorTool,
     activatePanTool,
+    activateInspectTool,
+    activateHandleTool,
     resetTools,
 
     /* transform */
@@ -264,10 +289,12 @@ export function useMapaEngine() {
     //tool
     resetAction,
     isPlantMode,
+    isEditMode,
     enterPlantMode,
     configAction,
-    showConfigPanel: showActionPanel,
     closeConfigPanel,
     openConfigPanel,
+    setPreviewPoints,
+    setSelecao,
   };
 }

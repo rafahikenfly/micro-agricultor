@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Form, InputGroup, Tabs, Tab } from "react-bootstrap";
 import { Accordion } from "react-bootstrap";
-import { validarCiclo } from "../../domain/planta.rules";
+import { validarCiclo } from "@domain/planta.rules";
 import RegrasAmbienteTab from "./RegrasAmbienteTab";
 import RegrasTarefasTab from "./RegrasTarefasTab";
 import RegrasTransicoesTab from "./RegrasTransicoesTab";

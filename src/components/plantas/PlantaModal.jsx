@@ -6,7 +6,7 @@ import AparenciaTab from "../common/AparenciaTab";
 import VerticesTab from "../common/VerticesTab";
 import VetorTab from "../common/VetorTab";
 import PlantaSistemaTab from "./PlantaSistemaTab";
-import { validarPlanta } from "../../domain/planta.rules";
+import { validarPlanta } from "@domain/planta.rules";
 
 export default function PlantaModal({ show, onSave, onClose, data, restrito = false, setToast}) {
   // Controle de tab

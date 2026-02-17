@@ -1,0 +1,172 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "cvQueue",
+  "type": "object",
+  "required": [
+    "jobId",
+    "jobNome",
+    "estado",
+    "context",
+    "imagem",
+    "lock",
+    "createdAt",
+    "createdBy"
+  ],
+
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "ID do documento da fila"
+    },
+
+    "descricao": {
+      "type": ["string", "null"],
+      "description": "Descrição opcional da execução"
+    },
+
+    "jobId": {
+      "type": "string",
+      "description": "Referência ao cvJob (definição do trabalho)"
+    },
+
+    "jobNome": {
+      "type": "string",
+      "description": "Nome do job (denormalização consciente)"
+    },
+
+    "estado": {
+      "type": "object",
+      "required": ["status", "retries"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "locked",
+            "processing",
+            "routing",
+            "waiting_task",
+            "done",
+            "failed"
+          ]
+        },
+        "stage": {
+          "type": ["string", "null"],
+          "enum": ["queued", "infer", "postprocess", "route", null]
+        },
+        "retries": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lastError": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+
+    "context": {
+      "type": "object",
+      "required": ["entidadeId"],
+      "properties": {
+        "entidadeId": {
+          "type": "string",
+          "description": "Entidade principal associada ao job (ex: canteiroId, plantaId, loteId)"
+        },
+        "entidadeTipo": {
+          "type": ["string", "null"],
+          "description": "Tipo da entidade (ex: Canteiro, Planta, Talhão)"
+        },
+        "entidadeNome": {
+          "type": ["string", "null"]
+        },
+        "hortaId": {
+          "type": ["string", "null"]
+        }
+      },
+      "additionalProperties": true
+    },
+
+    "imagem": {
+      "type": "object",
+      "required": ["path", "source", "timestamp"],
+      "properties": {
+        "path": { "type": "string" },
+        "source": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      }
+    },
+
+    "execucao": {
+      "type": "object",
+      "properties": {
+        "workerId": { "type": ["string", "null"] },
+        "startedAt": { "type": ["string", "null"], "format": "date-time" },
+        "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+        "durationMs": { "type": ["number", "null"] }
+      }
+    },
+
+    "inferencia": {
+      "type": "object",
+      "properties": {
+        "modelId": { "type": ["string", "null"] },
+        "modelVersion": { "type": ["number", "null"] },
+        "confidenceAvg": { "type": ["number", "null"] },
+        "detectionsCount": { "type": ["number", "null"] },
+        "rawResultPath": { "type": ["string", "null"] }
+      }
+    },
+
+    "encaminhamento": {
+      "type": "object",
+      "properties": {
+        "decision": {
+          "type": ["string", "null"],
+          "enum": ["archive", "training", "manual", "review", null]
+        },
+        "reason": {
+          "type": ["string", "null"],
+          "enum": [
+            "low_confidence",
+            "no_detection",
+            "expired_model",
+            "random_sampling",
+            "no_model",
+            null
+          ]
+        },
+        "destinationPath": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+
+    "lock": {
+      "type": "object",
+      "required": ["locked"],
+      "properties": {
+        "locked": { "type": "boolean" },
+        "lockedAt": { "type": ["string", "null"], "format": "date-time" },
+        "lockedBy": { "type": ["string", "null"] },
+        "ttl": { "type": ["string", "null"], "format": "date-time" }
+      }
+    },
+
+    "createdAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+
+    "createdBy": {
+      "type": "object",
+      "required": ["id", "tipo"],
+      "properties": {
+        "id": { "type": "string" },
+        "tipo": { "type": "string" },
+        "usuario": { "type": ["string", "null"] }
+      }
+    }
+  },
+
+  "additionalProperties": false
+}

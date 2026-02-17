@@ -1,6 +1,6 @@
 import { Form, } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions } from "../../utils/formUtils";
-import { mudarVariedade } from "../../domain/planta.rules";
+import { mudarVariedade } from "@domain/planta.rules";
 
 export default function PlantaDadosTab({
   form,

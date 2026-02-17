@@ -1,6 +1,6 @@
 import { Form, FormGroup, InputGroup } from "react-bootstrap";
 import { handleSelectWithRule, renderOptions } from "../../utils/formUtils";
-import { alteraEspecieDaVariedade } from "../../domain/variedades.rules";
+import { alteraEspecieDaVariedade } from "@domain/variedades.rules";
 
 export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
   return (

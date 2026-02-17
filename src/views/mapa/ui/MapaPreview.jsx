@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { getMapPointFromPoint } from "../../../services/svg/PointFunctions";
 import { SVGPreview } from "../../../services/svg/SVGPreview";
 import { useMapaEngine } from "../MapaEngine";
@@ -13,9 +14,8 @@ export default function MapaPreview () {
 
   const pontos = [];
   // ponto inicial do grid (SVG Coord)
-//  const mapStart = getMapPointFromPoint(mousePos, transform);
-  const startX = mousePos.x - (actionConfig.preview.radius * transform.scale);
-  const startY = mousePos.y - (actionConfig.preview.radius * transform.scale);
+  const startX = mousePos.x - ((actionConfig.preview.radius || actionConfig.preview.width) * transform.scale);
+  const startY = mousePos.y - ((actionConfig.preview.radius || actionConfig.preview.height) * transform.scale);
 
   // monta o grid
   for (let l = 0; l < linhas; l++) {
@@ -29,12 +29,29 @@ export default function MapaPreview () {
     }
   }
 
+  useEffect(() => {
+    engine.setPreviewPoints(pontos);
+  }, [
+    mousePos?.x,
+    mousePos?.y,
+    transform.x,
+    transform.y,
+    transform.scale,
+    transform.rotate,
+    linhas,
+    colunas,
+    espacamentoLinha,
+    espacamentoColuna
+  ]);
+
   return (
     <SVGPreview 
       pontos={pontos}
       geometria={actionConfig.preview.geometria}
       style={{
-        radius: actionConfig.preview.radius
+        radius: actionConfig.preview.radius,
+        width: actionConfig.preview.width,
+        height: actionConfig.preview.height,
       }}
     />
   )

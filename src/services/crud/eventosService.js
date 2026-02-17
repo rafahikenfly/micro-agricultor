@@ -1,8 +1,13 @@
-import { db, timestamp } from "../../firebase";
-import { createCRUDService } from "./crudService";
+import { createCRUDService } from "@shared/infra/crudFactory";
+import { firebaseAdapter } from "./firebaseAdapter";
 
-export const eventosService = createCRUDService("eventos");
+export const eventosService = createCRUDService(firebaseAdapter, {
+  collection: "eventos",
+  softDelete: true,
+  useArchive: true,
+});
 
+/*
 export async function completarEfeitosLog({eventoId, efeitos = {}, data = {}}) {
   const ts = timestamp();
   const batch = db.batch();
@@ -31,3 +36,4 @@ export async function completarEfeitosLog({eventoId, efeitos = {}, data = {}}) {
 
   await batch.commit();
 }
+*/
