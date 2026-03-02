@@ -1,35 +1,30 @@
-import { montarLogEvento } from "@domain/evento.rules";
-import { plantarVariedade } from "@domain/planta.rules";
-import { db } from "../../../firebase";
-import { eventosService } from "../../../services/crud/eventosService";
-import { plantasService } from "../../../services/crud/plantasService";
+import { ACTION_TYPES } from "../../../../shared/types/ACTION_TYPES";
 import { toggleSelecao } from "../../../utils/uiUtils";
 import { MODOS_MAPA } from "../MapaContexto";
 
-export function createPlantaInputHandler(engine, planta, user, state, showToast) {
+export function createPlantaInputHandler(engine, planta, user, showToast, svgRef, gRef) {
   return {
     async onClick(evt) {
       evt.preventDefault();
-      if (state.activeAction === MODOS_MAPA.EDIT) {
-        // modo edit, gerencia a seleção
-        let novaSelecao;
-
-        // multi seleção com CTRL
-        if (evt.ctrlKey || evt.metaKey) {
-          novaSelecao = toggleSelecao(state.selection, planta, "planta");
-        // seleção única sem CTRL
-        } else {
-          novaSelecao = [{
-            entidadeId: planta.id,
-            tipoEntidadeId: "planta"
-          }];
-        }
-        engine.setSelecao(novaSelecao);
+      evt.stopPropagation();
+      // modo edit, gerencia a seleção
+      if (engine.isSelecting) {
+        engine.selectSet("planta",
+          (evt.ctrlKey || evt.metaKey) ? 
+            toggleSelecao(engine.selectionPlantas, planta.id) : // multi seleção (com CTRL)
+            [ planta.id ]                                       // seleção única (sem CTRL)
+        );
         return;
       }
-      else {
-        console.log(`Clicou na planta ${planta.nome} (${planta.id})`)
-      }
-    }
+    },
+    onDoubleClick(evt) {
+      evt.preventDefault();
+      evt.stopPropagation();
+
+      // Abre modal de edição da entidade
+      engine.setPendingMutation({actionType: ACTION_TYPES.EDIT, before: planta})
+      engine.selectModalData(planta);
+      engine.openModalPlanta();
+    },
   }
 }

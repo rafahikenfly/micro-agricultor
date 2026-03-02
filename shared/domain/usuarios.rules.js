@@ -1,6 +1,7 @@
 import { mergeComValidacao } from "./rulesUtils";
 const acessoPadrao = {
     admin: false,
+    dev: false,
     usuario: true,
 }
 const usuarioPadrao = {
@@ -10,7 +11,6 @@ const usuarioPadrao = {
   email: "",
   nome: "Novo usuário",
   descricao: "",
-  nomeCientifico: "",
 };
 
 

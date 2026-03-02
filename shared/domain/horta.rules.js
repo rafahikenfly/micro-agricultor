@@ -13,10 +13,11 @@ const hortaPadrao = {
   descricao: "",
   posicao: {
     altitude: 0,
+    orientacao: 0,
     lat: -25.4201517,
     long: -49.2739828,
-    orientacao: 0,
   },
+  membros: [],
 };
 
 

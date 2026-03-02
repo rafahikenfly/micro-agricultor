@@ -14,27 +14,20 @@ const MAX_PAN = 1500;
 export function useMapaEngine() {
   const { state, dispatch } = useMapa();
 
-  // ==== TOOL ACTIONS (UI INTENTS) === //
-  const toggleZoom = () => {
-    dispatch({ type: ACOES_MAPA.TOOL_ZOOM_TOGGLE });
+  // ==== TOOL SELECT === //
+  const activateDrawTool = () => {
+    dispatch({ type: ACOES_MAPA.TOOL_DRAW });
   };
-  const toggleGrid = () => {
-    dispatch({ type: ACOES_MAPA.TOOL_GRID_TOGGLE });
+  const activatePlantTool = () => {
+    dispatch({ type: ACOES_MAPA.TOOL_PLANT });
   };
-  const activateDrawRect = () => {
-    dispatch({ type: ACOES_MAPA.TOOL_DRAW_RECT });
-  };
-  const activateDrawCircle = () => {
-    dispatch({ type: ACOES_MAPA.TOOL_DRAW_CIRCLE });
-  };
+
+  //////// REVISAR!
   const activateRotateTool = () => {
     dispatch({ type: ACOES_MAPA.TOOL_ROTATE });
   };
   const activatePanTool = () => {
     dispatch({ type: ACOES_MAPA.TOOL_PAN });
-  };
-  const activatePlantTool = () => {
-    dispatch({ type: ACOES_MAPA.TOOL_PLANT });
   };
   const activateInspectTool = () => {
     dispatch({ type: ACOES_MAPA.TOOL_INSPECT });
@@ -175,11 +168,31 @@ export function useMapaEngine() {
       config
     })
   }
-  const closeConfigPanel = () =>{
-    dispatch({type: ACOES_MAPA.ACTION_HIDECONFIG})
+
+
+  const hideConfigPanel = () =>{
+    dispatch({type: ACOES_MAPA.HIDECONFIG})
   }
   const openConfigPanel = () =>{
-    dispatch({type: ACOES_MAPA.ACTION_SHOWCONFIG})
+    dispatch({type: ACOES_MAPA.OPENCONFIG})
+  }
+  const openModalCanteiro = () => {
+    dispatch({type: ACOES_MAPA.OPENMODAL_CANTEIRO})
+  }
+  const openModalPlanta = () => {
+    dispatch({type: ACOES_MAPA.OPENMODAL_PLANTA})
+  }
+  const openModalHorta = () => {
+    dispatch({type: ACOES_MAPA.OPENMODAL_HORTA})
+  }
+  const hideModalCanteiro = () => {
+    dispatch({type: ACOES_MAPA.HIDEMODAL_CANTEIRO})
+  }
+  const hideModalPlanta = () => {
+    dispatch({type: ACOES_MAPA.HIDEMODAL_PLANTA})
+  }
+  const hideModalHorta = () => {
+    dispatch({type: ACOES_MAPA.HIDEMODAL_HORTA})
   }
   const setMousePos = (p) => {
     dispatch({
@@ -189,32 +202,225 @@ export function useMapaEngine() {
   }
   const setPreviewPoints = (pontos) => {
     dispatch({
-      type: ACOES_MAPA.ACTION_SET_PREVIEW_POINTS,
+      type: ACOES_MAPA.PLACING_SET_PREVIEW_POINTS,
       payload: pontos
     });
   }
-  const setSelecao = (selecao) => {
+  // =====
+  // UI SERVICES (RESIZE, DRAG, PREVIEW, SELECT)
+  // =====
+  // DRAG
+  const hideDrag = () => {
+    dispatch({type: ACOES_MAPA.HIDEDRAG})
+  }
+  const openDrag = (modo) => {
     dispatch({
-      type: ACOES_MAPA.SELECTION_SET,
+      type: ACOES_MAPA.OPENDRAG,
+      payload: modo,
+    })
+  }
+  const dragStart = (ponto) => {
+    dispatch({
+      type: ACOES_MAPA.DRAG_START,
+      payload: ponto
+    });
+  }
+  const dragUpdate = (ponto) => {
+    dispatch({
+      type: ACOES_MAPA.DRAG_UPDATE,
+      payload: ponto
+    });
+  }
+  const dragFinish = () => {
+    dispatch({
+      type: ACOES_MAPA.DRAG_FINISH,
+    });
+  }
+  const dragReset = () => {
+    dispatch({type: ACOES_MAPA.DRAG_RESET})
+  }
+  const dragSetup = (config) => {
+    dispatch({
+      type: ACOES_MAPA.DRAG_SETUP,
+      payload: config
+    });
+  }
+  // RESIZE
+  const resizeStart = (payload) => { // {direction, anchor: {x, y}, current: {x, y}}
+    dispatch({
+      type: ACOES_MAPA.RESIZE_START,
+      payload: payload
+    });
+  }
+  const resizeUpdate = (ponto) => {
+    dispatch({
+      type: ACOES_MAPA.RESIZE_UPDATE,
+      payload: ponto
+    });
+  }
+  const resizeFinish = () => {
+    dispatch({
+      type: ACOES_MAPA.RESIZE_FINISH,
+    });
+  }
+  // PREVIEW
+  const openPreview = () => {
+    dispatch({type: ACOES_MAPA.OPENPREVIEW})
+  }
+  const hidePreview = () => {
+    dispatch({type: ACOES_MAPA.HIDEPREVIEW})
+  }
+  const previewStart = (geometria) => {
+    dispatch({
+      type: ACOES_MAPA.PREVIEW_START,
+      payload: geometria
+    });
+  }
+  const previewFinish = () => {
+    dispatch({
+      type: ACOES_MAPA.PREVIEW_FINISH,
+    });
+  }
+  const previewReset = () => {
+    dispatch({type: ACOES_MAPA.PREVIEW_RESET})
+  }
+  // SELECT
+  const selectSet = (lista, selecao) => {
+    dispatch({
+      type: ACOES_MAPA.SELECT_SET,
+      payload: selecao,
+      list: lista,
+    });
+  }
+  const selectClear = (lista) => {
+    dispatch({
+      type: ACOES_MAPA.SELECT_CLEAR,
+      list: lista
+    });
+  }
+  const selectReset = () => {
+    dispatch({
+      type: ACOES_MAPA.SELECT_RESET,
       payload: selecao
     });
   }
-  
+  const selectModalData = (data) => {
+    dispatch({
+      type: ACOES_MAPA.SELECT_MODALDATA,
+      payload: data
+    });
+  }
+  // HEATMAP
+  const heatmapSet = (caracteristica) => {
+    dispatch({
+      type: ACOES_MAPA.HEATMAP_SET,
+      payload: caracteristica,
+    });
+  }
+  const heatmapReset = () => {
+    dispatch({
+      type: ACOES_MAPA.HEATMAP_RESET,
+    });
+  }
+
+  // MODO PLACE
+  const placeStart = (payload) => { // {tipoEntidadeId, preview, layout, metadata}
+    dispatch({
+      type: ACOES_MAPA.PLACING_START,
+      payload: payload
+    });
+  }
+  const placeUpdade = (payload) => {
+    dispatch({
+      type: ACOES_MAPA.PLACING_UPDATE,
+      payload: payload
+    });
+  }
+  const placeFinish = () => {
+    dispatch({
+      type: ACOES_MAPA.PLACING_FINISH,
+    });
+  }
+  const placeReset = () => {
+    dispatch({
+      type: ACOES_MAPA.PLACING_RESET,
+    });
+  }
+
+  //MODO DRAW
+    const drawStart = (drawConfig) => { // {tipoEntidadeId, preview, layout, metadata}
+    dispatch({
+      type: ACOES_MAPA.DRAW_START,
+      payload: drawConfig
+    });
+  }
+  const drawUpdade = (payload) => {
+    dispatch({
+      type: ACOES_MAPA.DRAW_UPDATE,
+      payload: payload
+    });
+  }
+  const drawFinish = () => {
+    dispatch({
+      type: ACOES_MAPA.DRAW_FINISH,
+    });
+  }
+  const drawReset = () => {
+    dispatch({
+      type: ACOES_MAPA.DRAW_RESET,
+    });
+  }
+
+  // PENDING MUTATION
+  const setPendingMutation = (data) => {
+    dispatch({
+      type: ACOES_MAPA.SET_PENDING_MUTATION,
+      payload: data
+    })
+  }
+  const resetPendingMutation = () => {
+    dispatch({
+      type: ACOES_MAPA.RESET_PENDING_MUTATION
+    })
+  }
+
 
   // ==== SELECTORS (DERIVED STATS) === //
+  // modos
+  const isEditMode = state.activeAction === MODOS_MAPA.EDIT;
+  const isViewMode = state.activeAction === MODOS_MAPA.VIEW;
 
-//  const isEditMode = state.modo === MODOS_MAPA.EDIT;
-//  const isDrawMode = state.modo === MODOS_MAPA.DRAW;
-  const isPlantMode = state.modo === MODOS_MAPA.PLANT;
-  const isEditMode = state.modo === MODOS_MAPA.EDIT;
-  const isViewMode = state.modo === MODOS_MAPA.VIEW;
+  // condicoes
   const isForcePan = state.activeTool === "pan";
   const isForceRotate = state.activeTool === "rotate";
 
+  // ui service ativo
+  const isDragging = state.drag.active
+  const isResizing = (entidadeId = null) => {
+    if (entidadeId === null) return state.resize.active;
+    return (
+      state.resize.active &&
+      state.resize.entidade?.id === entidadeId
+    );
+  };
+  const isPreviewing = state.preview.active
+  
+  // ação ativa
+  const isPlacing = state.placing.active
+  const isDrawing = state.draw.active
+  const isSelecting = state.select.active
+const isHeatmapActive = (tipoEntidadeId) => {
+  if (!tipoEntidadeId) return state.heatmap.active;
+  return (
+    state.heatmap.active &&
+    state.heatmap.tipoEntidadeId === tipoEntidadeId
+  );
+};
+  // transform
   const scale = state.transform.scale;
   const rotation = state.transform.rotate;
   const position = { x: state.transform.x, y: state.transform.y };
-
+  const transform = state.transform
   const isZoomedIn = scale > 1;
   const isRotated = rotation !== 0;
   const isPanned = state.transform.x !== 0 || state.transform.y !== 0;
@@ -222,7 +428,24 @@ export function useMapaEngine() {
 
   //const hasGrid = state.gridArray.length > 0;
   const isZoomEnabled = state.hasZooming;
+  
+  //modal || preview
+  const showModalCanteiro = state.show.modalCanteiro
+  const showModalPlanta = state.show.modalPlanta
+  const showModalHorta = state.show.modalHorta
+  const showPreview = state.show.preview
+  const showDrag = state.show.drag
+  const showConfigPanel = state.show.configPanel
 
+  // selection
+  const selection = (lista) => {
+    if (!lista) return state.selection;
+    return state.selection[lista];
+  };
+  const selectionCanteiros = state.select.canteiro
+  const selectionHortas = state.select.horta
+  const selectionPlantas = state.select.planta
+  
   // ==== API === //
   return {
     /* raw */
@@ -230,18 +453,19 @@ export function useMapaEngine() {
 
     /* tool actions */
       //inutils
-    toggleZoom,
-    toggleGrid,
-    activateDrawRect,
-    activateDrawCircle,
-      //utils
+//    toggleZoom,
+//    toggleGrid,
+    //utils
+    activateDrawTool,
     activateRotateTool,
     activatePlantTool,
     activateMonitorTool,
     activatePanTool,
     activateInspectTool,
     activateHandleTool,
+//    pan,
     resetTools,
+    isForcePan,
 
     /* transform */
     setPan,
@@ -266,35 +490,104 @@ export function useMapaEngine() {
 
     /* selectors */
 //    isEditMode,
-//    isDrawMode,
 //    hasGrid,
     isZoomEnabled,
     isZoomedIn,
     isRotated,
     isPanned,
-    scale,
-    rotation,
-    position,
-
+    
 
     // usados
     isViewMode,
     zoomAt,
-    isForcePan,
-    pan,
     isForceRotate,
     rotateBy,
     setMousePos,
 
     //tool
     resetAction,
-    isPlantMode,
     isEditMode,
     enterPlantMode,
     configAction,
-    closeConfigPanel,
-    openConfigPanel,
     setPreviewPoints,
-    setSelecao,
+
+    //hide/show
+    openModalCanteiro,
+    openModalHorta,
+    openModalPlanta,
+    openConfigPanel,
+    hideModalCanteiro,
+    hideModalHorta,
+    hideModalPlanta,
+    hideConfigPanel,
+    showModalCanteiro,
+    showModalHorta,
+    showModalPlanta,
+    showConfigPanel,
+
+    // UI SERVICES
+    //drag
+    openDrag,
+    hideDrag,
+    dragStart,
+    dragUpdate,
+    dragFinish,
+    dragReset,
+    dragSetup,
+    showDrag,
+    isDragging,
+
+    //resize TODO: open, hide, reset, show
+    resizeStart,
+    resizeUpdate,
+    resizeFinish,
+    isResizing,
+
+    //preview
+    openPreview,
+    hidePreview,
+    previewStart,
+    previewFinish,
+    previewReset,
+    showPreview,
+    isPreviewing,
+
+    //select
+    selectSet,
+    selectModalData,
+    selectClear,
+    selectReset,
+    selection,
+    selectionCanteiros,
+    selectionHortas,
+    selectionPlantas,
+    isSelecting,
+
+    //heatmap
+    heatmapSet,
+    heatmapReset,
+    isHeatmapActive,
+
+    //draw
+    drawStart,
+    isDrawing,
+
+    //place
+    placeStart,
+    placeUpdade,
+    placeFinish,
+    placeReset,
+    isPlacing,
+
+    // transform
+    scale,
+    rotation,
+    position,
+    transform,
+
+
+    //controle de mutacao
+    setPendingMutation,
+    resetPendingMutation,
   };
 }

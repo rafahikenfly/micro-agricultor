@@ -1,17 +1,93 @@
-export const montarLogEvento = ({tipoEventoId, alvos, origemId, origemTipo, data = {}}) => {
-  if (!tipoEventoId) throw new Error ("Erro montando log: tipoEventoId obrigatório.")
-  if (!alvos) throw new Error ("Erro montando log: entidadeId obrigatório.")
-  if (!origemId) throw new Error ("Erro montando log: origemId obrigatório.")
-  if (!origemTipo) throw new Error ("Erro montando log: origemTipo obrigatório.")
+import { mergeComValidacao } from "./rulesUtils.js";
 
-  return {
-    ...data,
-    tipoEventoId,
-    alvos,
-    origemId,
-    origemTipo,
-  }
+const eventoPadrao = {
+  tipoEventoId: "",   // ex: "chuva", "vasoMovido", "irrigacaoManual"
+  tipoEventoNome: "", // denormalização consciente
+  categoria: "",      // "natural" | "humano" | "sistema" | "estrutural"
+  timestamp: 0,      // quando o fato ocorreu no mundo
+  origem: {},
+  alvos: [],          // string[]
+  efeitos: [],        // {entidadeId, tipoEntidadeId, before, after}
 }
+
+/**
+ * Protege contra problemas no objeto.
+ * @param {*} dataObj 
+ * @returns 
+ */
+export const validarObjetoEvento = (dataObj = {}) => {
+  // TODO: validações do objeto (tipos, etc..)
+  const valid = mergeComValidacao(eventoPadrao, dataObj);
+  return valid;
+}
+
+export const criarEvento = ({tipoEvento, timestamp, alvos, efeitos, data = {}}) => {
+  if (!tipoEvento) throw new Error ("Erro criando evento: tipoEvento é obrigatório.")
+  if (!alvos) console.warn ("Criando evento sem alvos.")
+  if (!efeitos) console.warn ("Criando evento sem efeitos.")
+  
+
+  // tipoEvento é obrigatório em um evento
+  // alvos é obrigatório em um evento
+  // efeitos é obrigatório em um evento
+  // timestamp é opcional em um evento e pode ser now
+  const novoEvento = {
+    ...data,
+    tipoEventoId: tipoEvento.id,
+    tipoEventoNome: tipoEvento.nome,
+    categoria: tipoEvento.categoria,
+    timestamp,
+    alvos,
+    efeitos,
+  }
+
+  return validarObjetoEvento(novoEvento)
+}
+
+export const criarEfeitosDoEvento = ({evento}) =>{
+  if (!evento) throw new Error ("Erro criando efeitos do evento: evento é obrigatório.")
+  if (!evento.id) throw new Error ("Erro criando efeitos do evento: evento recebido sem id.")
+
+  const ESTADO_PADRAO = {confianca: 0, valor:0}
+  const efeitosDoEvento = [];
+
+  // para cada alvo
+  for (const alvo of Object.values(evento.efeitos)) {
+    const estadoAntes = alvo?.before ?? {}
+    const estadoDepois = alvo?.after ?? {}
+    const todasCaracteristicas = new Set([
+      ...Object.keys(estadoAntes),
+      ...Object.keys(estadoDepois),
+    ]);
+    // para cada caracteristicaId
+    for (const caracteristicaId of todasCaracteristicas) {
+      const antes = estadoAntes[caracteristicaId] ?? ESTADO_PADRAO;
+      const depois = estadoDepois[caracteristicaId] ?? ESTADO_PADRAO;
+      
+      const mudou =
+      antes.confianca !== depois.confianca ||
+      antes.valor !== depois.valor;
+      
+      if (!mudou) continue;
+
+      efeitosDoEvento.push({
+        eventoId: evento.id,
+        tipoEventoId: evento.tipoEventoId,
+        caracteristicaId: caracteristicaId,
+        confiancaAntes: antes.confianca ?? 0,
+        confiancaDepois: depois.confianca ?? 0,
+        valorAntes: antes.valor ?? 0,
+        valorDepois: depois.valor ?? 0,
+        entidadeId: alvo.entidadeId,
+        tipoEntidadeId: alvo.tipoEntidadeId,
+        timestamp: evento.timestamp,
+      });
+    }
+  }
+
+  return efeitosDoEvento;
+}
+
 
 export const montarEfeitoHistorico = ({eventoId, tipoEventoId, entidadeId, entidadeTipoId, caracteristicaId, estadoAntes, estadoDepois, createdAt, data = {}}) => {
   if (!eventoId) throw new Error ("Erro montando lista de efeitos: eventoId obrigatório.")
@@ -62,109 +138,8 @@ export const calcularEfeitosDoEvento = ({entidadeId, eventoId, tipoEventoId, est
         caracteristicaId: caracteristicaId,
         estadoAntes: antes,
         estadoDepois: depois,
-        createdAt: createdAt,
+        timestamp: createdAt,
     }));
   }
   return efeitosDoEvento;
-}
-
-export async function processarEventoComEfeitos({
-  tipoEventoId,
-  origem,               // { id, tipo }
-  alvos,                // [{ data, tipoEntidadeId }]
-  regra,                // (input) => novaEntidade
-  contexto = {},        // medidas, tecnica, etc
-  user,
-  db,
-  services,             // { eventosService, historicoEfeitosService, entidadeService }
-  createdAt,
-}) {
-  if (!tipoEventoId) throw new Error ("Erro processando evento com efeitos: tipoEventoId obrigatório.")
-  if (!origem) throw new Error ("Erro processando evento com efeitos: origem obrigatório.")
-  if (!alvos) throw new Error ("Erro processando evento com efeitos: alvos obrigatório.")
-  if (!regra) throw new Error ("Erro processando evento com efeitos: regra obrigatório.")
-  if (!contexto) throw new Error ("Erro processando evento com efeitos: contexto obrigatório.")
-  if (!user) throw new Error ("Erro processando evento com efeitos: user obrigatório.")
-  if (!db) throw new Error ("Erro processando evento com efeitos: db obrigatório.")
-  if (!services) throw new Error ("Erro processando evento com efeitos: services obrigatório.")
-  if (!createdAt) throw new Error ("Erro processando evento com efeitos: createdAt obrigatório.")
-
-
-  const batch = db.batch();
-  let opCount = 0;
-  // cria evento ref
-  const eventoRef = services.eventosService.criarRef();
-
-  const evento = montarLogEvento({
-    tipoEventoId,
-    origemId: origem.id,
-    origemTipo: origem.tipo,
-    alvos: alvos.map(a => ({
-      id: a.data.id,
-      tipoEntidadeId: a.tipoEntidadeId
-    })),
-    data: {
-      efeitos: [],
-    }
-  });
-
-  // Para cada entidade-alvo
-  for (const alvo of alvos) {
-    const { data: entidade, tipoEntidadeId } = alvo;
-    const entidadeRef = services.entidadeService.getRefById(entidade.id)
-
-    // aplica regra de domínio
-    const entidadeDepois = regra({
-      [tipoEntidadeId]: entidade,
-      eventoId: eventoRef.id,
-      ...contexto,
-    });
-
-    // pula entidade caso não haja resultado da regra aplicada
-    if (!entidadeDepois) {
-      console.log(`Sem alteração para ${tipoEntidadeId} ${entidade.nome}`)
-      continue;
-    }
-
-    // calcula efeitos
-    const efeitos = calcularEfeitosDoEvento({
-      entidadeId: entidade.id,
-      eventoId: eventoRef.id,
-      tipoEventoId,
-      estadoAntes: entidade?.estadoAtual || {},
-      estadoDepois: entidadeDepois.estadoAtual,
-      tipoEntidadeId,
-      createdAt: createdAt,
-    });
-
-    if (efeitos.length === 0) {
-      console.log(`Sem efeitos para ${tipoEntidadeId} ${entidade.nome}`)
-      continue;
-    }
-    // atualiza estado da entidade
-    services.entidadeService.batchUpdate(
-      entidadeRef, 
-      { estadoAtual: entidadeDepois.estadoAtual, },
-      user,
-      batch
-    );
-    opCount++;
-
-    // cria o histórico de cada efeito
-    efeitos.forEach(efeito => {
-      services.historicoEfeitosService.batchCreate(efeito, user, batch);
-      opCount++;
-    });
-
-    // adiciona efeitos no evento
-    evento.efeitos.push(...efeitos);
-  }
-
-  // salva evento
-  services.eventosService.batchUpsert(eventoRef, evento, user, batch);
-  opCount++;
-
-  await batch.commit();
-
-  return { evento, opCount };
 }

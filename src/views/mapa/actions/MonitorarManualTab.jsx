@@ -1,20 +1,14 @@
 import { useEffect, useState } from "react";
-import { Form, Button, InputGroup, Row, Col, Card, } from "react-bootstrap";
+import { Form, Button, InputGroup, Row, Card, } from "react-bootstrap";
 import { catalogosService } from "../../../services/catalogosService";
-import { eventosService, } from "../../../services/crud/eventosService";
 import { useAuth } from "../../../services/auth/authContext";
-import { monitorarCanteiro } from "@domain/canteiro.rules";
-import { monitorarPlanta } from "@domain/planta.rules";
-import { processarEventoComEfeitos } from "@domain/evento.rules";
-import { db, nowTimestamp, timestamp, } from "../../../firebase";
-import { canteirosService } from "../../../services/crud/canteirosService";
-import { plantasService } from "../../../services/crud/plantasService";
-import { historicoEfeitosService } from "../../../services/crud/historicoEfeitosService";
 import Loading from "../../../components/common/Loading";
+import { monitorarMultiplosCanteiros, } from "../../../services/application/canteiro.application";
+import { ACTION_TYPES } from "../../../../shared/types/ACTION_TYPES";
+import { monitorarMultiplasPlantas } from "../../../services/application/plantas.application";
 
-export default function MonitorarManualTab({ selection, tipoEntidadeId, showToast }) { //entidade, 
-  if (!selection || selection.length === 0) return null
-
+export default function MonitorarManualTab({ entidade, selectionData, tipoEntidadeId, showToast, stringTimestamp }) { 
+  if (!selectionData || selectionData.length === 0) return null
   const { user } = useAuth();
   const [caracteristicas, setCaracteristicas] = useState([]);
   const [form, setForm] = useState({});
@@ -38,7 +32,7 @@ export default function MonitorarManualTab({ selection, tipoEntidadeId, showToas
   }, []);
 
   const aplicarMonitoramento = async () => {
-
+    // Recupera as medidas do formulário
     const medidas = {};  
     Object.entries(form).forEach(([caracteristicaId, dados]) => {
       if (dados.atualizar) {
@@ -48,50 +42,67 @@ export default function MonitorarManualTab({ selection, tipoEntidadeId, showToas
         };
       }
     });
-    
+
+    // Verifica se há alguma medida para atualizar
     if (Object.keys(medidas).length === 0) {
       showToast("Selecione ao menos uma característica para atualizar.", "danger");
       return;
     }
     
+    // Recupera o timestamp
+    const date = new Date(stringTimestamp);
+    const timestamp = date.getTime();
+
+    // Aplica os monitoramentos
+    // aplicarMonitoramentos(
+    // tipoEntidadeId: "planta" || "canteiro"...
+    // medidas: {[caracteristicaId]: {valor, confianca}, ...}
+    // user.    {}
+    // timestamp: integer
+    // entidades: [{}...]
+    // )
+    //
+    // tipoEntidadeId
+    // user,
+    // timestamp,
+    // entidades: [{entidade}...]
+    // medidas: {[entidadeId]: {[caracteristicaId]: {valor, confianca}...}...}
     setWriting(true);
     try {
-      const monitoramento = processarEventoComEfeitos({
-        tipoEventoId: "monitoramento",
-        origem: {id: user.id, tipo: "usuário"},
-        alvos: selection, //TODO: reduce para apenas as entidades do mesmo tipo!
-        regra: monitorarCanteiro, //TODO: fazer um resolveService ou um objeto resolvido
-        contexto: {
-          medidas,
-          timestamp: nowTimestamp(),
-        },
-        user: user,
-        db: db,
-        services: {
-          eventosService: eventosService,
-          historicoEfeitosService: historicoEfeitosService,
-          entidadeService: canteirosService.forParent(selection[0]?.data.hortaId), //TODO: fazer um resolveService ou um objeto resolvido
-        },
-        createdAt: nowTimestamp(),
-      })
-      showToast(monitoramento.opCount > 0 
-        ? `Monitoramento de 
-        ${selection.length > 1 ? selection.length + "canteiros": selection[0].data.nome} 
-        registrado com sucesso.` //TODO: fazer um resolve
-        : `Nenhuma alteração detectada em 
-        ${selection.length > 1 ? selection.length + "canteiros": selection[0].data.nome}
-        .` //TODO: fazer um resolve
-      );
+      switch (tipoEntidadeId) {
+        case "canteiro":
+          monitorarMultiplosCanteiros({
+            canteiros: selectionData,
+            medidas,
+            user,
+            actionType: ACTION_TYPES.MONITOR,
+            timestamp,
+          })
+          break;
+        case "planta":
+          monitorarMultiplasPlantas({
+            plantas: selectionData,
+            medidas,
+            user,
+            actionType: ACTION_TYPES.MONITOR,
+            timestamp,
+          })
+          break;
+        default:
+          throw new Error (`Entidade ${tipoEntidadeId} não é monitorável.`)
+      }
+      showToast({
+        body: `Monitoramento de ${selectionData.length > 1 ? `${selectionData.length} ${tipoEntidadeId}s`: entidade.nome} registrado com sucesso.`,
+        variant: "success",
+      });
       //Limpa seleção
       setForm({});
     } catch (err) {
       console.error(err)
-      showToast(
-        `Erro ao salvar monitoramento de 
-        ${selection.length > 1 ? selection.length + "canteiros": selection[0].data.nome}
-        .`, //TODO: fazer um resolve
-        "danger"
-      );
+      showToast({
+        body: `Erro ao registrar monitoramento.`,
+        variang: "danger"
+      });
     } finally {
       setWriting(false);
     }
@@ -169,10 +180,10 @@ export default function MonitorarManualTab({ selection, tipoEntidadeId, showToas
       <Button
         variant="success"
         className="mt-3 w-100"
-        disabled={writing || selection.length === 0}
+        disabled={writing || selectionData.length === 0}
         onClick={aplicarMonitoramento}
       >
-        {selection.length === 0 ? "Selecione entidades para monitorar"
+        {selectionData.length === 0 ? "Selecione entidades para monitorar"
         : writing ? "Aplicando monitoramento..."
           : "Aplicar monitoramento"
         }

@@ -1,4 +1,5 @@
-import { setToast } from "./toast";
+import { VARIANT_TYPES } from "../../../shared/types/VARIANT_TYPES";
+import { useToast } from "../toast/toastProvider";
 
 export function useCrudUI({
     crudService,
@@ -9,15 +10,13 @@ export function useCrudUI({
     // estados
     editando,
     registroParaExcluir,
-//    cancelarExclusao,
 
     // setters
     setEditando,
     setShowModal,
     setRegistroParaExcluir, 
-    setShowToast,
   }) {
-
+  const { toastMessage, toastConfirm } = useToast();  
     if (!crudService) {
       console.error("crudService não definido", crudService);
       return {};
@@ -35,22 +34,44 @@ export function useCrudUI({
       setEditando(data);
       setShowModal(true);
     };
+
+    const duplicar = (data) => {
+      const {
+        id,
+        createdAt,
+        createdBy,
+        updatedAt,
+        updatedBy,
+        isArchived,
+        isDeleted,
+        version,
+        ...rest } = data;      
+      setEditando(rest);
+      setShowModal(true);
+    }
   
     const atualizar = async (data) => {
       try {
         if (data.id) {
           await crudService.update(crudService.getRefById(editando.id), data, user);
-          setToast({ body: `${nomeCapitalizado} atualizad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
-        } else {
+          toastMessage({
+            body: `${nomeCapitalizado} atualizad${masculino ? "o" : "a"} com sucesso`,
+            variant: "success",
+          });
+        }
+        else {
           await crudService.create(data, user);
-          setToast({ body: `${nomeCapitalizado} criad${masculino ? "o" : "a"} com sucesso`, }, setShowToast);
+          toastMessage({
+            body: `${nomeCapitalizado} criad${masculino ? "o" : "a"} com sucesso`,
+            variant: "success",
+          });
         }
       } catch (err) {
         console.error(err,data,user);
-        setToast({
+        toastMessage({
           body: `Erro ao ${editando ? "atualizar" : "criar"} ${masculino ? "o" : "a"} ${nomeEntidade}`,
           variant: "danger"
-        }, setShowToast);
+        });
       } finally {
         setShowModal(false);
         setEditando(null);
@@ -59,16 +80,18 @@ export function useCrudUI({
   
     const apagar = async () => {
       if (!registroParaExcluir) return;
-  
       try {
-        await crudService.remove(registroParaExcluir.id, user);
-        setShowToast({ body: `${nomeCapitalizado} removid${masculino ? "o" : "a"} com sucesso` }, setShowToast);
+        await crudService.remove(crudService.getRefById(registroParaExcluir.id), user);
+        toastMessage({
+          body: `${nomeCapitalizado} removid${masculino ? "o" : "a"} com sucesso`,
+          variant: VARIANT_TYPES.GREEN,
+        });
       } catch (err) {
         console.error(err);
-        setShowToast({
+        toastMessage({
           body: `Erro ao remover ${masculino ? "o" : "a"} ${nomeEntidade}`,
-          variant: "danger"
-        }, setShowToast);
+          variant: VARIANT_TYPES.RED,
+        });
       } finally {
         cancelarExclusao();
       }
@@ -76,24 +99,30 @@ export function useCrudUI({
   
     const arquivar = async (data) => {
       try {
-        await crudService.archive(data.id, user);
-        setShowToast({ body: `${nomeCapitalizado} arquivad${masculino === "o" ? "o" : "a"} com sucesso` }, setShowToast);
+        await crudService.archive(crudService.getRefById(data.id), user);
+        toastMessage({
+          body: `${nomeCapitalizado} arquivad${masculino === "o" ? "o" : "a"} com sucesso`,
+          variant: "success",
+        });
       } catch (err) {
         console.error(err);
-        setShowToast({
+        toastMessage({
           body: `Erro ao arquivar ${masculino ? "o" : "a"} ${nomeEntidade}`,
           variant: "danger"
-        }, setShowToast);
+        });
       }
     };
   
     const desarquivar = async (data) => {
       try {
-        await crudService.restore(data.id, user);
-        setShowToast({ body: `${nomeCapitalizado} desarquivad${masculino === "o" ? "o" : "a"} com sucesso` }, setShowToast);
+        await crudService.restore(crudService.getRefById(data.id), user);
+        toastMessage({
+          body: `${nomeCapitalizado} desarquivad${masculino === "o" ? "o" : "a"} com sucesso`,
+          variant: "success",
+        });
       } catch (err) {
         console.error(err);
-        setShowToast({
+        toastMessage({
           body: `Erro ao desarquivar ${masculino ? "o" : "a"} ${nomeEntidade}`,
           variant: "danger"
         });
@@ -102,18 +131,16 @@ export function useCrudUI({
   
     const apagarComConfirmacao = (data) => {
       setRegistroParaExcluir(data);
-      setShowToast({
+      toastConfirm({
         body: `Confirma a exclusão do ${nomeEntidade} ${data.nome}?`,
-        variant: "danger",
-        confirmacao: true,
         onConfirm: apagar,
         onCancel: cancelarExclusao,
+        variant: "danger",
       });
     };
     
     const cancelarExclusao = () => {
       setRegistroParaExcluir(null);
-      setShowToast({show: false});
     };
 
 
@@ -122,6 +149,7 @@ export function useCrudUI({
       editar,
       atualizar,
       apagar,
+      duplicar,
       arquivar,
       desarquivar,
       apagarComConfirmacao,

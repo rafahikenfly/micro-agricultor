@@ -1,57 +1,82 @@
-import { useEffect } from "react";
-import { getMapPointFromPoint } from "../../../services/svg/PointFunctions";
+import { useMemo } from "react";
 import { SVGPreview } from "../../../services/svg/SVGPreview";
 import { useMapaEngine } from "../MapaEngine";
+import { getPreviewPoints } from "../../../services/svg/PointFunctions";
 
 export default function MapaPreview () {
   const engine = useMapaEngine();
-  const { mousePos, transform, actionConfig } = engine.state;
-  if (!actionConfig?.preview?.show) return null;
-  if (!mousePos) return null;
+  const { mousePos, placing, preview } = engine.state;
+  const { linhas, colunas, espacamentoLinha, espacamentoColuna } = placing.layout;
+  
+  // calcula os pontos sempre
+   const pontos = useMemo(() => {
+    return getPreviewPoints({
+      mousePos,
+      preview,
+      linhas,
+      colunas,
+      espacamentoLinha,
+      espacamentoColuna
+    })
+/*    if (!mousePos) return [];
+    if (preview.geometria === "ellipse") {console.warn ("preview ellipse não implementado"); return []}
+    if (preview.geometria === "polygon") {console.warn ("preview poligon não implementado"); return []}
 
-  const { linhas, colunas, espacamentoLinha, espacamentoColuna } =
-    actionConfig.layout;
+    const offsetX =
+    preview.geometria === "circle"
+      ? preview.width / 2
+      : preview.width;
 
-  const pontos = [];
-  // ponto inicial do grid (SVG Coord)
-  const startX = mousePos.x - ((actionConfig.preview.radius || actionConfig.preview.width) * transform.scale);
-  const startY = mousePos.y - ((actionConfig.preview.radius || actionConfig.preview.height) * transform.scale);
+    const offsetY =
+      preview.geometria === "circle"
+        ? preview.height / 2
+        : preview.height;
 
-  // monta o grid
-  for (let l = 0; l < linhas; l++) {
-    for (let c = 0; c < colunas; c++) {
-      const svgPoint = {
-        x: startX - c * (espacamentoColuna * transform.scale),
-        y: startY - l * (espacamentoLinha * transform.scale),
-      };
-      const mapPoint = getMapPointFromPoint(svgPoint, transform);
-      pontos.push(mapPoint);
-    }
-  }
+    const startX =
+      mousePos.x
+      - offsetX
+      - (colunas - 1) * espacamentoColuna;
+    const startY =
+      mousePos.y
+      - offsetY
+      - (linhas - 1) * espacamentoLinha;
 
-  useEffect(() => {
-    engine.setPreviewPoints(pontos);
+      const result = [];
+    
+    for (let l = 0; l < linhas; l++) {
+      for (let c = 0; c < colunas; c++) {
+        const mapPoint = {
+          x: startX + c * espacamentoColuna,
+          y: startY + l * espacamentoLinha,
+        };
+
+        result.push(mapPoint);
+      }
+    } 
+    return result;*/
   }, [
     mousePos?.x,
     mousePos?.y,
-    transform.x,
-    transform.y,
-    transform.scale,
-    transform.rotate,
     linhas,
     colunas,
     espacamentoLinha,
-    espacamentoColuna
+    espacamentoColuna,
   ]);
 
+//  useEffect(() => {
+//    if (!mousePos) return;
+//    engine.setPreviewPoints(pontos);
+//  }, [pontos, mousePos]);
+
+  if (!mousePos) return null;
   return (
     <SVGPreview 
       pontos={pontos}
-      geometria={actionConfig.preview.geometria}
+      geometria={preview.geometria}
       style={{
-        radius: actionConfig.preview.radius,
-        width: actionConfig.preview.width,
-        height: actionConfig.preview.height,
+        radius: preview.radius,
+        width: preview.width,
+        height: preview.height,
       }}
     />
   )

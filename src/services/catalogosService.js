@@ -1,18 +1,22 @@
 import { db } from "../firebase";
 
 let cache = {
+  hortas: null,
+  canteiros: null,
+  plantas: null,
   especies: null,
   variedades: null,
   estadosPlanta: null,
   cvJobSpecs: null,
   categorias_especie: null,
-  canteiros: null,
   estagios_especie: null,
   estados_planta: null,
   estados_canteiro: null,
   caracteristicas: null,
   manejos: null,
   cvModelos: null,
+  tarefas: null,
+  usuarios: null,
 };
 
 const fetchCollection = async (path) => {
@@ -112,7 +116,7 @@ export const catalogosService = {
     return cache.caracteristicas.filter(item => item[filter.field] === filter.value);    
   },
 
-    async getCvModelos(filter = null) {
+  async getCvModelos(filter = null) {
     if (!cache.cvModelos) {
       cache.cvModelos = await fetchCollection("cvModelos");
     }
@@ -120,27 +124,71 @@ export const catalogosService = {
     return cache.cvModelos.filter(item => item[filter.field] === filter.value);    
   },
 
-    async getCanteiros(filter = null) {
+  async getPlantas(filter = null) {
+    if (!cache.plantas) {
+      cache.plantas = await fetchCollection("plantas");
+    }
+    if (!filter) return cache.plantas;
+    return cache.plantas.filter(item => item[filter.field] === filter.value);    
+  },
+
+
+  async getCanteiros(filter = null) {
     if (!cache.canteiros) {
-      cache.canteiros = await fetchCollectionGroup("canteiros");
+      cache.canteiros = await fetchCollection("canteiros");
     }
     if (!filter) return cache.canteiros;
     return cache.canteiros.filter(item => item[filter.field] === filter.value);    
   },
 
-  // útil se um dia precisar forçar reload
-  clearCache() {
-    cache = { 
-      especies: null,
-      variedades: null,
-      estadosPlanta: null,
-      cvJobSpecs: null,
-      categorias_especie: null,
-      estagios_especie: null,
-      estados_planta: null,
-      estados_canteiro: null,
-      manejos: null,
-      caracteristicas: null,
-    };
-  }
+  async getHortas(filter = null) {
+    if (!cache.hortas) {
+      cache.hortas = await fetchCollection("hortas");
+    }
+    if (!filter) return cache.hortas;
+    return cache.hortas.filter(item => item[filter.field] === filter.value);    
+  },
+
+  async getTarefas(filter = null) {
+    if (!cache.tarefas) {
+      cache.tarefas = await fetchCollection("tarefas");
+    }
+    if (!filter) return cache.tarefas;
+    return cache.tarefas.filter(item => item[filter.field] === filter.value);    
+  },
+
+  async getUsuarios(filter = null) {
+    if (!cache.usuarios) {
+      cache.usuarios = await fetchCollection("usuarios");
+    }
+    if (!filter) return cache.usuarios;
+    return cache.usuarios.filter(item => item[filter.field] === filter.value);    
+  },
+
+  clearCache(key) {
+    if (!key) {
+      cache = {
+        hortas: null,
+        canteiros: null,
+        plantas: null,
+        especies: null,
+        variedades: null,
+        estadosPlanta: null,
+        cvJobSpecs: null,
+        categorias_especie: null,
+        estagios_especie: null,
+        estados_planta: null,
+        estados_canteiro: null,
+        manejos: null,
+        caracteristicas: null,
+        tarefas: null,
+        usuarios: null,
+      };
+      return;
+    }
+
+    if (key in cache) {
+      cache[key] = null;
+    }
+  },
 };

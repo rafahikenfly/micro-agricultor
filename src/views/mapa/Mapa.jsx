@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { MapaProvider, MODOS_MAPA } from "./MapaContexto";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { MapaProvider } from "./MapaContexto";
 import { useMapaEngine } from "./MapaEngine";
 import { useAuth } from "../../services/auth/authContext";
 import { canteirosService } from "../../services/crud/canteirosService";
@@ -18,6 +18,11 @@ import MapaBussola from "./ui/MapaBussola";
 import MonitorarOffcanvas from "./actions/MonitorarOffcanvas";
 import InspecionarOffCanvas from "./actions/InspecionarOffCanvas";
 import ManejarOffCanvas from "./actions/ManejarOffCanvas";
+import CanteiroModal from "../admin/canteiros/CanteiroModal";
+import PlantaModal from "../admin/plantas/PlantaModal";
+import MapaDrag from "./ui/MapaDrag";
+import DesenharOffcanvas from "./actions/DesenharOffCanvas";
+import { salvarCanteiro } from "../../services/application/canteiro.application";
 
 function MapaConteudo({ horta }) {
   const { user } = useAuth();
@@ -25,10 +30,11 @@ function MapaConteudo({ horta }) {
   if (!horta) return <div>Nada por aqui...</div>
 
   const engine = useMapaEngine();
-  const handlers = createMapaInputHandler(engine, engine.state);
+  const svgRef = useRef(null);
+  const gRef = useRef(null);
+  const handlers = createMapaInputHandler(engine, engine.state, svgRef.current,gRef.current);
   const { transform, } = engine.state;
 
-//  const [horta, setHorta] = useState(horta);
   const [canteiros, setCanteiros] = useState ([]);
   const [plantas, setPlantas] = useState([]);
 
@@ -50,47 +56,10 @@ function MapaConteudo({ horta }) {
     setLoadingCanteiros(true);
 
     const unsub = canteirosService
-      .forParent(horta.id)
       .subscribe((data) => {
         setCanteiros(data);
         setLoadingCanteiros(false);
       }, [
-      {field: "isDeleted", op: "==", value: false},
-    ]);
-
-    return () => unsub();
-  }, [horta?.id]);
-
-  const canteirosSelecionados = useMemo(() => {
-    if (!engine.state.selection?.length) return [];
-
-    const canteirosById = Object.fromEntries(
-      canteiros.map(c => [c.id, c])
-    );
-    return engine.state.selection
-      .filter(sel => sel.tipoEntidadeId === "canteiro")
-      .map(sel => {
-        const canteiro = canteirosById[sel.entidadeId];
-        if (!canteiro) return null;
-
-        return {
-          data: canteiro,
-          tipoEntidadeId: "canteiro"
-        };
-      })
-      .filter(Boolean);
-  }, [engine.state.selection, canteiros]);
-
-  // Plantas
-  useEffect(() => {
-    if (!horta.id) return;
-
-    setLoadingPlantas(true);
-
-    const unsub = plantasService.subscribe((data) => {
-      setPlantas(data);
-      setLoadingPlantas(false);
-    }, [
       {field: "isDeleted", op: "==", value: false},
       {field: "hortaId", op: "==", value: horta.id},
     ]);
@@ -98,25 +67,51 @@ function MapaConteudo({ horta }) {
     return () => unsub();
   }, [horta?.id]);
 
-    const plantasSelecionadas = useMemo(() => {
-    if (!engine.state.selection?.length) return [];
+  const canteirosSelecionados = useMemo(() => {
+    if (!engine.selectionCanteiros.length) return [];
+    const canteirosById = Object.fromEntries(
+      canteiros.map(c => [c.id, c])
+    );
 
+    return engine.selectionCanteiros
+      .map(id => {
+        const canteiro = canteirosById[id];
+        if (!canteiro) return null;
+        return canteiro;
+      })
+      .filter(Boolean);
+  }, [engine.selectionCanteiros, canteiros]);
+
+    // Plantas
+    useEffect(() => {
+      if (!horta.id) return;
+
+      setLoadingPlantas(true);
+
+      const unsub = plantasService.subscribe((data) => {
+        setPlantas(data);
+        setLoadingPlantas(false);
+      }, [
+        {field: "isDeleted", op: "==", value: false},
+        {field: "hortaId", op: "==", value: horta.id},
+      ]);
+
+      return () => unsub();
+    }, [horta?.id]);
+
+    const plantasSelecionadas = useMemo(() => {
+    if (!engine.selectionPlantas.length) return [];
     const plantasById = Object.fromEntries(
       plantas.map(c => [c.id, c])
     );
-    return engine.state.selection
-      .filter(sel => sel.tipoEntidadeId === "planta")
-      .map(sel => {
-        const planta = plantasById[sel.entidadeId];
+    return engine.selectionPlantas
+      .map(id => {
+        const planta = plantasById[id];
         if (!planta) return null;
-
-        return {
-          data: planta,
-          tipoEntidadeId: "planta"
-        };
+        return planta;
       })
       .filter(Boolean);
-  }, [engine.state.selection, plantas]);
+  }, [engine.selectionPlantas, plantas]);
 
 
   /* ================== TOAST ================== */
@@ -131,7 +126,7 @@ function MapaConteudo({ horta }) {
     try {
       selecao.forEach(async (item) => {
         if (item.tipoEntidadeId === "canteiro") {
-          await canteirosService.forParent(horta.id).remove(item.data.id,user);
+          await canteirosService.remove(item.data.id,user);
         }
         if (item.tipoEntidadeId === "planta") {
           await plantasService.remove(item.data.id,user);
@@ -148,70 +143,149 @@ function MapaConteudo({ horta }) {
       setModo("edit");
     }
   };
-  const canteirosExibidos = canteiros.filter((a)=>true);
-  const plantasExibidas = plantas.filter((a)=>true);
+  const canteirosExibidos = canteiros.filter((a)=>true); //TODO: filtro de canteiros
+  const plantasExibidas = plantas.filter((a)=>true); //TODO: filtro de plantas
 
-  //console.log("MAPA RENDER:", engine.state.selection)
+  //TODO: toasts
+  const onSaveModal = async (data, tipoEntidadeId) => {
+    engine.setPendingMutation({after: data})
+    const saveHandlers = {
+      canteiro: salvarCanteiro,
+      horta: (data, user)=>console.log(data, user),
+      planta: (data, user)=>console.log(data, user),
+    };
+    try {
+      const save = saveHandlers[tipoEntidadeId];
+      if (!save) { throw new Error(`Tipo de entidade não suportado: ${tipoEntidadeId}`); }
+      await save({ data, user, mutation: engine.state.pendingMutation });
+    } catch (err) {
+      console.error(err,data,user);
+    } finally {
+      engine.hideModalCanteiro();
+      engine.setModalData(null);
+    }
+  };
+
   return (
     <Container>
       <div
         style={{ width: "90vw", height: "90vh", overflow: "hidden", border: "solid black 1px"}}
         onWheel={handlers.onWheel}
-        onMouseMove={handlers.onMouseMove}
+        onMouseMove={(evt)=>handlers.onMouseMove(evt)}
+        onMouseDown={handlers.onMouseDown}
+        onMouseUp={handlers.onMouseUp}
       >
-        <svg width="100%" height="100%">
-
+        <svg ref={svgRef} width="100%" height="100%">
+          {engine.isPlacing && <text x="20" y="35" >Placing</text>}
+          {engine.isResizing && <text x="20" y="55" >Resizing</text>}
+          {engine.isDragging && <text x="20" y="75" >Dragging</text>}
           {/* grupo transformado */}
           <g
+            ref={gRef}
             transform={`
               translate(${transform.x} ${transform.y})
               rotate(${transform.rotate})
               scale(${transform.scale})
             `}
           >
-            <MapaHorta horta={horta} />
+            <MapaHorta
+              horta={horta}
+              svgRef={svgRef.current}
+              gRef={gRef.current}
+            />
             {canteirosExibidos.map((cant) => (
-              <MapaCanteiro key={cant.id} canteiro={cant} showToast={showToast}/>
+              <MapaCanteiro
+                key={cant.id}
+                canteiro={cant}
+                showToast={showToast}
+                svgRef={svgRef.current}
+                gRef={gRef.current}
+              />
             ))}
             {plantasExibidas.map((plan) => (
-              <MapaPlanta key={plan.id} planta={plan} showToast={showToast}/>
+              <MapaPlanta
+                key={plan.id}
+                planta={plan}
+                showToast={showToast}
+                svgRef={svgRef.current}
+                gRef={gRef.current}
+              />
             ))}
-            <MapaPreview />
+            {engine.showPreview && <MapaPreview />}
+            {engine.showDrag && <MapaDrag />}
           </g>
         </svg>
         <PlantarOffcanvas
-          show={engine.state.activeAction === MODOS_MAPA.PLANT && engine.state.showConfigPanel}
-          onConfirm={(config) => engine.configAction(config)}
+          show={engine.isPlacing && engine.state.placing.tipoEntidadeId === "planta" && engine.showConfigPanel}
+          onConfirm={(config, preview) => {
+            engine.placeUpdade(config); //UPDATE porque a entidade planta já vem do toolbox
+            engine.previewStart(preview);
+            engine.openPreview();
+          }}
+          onCancel={engine.placeReset}
+          onClose={engine.hideConfigPanel}
+        />
+        <DesenharOffcanvas
+          show={engine.isDrawing && engine.showConfigPanel}
+          onConfirm={(config, drag) => {
+            engine.drawStart(config, drag);
+            engine.dragSetup(drag);
+            engine.openDrag()
+          }}
           onCancel={engine.resetAction}
-          onClose={engine.closeConfigPanel}
+          onClose={engine.hideConfigPanel}
         />
         <MonitorarOffcanvas
-          show={engine.state.activeTool === "monitor" && engine.state.showConfigPanel}
-          selection={[...canteirosSelecionados, ...plantasSelecionadas]}
-          onClose={engine.closeConfigPanel}
+          show={engine.state.activeTool === "monitor" && engine.showConfigPanel}
+          selectionData={{
+            planta: plantasSelecionadas,
+            canteiro: canteirosSelecionados,
+          }}
+          onClose={engine.hideConfigPanel}
           showToast={showToast}
         />
         <InspecionarOffCanvas
-          show={engine.state.activeTool === "inspect" && engine.state.showConfigPanel}
-          tipoEntidadeId={"canteiro" /*TODO: ARRUMAR PARA OUTRAS ENTIDADES*/}
-          onClose={engine.closeConfigPanel}
+          show={engine.state.activeTool === "inspect" && engine.showConfigPanel}
+          onClose={engine.hideConfigPanel}
+          selectionData={{
+            planta: plantasSelecionadas,
+            canteiro: canteirosSelecionados,
+          }}
+          onActivate={(config)=>engine.heatmapSet(config)}
+          onDeactivate={()=>engine.heatmapReset()}
           showToast={showToast}
-          onActivate={(config)=>engine.configAction(config)}
-          onDeactivate={()=>engine.configAction({
-            ...engine.state.actionConfig,
-            inspect: false,
-          })}
         />
         <ManejarOffCanvas
-          show={engine.state.activeTool === "handle" && engine.state.showConfigPanel}
-          selection={[...canteirosSelecionados, ...plantasSelecionadas]}
-          onClose={engine.closeConfigPanel}
+          show={engine.state.activeTool === "handle" && engine.showConfigPanel}
+          selectionData={{
+            planta: plantasSelecionadas,
+            canteiro: canteirosSelecionados,
+          }}
+          onClose={engine.hideConfigPanel}
           showToast={showToast}
         />
 
         <MapaBussola />
         <MapaToolbar />
       </div>
+      {/* ================= MODAL ================= */}
+      <CanteiroModal
+        key="canteiro"
+        show={engine.showModalCanteiro}
+        onClose={engine.hideModalCanteiro}
+        onSave={(data,tipoEntidadeId)=>onSaveModal(data,tipoEntidadeId)}
+        data={engine.state.select.modalData}
+        setToast={(toast) => setToast(toast, setShowToastMensagem)}
+      />
+      <PlantaModal
+        key="planta"
+        show={engine.showModalPlanta}
+        onClose={engine.hideModalPlanta}
+        onSave={(data,tipoEntidadeId)=>onSaveModal(data,tipoEntidadeId)}
+        data={engine.state.select.modalData}
+        setToast={(toast) => setToast(toast, setShowToastMensagem)}
+      />
+      {/*TODO: AJUSTAR TOAST DO MAPA PARA PADRÃO NOVO */}
       {/* ================= TOASTS ================= */}
       <AppToastMensagem
         show={showToastMensagem}

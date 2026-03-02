@@ -15,7 +15,7 @@ const estagioPadrao = {
 };
 
 const categoriaPadrao = {
-    nome: "Novo Estágio",
+    nome: "Nova Categoria",
     descricao: "",
     tagVariant: "dark",
 };

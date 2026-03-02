@@ -1,61 +1,62 @@
-export function normalizeSelection(selection) {
-  if (!selection || selection.length === 0) {
-    return {
-      entidade: null,
-      selectionNormalizada: [],
-      tipoEntidadeId: null,
-    };
+export function calcularArea(entidade) {
+  if (!entidade.dimensao) return 0;
+  if (!entidade.aparencia.geometria) return 0;
+
+  const { y, x } = entidade.dimensao;
+
+  switch (entidade.aparencia.geometria) {
+    case "rect":
+      return x * y;
+    case "circle": {
+      const diametro = Math.min(x, y);
+      const raio = diametro / 2;
+      return Math.PI * raio ** 2;
+    }
+    case "ellipse": {
+      const a = x / 2;
+      const b = y / 2;
+      return Math.PI * a * b;
+    }
+    case "polygon": {
+      const pontos = entidade.aparencia.vertices;
+
+      if (!pontos || pontos.length < 3) return 0;
+
+      let area = 0;
+      const n = pontos.length;
+
+      for (let i = 0; i < n; i++) {
+        const j = (i + 1) % n;
+        area += pontos[i].x * pontos[j].y;
+        area -= pontos[j].x * pontos[i].y;
+      }
+
+      return Math.abs(area) / 2;
+    }
+
+    default:
+      console.warn(`Não é possível calcular área de ${entidade.aparencia.geometria}`)
+      return 0;
   }
-
-  const entidade = selection[0].data;
-  const tipoEntidadeId = selection[0].tipoEntidadeId;
-
-  const selectionNormalizada =
-    selection.length === 1
-      ? selection
-      : selection.filter(
-          s => s.tipoEntidadeId === tipoEntidadeId
-        );
-
-  return {
-    entidade,
-    selectionNormalizada,
-    tipoEntidadeId,
-  };
 }
 
-export function offcanvasTabHeader ({selection = [], tipoEntidadeId}) {
 
-  let entidade = null;
-  let displayNome;
-  let displayArea;
+export function offcanvasTabHeader ({tipoEntidadeId, list = []}) {
+  if (!tipoEntidadeId) return <div><strong>Sem seleção</strong></div>
 
-  // selecao vazia
-  if (selection.length === 0) {
-    displayNome = "Nada Selecionado";
-    displayArea = 0;
-  } else {
-    // seleção única
-    entidade = selection[0].data;
-    if (selection.length === 1) {
-      displayNome = entidade.nome;
-      displayArea = entidade.dimensao.x/100 * entidade.dimensao.y/100; //TODO: gerenciar outras geometrias! 
-    // seleção múltipla
-    } else {
-      displayNome = `${entidade.nome} e mais ${selection.length - 1} ${tipoEntidadeId}${selection.length > 2 ? "s" : ""}`
-      displayArea = selection
-      .reduce((acc, s) => {
-        const { x, y } = s.data.dimensao || {};
-        return acc + (Number(x/100 || 0) * Number(y/100 || 0));
-      }, 0);  //TODO: gerenciar outras geometrias! 
-    }
-  }
+  const last = list.at(-1) || null;
+  const displayArea = list.reduce((acc, sel) => {
+      return acc + calcularArea(sel);
+    }, 0);
 
+  let displayNome = last ? last.nome : `Sem ${tipoEntidadeId}s na seleção`
+  if (list.length > 1) displayNome =
+  `${last.nome} e mais ${list.length - 1} ${tipoEntidadeId}${list.length > 2 ? "s" : ""}`
 
   return ( <div>
       <strong>{displayNome}</strong>
       <div className="text-muted small">
-          {displayArea.toFixed(2)} m²
+          {(displayArea/10000).toFixed(2)} m²
       </div>
     </div>
   )

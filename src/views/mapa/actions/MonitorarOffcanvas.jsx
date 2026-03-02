@@ -1,22 +1,27 @@
-import { Offcanvas, Tabs, Tab, } from "react-bootstrap";
+import { Offcanvas, Tabs, Tab, Form, } from "react-bootstrap";
 import MonitorarManualTab from "./MonitorarManualTab";
 import HistoricoTab from "./HistoricoTab";
-import MonitorarAutomaticoTab from "./CVTab";
-import { normalizeSelection, offcanvasTabHeader } from "../ui/OffcanvasPattern"
+import { offcanvasTabHeader } from "../ui/OffcanvasPattern"
 import CVTab from "./CVTab";
+import { useState } from "react";
+import { renderOptions, StandardInput } from "../../../utils/formUtils";
+import { TIPOS_ENTIDADE } from "../../../utils/consts/TIPOS_ENTIDADE";
+import { toDateTimeLocal } from "../../../utils/dateUtils";
+
 
 export default function MonitorarOffcanvas({
   show,
-  selection,
-  onClose = () => {},
-  showToast
+  selectionData,
+  onClose,
+  showToast,
 }) {
-  if (!selection) return null;
+  if (!selectionData) return null;
+  const [tipoEntidadeId, setTipoEntidadeId] = useState(null);
+  const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
+  const list = selectionData[tipoEntidadeId] ?? [];
+  const last = list.at(-1) ?? {};
+  const header = offcanvasTabHeader ({tipoEntidadeId, list})
 
-  const {entidade, selectionNormalizada, tipoEntidadeId} = normalizeSelection(selection)
-  const header = offcanvasTabHeader ({selection: selectionNormalizada, tipoEntidadeId})
-
-  console.log(entidade)
   return (
     <Offcanvas
       show={show}
@@ -26,33 +31,52 @@ export default function MonitorarOffcanvas({
       scroll
       style={{ width: 420, padding: "8px 12px" }}
     >
-      <Offcanvas.Header closeButton>{header}</Offcanvas.Header>
-      <Offcanvas.Body className="p-0">
-        <Tabs className="px-3 pt-2">
+      <Offcanvas.Header closeButton>
+        🔬 {header}
+      </Offcanvas.Header>
+      
+     <Offcanvas.Body className="p-0">
+        <StandardInput label="Monitorar" width="120px">
+          <Form.Select
+            value={tipoEntidadeId ?? ""}
+            onChange={(e)=>setTipoEntidadeId(e.target.value)}
+          >
+            {renderOptions({
+              list: TIPOS_ENTIDADE.filter((a)=>a.monitoravel),
+              placeholder: "Selecione o tipo de entidade",
+              nullOption: true,
+              isOptionDisabled: (a)=>!selectionData[a.id] || selectionData[a.id].length === 0
+            })}
+            </Form.Select>
+        </StandardInput>
+        <StandardInput label="Data/hora" width="120px">
+          <Form.Control
+            type="datetime-local"
+            value={stringTimestamp}
+            onChange={(e)=> setStringTimestamp(e.target.value)}
+          />
+        </StandardInput>
 
-          {selectionNormalizada.length > 0 && <Tab eventKey="medir" title="Monitorar">
+        {tipoEntidadeId && list.length > 0 && <Tabs className="px-3 pt-2">
+          <Tab eventKey="medir" title="Monitorar">
             <MonitorarManualTab
-              selection={selectionNormalizada}
+              entidade={last}
+              selectionData={list}
               tipoEntidadeId={tipoEntidadeId}
               showToast={showToast}
+              stringTimestamp={stringTimestamp}
             />
-          </Tab>}
-          {entidade?.id &&<Tab eventKey="CV" title="Visão Computacional">
+          </Tab>
+          <Tab eventKey="CV" title="Visão Computacional">
             <CVTab
-              entidade={entidade}
+              entidade={last}
               tipoEntidadeId={tipoEntidadeId}
               showToast={showToast}
             />
-          </Tab>}
-          {entidade?.id &&<Tab eventKey="historico" title="Histórico">
-            <HistoricoTab
-              entidade={entidade}
-              tipoEntidadeId={tipoEntidadeId}
-              showToast={showToast}
-            />
-          </Tab>}
-        </Tabs>
+          </Tab>
+        </Tabs>}
       </Offcanvas.Body>
     </Offcanvas>
   );
 }
+//TODO: HistóricoTab deve ir para Inspecionar!

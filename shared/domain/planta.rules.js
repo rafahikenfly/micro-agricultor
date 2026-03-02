@@ -1,5 +1,6 @@
-import { mergeComValidacao } from "./rulesUtils.js";
-import { timestamp } from "../../src/firebase";  //TODO: ESSE ACOPLAMENTO COM O FRONTEND NÃO ESTÁ CORRETO
+import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { REASON_TYPES } from "../types/REASON_TYPES.js";
+import { estimarDiasDaInformacao, calcularConfiancaPorTempoTotal,  mergeComValidacao } from "./rulesUtils.js";
 
 const estadoInicial = {
   id: "HLRvq5eExZAiKSZOcnaF",
@@ -21,6 +22,7 @@ const plantaPadrao = {
     descricao: "",
     dimensao: { x: 1, y: 1, z: 0 },
     posicao: { x: 0, y: 0, z: 0 },
+    estadoAtual: {},
     estadoId: "",
     estadoNome: "",
     estagioId: "",
@@ -33,19 +35,17 @@ const plantaPadrao = {
     especieId: "",
     especieNome: "",
     variedadeId: "",
-    variedadeNome: ""}
+    variedadeNome: "",
+  }
 
 const cicloPadrao = {
   estagioId: "",
   estagioNome: "",
   dimensao: {x: 0, y: 0, z: 0},
   ambiente: {
-    regras: {
       //    [caracteristicaId]: { min: 6, max: 10 },
-    }
   },
-  tarefas: {
-    regras: [
+  tarefas: [
 //    { caracteristicaId: $caracteristicaId,
 //      operador: ">=",
 //      limite: 4,
@@ -54,14 +54,13 @@ const cicloPadrao = {
 //        ...
 //      ]
 //    }
-    ]},
-  transicoes: {
-    regras: [
+    ],
+  transicao: {
 //    { caracteristicaId: $caracteristicaId,
 //      operador: ">=",
 //      limite: 4, }
 //      ...
-    ]},
+    },
   };
 
 export function mudarVariedade(planta, novaVariedade) {
@@ -86,8 +85,8 @@ export function mudarVariedade(planta, novaVariedade) {
     };
   }
   
-export function manejarPlanta(planta, manejo, eventoId) {
-  const ts = timestamp();
+//TODO: ARRUMAR ESSA FUNÇÃO
+export function manejarPlanta(planta, manejo, eventoId, ts) {
   // Cria uma cópia da planta para não modificar o original, garantindo a existencia da chave estadoAtual
   const plantaManejada = {
     ...planta,
@@ -181,56 +180,115 @@ export function manejarPlanta(planta, manejo, eventoId) {
   };
 }
 
-export function monitorarPlanta(planta, medidas, logMonitoramentoId) {
-  // Cria uma cópia da planta para não modificar o original, garantindo a existencia da chave estadoAtual
-  const plantaMonitorada = {
-    ...planta,
-    estadoAtual: {
-      ...(planta.estadoAtual ?? {})
-    },
-  };
-  const relatorioEfeitos = {};
+/**
+ * Monitorar uma planta com as medidas fornecidas, retornando a planta modificada. O Monitoramento
+ * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
+ * do cálculo do Estado Atual da característica atualizada.
+ * @param {object} planta 
+ * @param {object} medidas 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {object} canteiroMonitorado
+ * 
+ * TODO: monitorarPlanta deveria salvar os eventos/manejos e a diferença acumulada quando
+ * há um estadoAtual anterior? Isso pode ser importante para calcular o decaimento de confiança e
+ * valor de uma determinada característica.
+ * */
+export function monitorarPlanta({planta, caracteristicasMedidas, eventoId, timestamp}) {
+  const results = monitorarEstadoAtual({planta, caracteristicasMedidas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE PLANTAS
+  return results;
+}
 
-  // Processa as medidas da medicao
-  Object.entries(medidas).forEach(([caracteristicaId, medida]) => {
-    // Garante que a característica exista no estadoAtual
-    const atual =
-      plantaMonitorada.estadoAtual[caracteristicaId] ?? {};
+export function calcularEvolucaoTemporalPlanta({planta, catalogo, eventoId, timestamp}) {
+  if (!planta) throw new Error ("Erro recalculando caracteristicas do planta: planta obrigatória.")
+  if (!catalogo) throw new Error ("Erro recalculando caracteristicas do planta: catalogo obrigatório.")
+  if (!eventoId) throw new Error ("Erro recalculando caracteristicas do planta: eventoId obrigatório.")
+  if (!timestamp) throw new Error ("Erro recalculando caracteristicas do planta: timestamp obrigatório.")
 
-    // Salva os valores antes da medida
-    const valorAntes = atual.valor ?? 0;
-    const confiancaAntes = atual.confianca ?? 0;
-    
-    // Registra efeito líquido no relatório
-    relatorioEfeitos[caracteristicaId] = {
-      valorAntes,
-      valorDepois: medida.valor,
-      deltaValor: medida.valor - valorAntes,
-      confiancaAntes,
-      confiancaDepois: medida.confianca,
-      deltaConfianca: medida.confianca - confiancaAntes,
-    };
+  // Se não há condições de calcular ou entidade é morta, retorna estadoAtual Vazio
+  const mutation = {estadoAtual: {}};
 
-    // Reinicializa a característica com a medida, limpando eventos e manejos anteriores
-    plantaMonitorada.estadoAtual[caracteristicaId] = {
-      ...atual,
-      valor: medida.valor,          // Reinicializa o valor
-      confianca: medida.confianca,  // Reinicializa a confiança
-      calculadoEm: timestamp,
-      ultimaMedicao: {              // O valor da medição é armazenado em ultimaMedicao
-        id: logMonitoramentoId,
-        valor: medida.valor,
-        confianca: medida.confianca,
-        timestamp: timestamp,
-      },
-      eventos: [], // Limpa eventos anteriores após medição
-      manejos: [], // Limpa manejos anteriores após medição
-    };
-  });
-  return {
-    plantaMonitorada,
-    relatorioEfeitos
-  };
+  if (!planta?.estadoAtual) {console.log (`${planta.id} sem estado atual`); return mutation}
+  if (planta.isDeleted)     {console.log(`${planta.id} deletada`); return mutation}
+  if (planta.isArchived)    {console.log (`${planta.id} arquivada`); return mutation};
+
+  
+  // para cada caracteristica presente no estado atual
+  for (const caracteristicaId of Object.keys(planta.estadoAtual)) {
+    const caracteristica = planta.estadoAtual[caracteristicaId];
+    const caracteristicaCatalogo = catalogo.find(
+      c => c.id === caracteristicaId
+    );
+
+    // Primeiro analisa se a característica tem condições de ser calculada
+    if (!caracteristica) {
+      console.log (`${planta.id} sem caracteristica ${caracteristicaId}`)
+      continue;
+    }
+    if (!caracteristica.calculadoEm){
+      console.log (`${planta.id} sem data de cálculo para ${caracteristicaId}`)
+      continue;
+    }
+    if (!caracteristicaCatalogo.aplicarObsolescencia && !caracteristicaCatalogo.aplicarVariacao) {
+      console.log (`Nada a fazer com ${caracteristicaId}`)
+      continue
+    }
+    if (caracteristicaCatalogo.aplicarObsolescencia &&
+      !caracteristica.confianca  && 
+      !caracteristicaCatalogo.longevidade ){
+      console.log(`Obsolescência inválida para ${caracteristicaId} em ${planta.id}`);
+      continue;
+    }
+    if (caracteristicaCatalogo.aplicarVariacao &&
+      caracteristica.valor === null &&
+      !caracteristicaCatalogo.variacaoDiaria) {
+      console.log(`Valor inválido para ${caracteristicaId} em ${planta.id}`);
+      continue;
+    }
+      
+      
+
+    const dtMs = timestamp - caracteristica.calculadoEm;
+    if (dtMs <= 0) {
+      console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${planta.id}`);
+      continue;
+    }
+
+    const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
+
+    // Depois analisa se a confiança da característica varia
+    let novaConfianca = caracteristica.confianca;
+    if (caracteristicaCatalogo.aplicarObsolescencia) {
+      
+      const diasEstimados = estimarDiasDaInformacao(
+        caracteristica.confianca,
+        caracteristicaCatalogo.longevidade
+      );
+      novaConfianca = calcularConfiancaPorTempoTotal(
+        diasEstimados + diasDecorridos,
+        caracteristicaCatalogo.longevidade
+      );
+    }
+    // Finalmente, analisa se o valor da característica varia
+    let novoValor = caracteristica.valor;
+    if (caracteristicaCatalogo.aplicarVariacao) {
+      novoValor = caracteristica.valor + diasDecorridos * caracteristicaCatalogo.variacaoDiaria
+    }
+
+    // Salva a mutação
+    if (novoValor !== caracteristica.valor || novaConfianca !== caracteristica.confianca) {
+      mutation.estadoAtual[caracteristicaId] = {
+        ...caracteristica,
+        confianca: novaConfianca,
+        valor: novoValor,
+        calculadoEm: timestamp,
+        eventos: [... (caracteristica.eventos ?? []), eventoId],
+      };
+    }
+  }
+
+  return mutation;
 }
 
 export function plantarVariedade({especie, variedade, tecnica, canteiro, posicao}) {
@@ -274,7 +332,81 @@ export function validarPlanta(dataObj) {
     return valid;
 }
 
+//TODO: ISSO É REFERENTE À VARIEDADE, NÃO À PLANTA
 export function validarCiclo(dataObj) {
     const valid = mergeComValidacao(cicloPadrao, dataObj);
     return valid;
+}
+
+export const getCaracteristicasRelevantesPlanta = ({planta, catalogoVariedades}) => {
+  const caracteristicasSet = new Set();
+
+  // para cada planta
+  const variedade = catalogoVariedades.find((v) => v.id === planta.variedadeId);
+  if (!variedade || !Array.isArray(variedade.ciclo)) return;
+
+  // para cada fase do ciclo da variedade
+  variedade.ciclo.forEach(fase => {
+    
+    // ambiente => chaves do objeto
+    // não pega para as plantas, só para os canteiros
+    //if (fase.ambiente && typeof fase.ambiente === "object") {
+    //  Object.keys(fase.ambiente).forEach(id => {
+    //    caracteristicasSet.add(id);
+    //  });
+    //}
+
+    // transicao => chaves do objeto
+    if (fase.transicao && typeof fase.transicao === "object") {
+      Object.keys(fase.transicao).forEach(id => {
+        caracteristicasSet.add(id);
+      });
+    }
+
+    // tarefas => array
+    if (Array.isArray(fase.tarefas)) {
+      fase.tarefas.forEach(tarefa => {
+        if (tarefa?.caracteristicaId) {
+          caracteristicasSet.add(tarefa.caracteristicaId);
+        }
+      });
+    }
+
+  });
+
+  return Array.from(caracteristicasSet);
+}
+
+export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
+  const pendencias = [];
+
+  const estadoAtual = planta?.estadoAtual || {};
+
+  arrCaracteristicaIds.forEach(caracteristicaId => {
+    const caracteristica = estadoAtual[caracteristicaId];
+
+    // Valor Desconhecido
+    if (!caracteristica) {
+      pendencias.push({
+        tipoEntidadeId: ENTITY_TYPES.PLANTA,
+        alvos: [planta.id],
+        caracteristicaId,
+        motivo: REASON_TYPES.NO_VALUE,
+      });
+      return;
+    }
+
+    // Valor Não-Confiável
+    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 50) {
+      pendencias.push({
+        tipoEntidadeId: ENTITY_TYPES.PLANTA,
+        alvos: [planta.id],
+        caracteristicaId: caracteristicaId,
+        motivo: REASON_TYPES.LOW_CONFIDENCE,
+        confiancaAtual: caracteristica.confianca ?? null
+      });
+    }
+  });
+
+  return pendencias;
 }

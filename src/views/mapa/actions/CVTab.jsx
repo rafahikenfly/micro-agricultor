@@ -87,7 +87,7 @@ export default function CVTab({ entidade, tipoEntidadeId, showToast }) {
     }
     setWriting(true);
     try {
-      const novoCvJobRunRef = cvJobRunsService.criarRef();
+      const novoCvJobRunRef = cvJobRunsService.getCreateRef();
       const novoCvJobRun = criarCvJobRun({
         cvJobRunId: novoCvJobRunRef.id,
         cvJobSpecs: jobSpecsSelecionado,

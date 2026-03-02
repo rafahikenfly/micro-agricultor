@@ -1,35 +1,25 @@
 import { useAuth } from "../../../services/auth/authContext";
 import SVGEntidade from "../../../services/svg/SVGEntidade";
 import { createPlantaInputHandler } from "../handlers/MapaPlanta.handlers";
-import { MODOS_MAPA } from "../MapaContexto";
+import { calcularCorHeatmap } from "../../../utils/uiUtils";
 import { useMapaEngine } from "../MapaEngine";
 
-export default function MapaPlanta ({planta, showToast}) {
+export default function MapaPlanta ({planta, showToast, svgRef, gRef}) {
   const { user } = useAuth();
   const engine = useMapaEngine();
-  const handlers = createPlantaInputHandler(engine, planta, user, engine.state, showToast)
+  const handlers = createPlantaInputHandler(engine, planta, user, showToast, svgRef, gRef)
 
   const style = {}
-    if (engine.state.activeAction === MODOS_MAPA.EDIT) {
-      const selecionado = engine.state.selection?.some(
-          (s) =>
-            s.tipoEntidadeId === "planta" &&
-            s.entidadeId === planta.id
-        );
-
-      style.opacity = selecionado ? 1 : 0.35;
+  if (engine.isSelecting) {
+    const selecionado = engine.selectionPlantas.includes(planta.id);
+    style.opacity = selecionado ? 1 : 0.35;
+    if (selecionado && engine.isHeatmapActive("planta")) {
+      const { caracteristicaId, min, max } = engine.state.heatmap;
+      const valor = planta.estadoAtual?.[caracteristicaId]?.valor;
+      style.fill = calcularCorHeatmap(valor, min, max,) 
+      style.stroke = style.fill
     }
-    if (engine.state.activeAction === MODOS_MAPA.VIEW
-     && engine.state.activeTool === "inspect"
-     && engine.state.actionConfig?.inspect) {
-      const caracteristicaId = engine.state.actionConfig.caracteristicaId;
-      style.fill = calcularCorHeatmap(
-        canteiro.estadoAtual?.[caracteristicaId]?.valor,
-        engine.state.actionConfig.min,
-        engine.state.actionConfig.max,
-      );
-      style.border = "#808080";
-    }
+  }
 
   return (
     <SVGEntidade 
@@ -37,6 +27,7 @@ export default function MapaPlanta ({planta, showToast}) {
       style={style}
       eventos={{
         onClick: (evt) => handlers.onClick(evt),
+        onDoubleClick: (evt) => handlers.onDoubleClick(evt),
       }}
     />
   )

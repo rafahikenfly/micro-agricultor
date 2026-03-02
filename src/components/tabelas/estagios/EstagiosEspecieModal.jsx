@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
 import { validarEstagio } from "@domain/estados.rules";
-import { renderOptions } from "../../../utils/formUtils";
+import { handleSaveForm, renderOptions } from "../../../utils/formUtils";
 import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
 export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, }) {
@@ -29,7 +29,7 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
       </Modal.Header>
 
         <Modal.Body>
-          <Form onSubmit={salvar}>
+          <Form>
 
             <Form.Group className="mb-3">
               <Form.Label>Nome</Form.Label>
@@ -69,7 +69,15 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
         
         <Modal.Footer>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" onClick={salvar}>Salvar</Button>
+          <Button variant="success" onClick={()=>handleSaveForm({
+              onSave,
+              form,
+              setForm,
+              clearCache:"estagios_especie"
+            })}
+          >
+            Salvar
+          </Button>
         </Modal.Footer>
       </Modal>
     )

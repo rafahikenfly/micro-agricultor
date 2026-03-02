@@ -41,6 +41,7 @@ export default function EstagiosEspecieCRUD() {
   const {
     criar,
     editar,
+    duplicar,
     atualizar,
     arquivar,
     desarquivar,

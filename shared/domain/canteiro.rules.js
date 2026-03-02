@@ -1,3 +1,6 @@
+import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { REASON_TYPES } from "../types/REASON_TYPES.js";
+import { monitorarEstadoAtual } from "./monitoramento.rules.js";
 import { calcularConfiancaPorTempoTotal, estimarDiasDaInformacao, mergeComValidacao } from "./rulesUtils.js";
 
 const estadoInicial = {
@@ -29,9 +32,15 @@ const canteiroPadrao = {
   estadoAtual: {},
 }
 
-export const validarCanteiro = (dataObj = {}) => {
-    const valid = mergeComValidacao(canteiroPadrao, dataObj);
-    return valid;
+/**
+ * Protege contra problemas no objeto.
+ * @param {*} dataObj 
+ * @returns 
+ */
+export const validarObjetoCanteiro = (dataObj = {}) => {
+  // TODO: validações do objeto (tipos, etc..)
+  const valid = mergeComValidacao(canteiroPadrao, dataObj);
+  return valid;
 }
 
 /**
@@ -62,30 +71,30 @@ export function manejarCanteiro({canteiro, manejo, eventoId, timestamp}) {
 
   // Processa os efeitos do manejo
   if (Array.isArray(manejo.efeitos)) {
-    manejo.efeitos.forEach((ef) => {
+    for (const efeito of manejo.efeitos) {
       // Garante que a característica exista no estadoAtual
-      const atual = canteiroManejado.estadoAtual[ef.caracteristicaId] ?? {};
+      const atual = canteiroManejado.estadoAtual[efeito.caracteristicaId] ?? {};
 
       let novoValor = atual.valor;
       // Calcula o novo valor conforme o tipo
-      switch (ef.tipoEfeitoId) {
-        case "delta": novoValor += Number(ef.valorEfeito); break;
-        case "multiplicador":  novoValor *= Number(ef.valorEfeito); break;
-        case "fixo": novoValor = Number(ef.valorEfeito); break;
+      switch (efeito.tipoEfeitoId) {
+        case "delta": novoValor += Number(efeito.valorEfeito); break;
+        case "multiplicador":  novoValor *= Number(efeito.valorEfeito); break;
+        case "fixo": novoValor = Number(efeito.valorEfeito); break;
         default:
-          throw new Error( `Tipo de efeito ${ef.tipoEfeitoId} inválido` );
+          throw new Error( `Tipo de efeito ${efeito.tipoEfeitoId} inválido` );
       }
 
       // Atualiza a característica com a medida, limpando eventos e manejos anteriores
-      canteiroManejado.estadoAtual[ef.caracteristicaId] = {
+      canteiroManejado.estadoAtual[efeito.caracteristicaId] = {
         ...atual,
         valor: novoValor,                           // Novo valor da característica
-        confianca: Number(ef?.valorConfianca) ?? 0, // Nova confiança da característica (se houver)
+        confianca: Number(efeito?.valorConfianca) ?? 0, // Nova confiança da característica (se houver)
         manejos: [...atual.manejos, eventoId],      // Adiciona manejos aos anteriores
         // TODO: se um manejo tiver duas vezes a mesma caracteristica, o manejo aparecerá duplicado aqui.
-        calculadoEm: timestamp,
+        calculadoEm: timestamp ?? Date.now(),
       };
-    });
+    };
   }
   return canteiroManejado
 }
@@ -96,112 +105,200 @@ export function manejarCanteiro({canteiro, manejo, eventoId, timestamp}) {
  * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
  * do cálculo do Estado Atual da característica atualizada.
  * @param {object} canteiro 
- * @param {object} medidas 
+ * @param {object} caracteristicasMedidas 
  * @param {string} eventoId 
- * @returns canteiroMonitorado
+ * @param {number} timestamp
+ * @returns {object} monitorado
+ * @returns {object} before
+ * @returns {object} after
+ * 
+ * TODO: monitorarCanteiro deveria salvar os eventos/manejos e a diferença acumulada quando
+ * há um estadoAtual anterior? Isso pode ser importante para calcular o decaimento de confiança e
+ * valor de uma determinada característica.
  */
 export function monitorarCanteiro({canteiro, medidas, eventoId, timestamp}) {
-  if (!canteiro) throw new Error ("Erro monitorando canteiro: canteiro obrigatório.")
-  if (!medidas) throw new Error ("Erro monitorando canteiro: medidas obrigatório.")
-  if (!eventoId) throw new Error ("Erro monitorando canteiro: eventoId obrigatório.")
-
-  // Cria uma cópia do canteiro para não modificar o original, garantindo a existencia da chave estadoAtual
-  const canteiroMonitorado = {
-    ...canteiro,
-    estadoAtual: {
-      ...(canteiro.estadoAtual ?? {})
-    },
-  };
-
-  // Processa as medidas da medicao
-  Object.entries(medidas).forEach(([caracteristicaId, medida]) => {
-    // Garante que a característica exista no estadoAtual
-    const atual = canteiroMonitorado.estadoAtual[caracteristicaId] ?? {};
-
-    // Reinicializa a característica com a medida, limpando eventos e manejos anteriores
-    canteiroMonitorado.estadoAtual[caracteristicaId] = {
-      ...atual,
-      valor: medida.valor,          // Reinicializa o valor
-      confianca: medida.confianca,  // Reinicializa a confiança
-      eventos: [eventoId],          // Reinicializa eventos com a medição
-      manejos: [],                  // Limpa manejos anteriores após medição
-      calculadoEm: timestamp,
-    };
-  });
-  return canteiroMonitorado;
+  const results = monitorarEstadoAtual({entidade: canteiro, medidas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE CANTEIROS
+  return results;
 }
 
-export function recalcularCaracteristicasCanteiro({canteiro, catalogo, eventoId, timestamp}) {
-  if (!canteiro) throw new Error ("Erro recalculando caracteristicas do canteiro: canteiro obrigatório.")
+export function calcularEvolucaoTemporalCanteiro({canteiro, catalogo, eventoId, timestamp}) {
+  if (!canteiro) throw new Error ("Erro recalculando caracteristicas do canteiro: canteiro obrigatória.")
   if (!catalogo) throw new Error ("Erro recalculando caracteristicas do canteiro: catalogo obrigatório.")
   if (!eventoId) throw new Error ("Erro recalculando caracteristicas do canteiro: eventoId obrigatório.")
   if (!timestamp) throw new Error ("Erro recalculando caracteristicas do canteiro: timestamp obrigatório.")
 
-  if (!canteiro?.estadoAtual) return null;
-  if (canteiro.isDeleted) return canteiro;
-  if (canteiro.isArchived) return canteiro;
-  const novoEstadoAtual = { ...canteiro.estadoAtual };
+  // Se não há condições de calcular ou entidade é morta, retorna estadoAtual Vazio
+  const mutation = {estadoAtual: {}};
+
+  if (!canteiro?.estadoAtual) {console.log (`${canteiro.id} sem estado atual`); return mutation}
+  if (canteiro.isDeleted)     {console.log(`${canteiro.id} deletado`); return mutation}
+  if (canteiro.isArchived)    {console.log (`${canteiro.id} arquivado`); return mutation};
+
   
-  // para cada caracteristica
-  for (const caracteristicaId of Object.keys(novoEstadoAtual)) {
-    const caracteristica = novoEstadoAtual[caracteristicaId];
+  // para cada caracteristica presente no estado atual
+  for (const caracteristicaId of Object.keys(canteiro.estadoAtual)) {
+    const caracteristica = canteiro.estadoAtual[caracteristicaId];
     const caracteristicaCatalogo = catalogo.find(
       c => c.id === caracteristicaId
     );
 
     // Primeiro analisa se a característica tem condições de ser calculada
-    if (!caracteristica                         // não existe a característica na entidade
-      || !caracteristica.calculadoEm            // não há registro do cálculo da caracteristica da entidade
-      || !caracteristica.confianca              // não há confiança da característica (ou é zero - não pode reduzir)
-      || !caracteristicaCatalogo.longevidade    // não há longevidade cadastrada (ou é zero - não dá para calcular a taxa de caída)
-      || caracteristica.valor === null          // não há valor da característica (aqui zero deveria valer)
-      || !caracteristicaCatalogo.variacaoDiaria)// não há variação diária cadastrada (ou é zero - há mudança com o tempo)
+    if (!caracteristica) {
+      console.log (`${canteiro.id} sem caracteristica ${caracteristicaId}`)
       continue;
+    }
+    if (!caracteristica.calculadoEm){
+      console.log (`${canteiro.id} sem data de cálculo para ${caracteristicaId}`)
+      continue;
+    }
+    if (!caracteristicaCatalogo.aplicarObsolescencia && !caracteristicaCatalogo.aplicarVariacao) {
+      console.log (`Nada a fazer com ${caracteristicaId}`)
+      continue
+    }
+    if (caracteristicaCatalogo.aplicarObsolescencia &&
+      !caracteristica.confianca  && 
+      !caracteristicaCatalogo.longevidade ){
+      console.log(`Obsolescência inválida para ${caracteristicaId} em ${canteiro.id}`);
+      continue;
+    }
+    if (caracteristicaCatalogo.aplicarVariacao &&
+      caracteristica.valor === null &&
+      !caracteristicaCatalogo.variacaoDiaria) {
+      console.log(`Valor inválido para ${caracteristicaId} em ${canteiro.id}`);
+      continue;
+    }
 
-    const dtMs = timestamp.toMillis() - caracteristica.calculadoEm.toMillis();
-    if (dtMs <= 0) continue;         // não passou nenhum tempo desde o último cálculo
+    const dtMs = timestamp - caracteristica.calculadoEm;
+    if (dtMs <= 0) {
+      console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${canteiro.id}`);
+      continue;
+    }
 
     const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
 
     // Depois analisa se a confiança da característica varia
-    let novaConfianca;
-    if (caracteristica.aplicarObsolescencia) {
-      const diasEstimados = estimarDiasDaInformacao(caracteristica.confianca, caracteristicaCatalogo.longevidade);
+    let novaConfianca = caracteristica.confianca;
+    if (caracteristicaCatalogo.aplicarObsolescencia) {
       
-      novaConfianca = calcularConfiancaPorTempoTotal(diasEstimados + diasDecorridos, caracteristicaCatalogo.longevidade);
+      const diasEstimados = estimarDiasDaInformacao(
+        caracteristica.confianca,
+        caracteristicaCatalogo.longevidade
+      );
+      novaConfianca = calcularConfiancaPorTempoTotal(
+        diasEstimados + diasDecorridos,
+        caracteristicaCatalogo.longevidade
+      );
     }
     // Finalmente, analisa se o valor da característica varia
-    let novoValor;
-    if (caracteristica.aplicarVariacao) {
+    let novoValor = caracteristica.valor;
+    if (caracteristicaCatalogo.aplicarVariacao) {
       novoValor = caracteristica.valor + diasDecorridos * caracteristicaCatalogo.variacaoDiaria
     }
 
-    novoEstadoAtual[caracteristicaId] = {
-      ...caracteristica,
-      confianca: Number(Math.max(0, novaConfianca).toFixed(2)),
-      calculadoEm: timestamp,
-      eventos: [... caracteristica.eventos, eventoId],
-    };
+    // Salva a mutação
+    if (novoValor !== caracteristica.valor || novaConfianca !== caracteristica.confianca) {
+      mutation.estadoAtual[caracteristicaId] = {
+        ...caracteristica,
+        confianca: novaConfianca,
+        valor: novoValor,
+        calculadoEm: timestamp,
+        eventos: [... (caracteristica.eventos ?? []), eventoId],
+      };
+    }
   }
 
-  return {
-    ...canteiro,
-    estadoAtual: novoEstadoAtual,
-  };
+  return mutation;
 }
 
-export function criarCanteiro({horta, nome, estadoId, estadoNome, descricao, dimensao, aparencia, posicao}) {
-  if (!horta) throw new Error ("Erro criando canteiro: horta obrigatória.")
+export function criarCanteiro({horta, estado, data = {}, }) {
+  if (!horta) throw new Error ("Erro criando canteiro: horta é obrigatória.")
 
-  return {
+  // horta é obrigatória em um canteiro
+  // estado {id, nome} é opcional e pode vir do data ou buscar do padrão
+  const novoCanteiro = {
+    ...data,
     hortaId: horta.id,
     hortaNome: horta.nome,
-    estadoId: estadoId || estadoInicial.id,
-    estadoNome: estadoNome || estadoInicial.nome,
-    nome: nome || "Novo canteiro",
-    descricao: descricao || "",
-    aparencia: {...aparenciaPadrao, ...aparencia},
-    posicao: {...vetorPadrao, ...posicao},
-    dimensao: {...vetorPadrao, ...dimensao},
+    estadoId: estado?.id ?? data?.estadoId,
+    estadoNome: estado?.nome ?? data?.estadoNome,
   }
+
+  return validarObjetoCanteiro(novoCanteiro)
+}
+
+export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedades}) => {
+  const caracteristicasSet = new Set();
+
+  // para cada planta
+  plantas.forEach(planta => {
+    const variedade = catalogoVariedades.find((v) => v.id === planta.variedadeId);
+    if (!variedade || !Array.isArray(variedade.ciclo)) return;
+
+    // para cada fase do ciclo da variedade
+    variedade.ciclo.forEach(fase => {
+      
+      // ambiente => chaves do objeto
+      if (fase.ambiente && typeof fase.ambiente === "object") {
+        Object.keys(fase.ambiente).forEach(id => {
+          caracteristicasSet.add(id);
+        });
+       }
+
+      // transicao => chaves do objeto
+      // não pega para canteiros, só plantas
+      // if (fase.transicao && typeof fase.transicao === "object") {
+      //   Object.keys(fase.transicao).forEach(id => {
+      //     caracteristicasSet.add(id);
+      //   });
+      // }
+
+      // tarefas => array
+      // não pega para canteiros, só plantas
+      // if (Array.isArray(fase.tarefas)) {
+      //   fase.tarefas.forEach(tarefa => {
+      //     if (tarefa?.caracteristicaId) {
+      //       caracteristicasSet.add(tarefa.caracteristicaId);
+      //     }
+      //   });
+      // }
+
+    });
+  });
+
+  return Array.from(caracteristicasSet);
+}
+
+export function getPendenciasCanteiro({canteiro, arrCaracteristicaIds}) {
+  const pendencias = [];
+
+  const estadoAtual = canteiro?.estadoAtual || {};
+
+  arrCaracteristicaIds.forEach(caracteristicaId => {
+    const caracteristica = estadoAtual[caracteristicaId];
+
+    // Valor Desconhecido
+    if (!caracteristica) {
+      pendencias.push({
+        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
+        alvos: [canteiro.id],
+        caracteristicaId,
+        motivo: REASON_TYPES.NO_VALUE
+      });
+      return;
+    }
+
+    // Valor Não-Confiável
+    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 50) {
+      pendencias.push({
+        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
+        alvos: [canteiro.id],
+        caracteristicaId: caracteristicaId,
+        motivo: REASON_TYPES.LOW_CONFIDENCE,
+        confiancaAtual: caracteristica.confianca ?? null
+      });
+    }
+  });
+
+  return pendencias;
 }

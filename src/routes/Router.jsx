@@ -1,16 +1,19 @@
+// src/routes/Router.jsx
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import AppAdmin from "../app/AppAdmin";
-import AppUsuario from "../app/AppUsuario";
-import AppSelector from "../app/AppSelector";
+import Login from "../app/Login";
+import AppAdmin from "../views/ambientes/AppAdmin"
+import AppMapa from "../views/ambientes/AppMapa";
+import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Rota raiz decide o ambiente automaticamente */}
-        <Route path="/" element={<AppSelector />} />
-        <Route path="/usuario/*" element={<AppUsuario />} />
-        <Route path="/admin/*" element={ <AppAdmin /> }/>
+        <Route path="/" element={<AppMapa />} />
+        <Route path="/mapa/*" element={<AppMapa />} />
+        <Route path="/calendario/*" element={<AppCalendario />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/admin/*" element={<AppAdmin />} />
       </Routes>
     </BrowserRouter>
   );

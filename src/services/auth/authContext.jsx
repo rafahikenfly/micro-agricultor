@@ -1,47 +1,71 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import { auth, db } from "../../firebase";
 
 const AuthContext = createContext(null);
-const STORAGE_KEY = "app:user";
-
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* =================== LOCALSTORAGE =================== */
+  /* ================= FIREBASE AUTH ================= */
   useEffect(() => {
-    const storedUser = localStorage.getItem(STORAGE_KEY);
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
+      if (!firebaseUser) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const doc = await db.collection("usuarios")
+          .doc(firebaseUser.uid)
+          .get();
+
+        if (!doc.exists) {
+          console.error("Usuário sem documento no Firestore.");
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
+        setUser({
+          uid: firebaseUser.uid,
+          ...doc.data(),
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar usuário:", err);
+        setUser(null);
+      }
+
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
   }, []);
 
-  /* =================== HELPERS =================== */
+  /* ================= HELPERS ================= */
   const hasAccess = (ambiente) => {
     return user?.acesso?.[ambiente] === true;
-  };  
-  
-  /* =================== AUTH ACTIONS =================== */
-  const login = (userData) => {
-    setUser(userData);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+  };
+
+  /* ================= AUTH ACTIONS ================= */
+  const login = (email, password) => {
+    return auth.signInWithEmailAndPassword(email, password);
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem(STORAGE_KEY);
+    return auth.signOut();
   };
 
   const setAmbiente = async (ambiente) => {
     if (!user) return;
     if (!hasAccess(ambiente)) return;
-    //TODO: persistir no banco de dados a mudança de ambiente do usuário
-    const updatedUser = { ...user, ambienteAtivo: ambiente };
-    setUser(updatedUser);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
-  };
 
+    await db.collection("usuarios").doc(user.uid).update({
+      ambienteAtivo: ambiente,
+    });
+  };
 
   return (
     <AuthContext.Provider
@@ -53,7 +77,8 @@ export function AuthProvider({ children }) {
         hasAccess,
         setAmbiente,
       }}
-    >      {children}
+    >
+      {children}
     </AuthContext.Provider>
   );
 }

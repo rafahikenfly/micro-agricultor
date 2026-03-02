@@ -41,6 +41,7 @@ export default function EstadosPlantaCRUD() {
   const {
     criar,
     editar,
+    duplicar,
     atualizar,
     arquivar,
     desarquivar,

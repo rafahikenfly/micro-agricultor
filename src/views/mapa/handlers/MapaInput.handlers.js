@@ -1,6 +1,6 @@
-import { getSVGPoint } from "../../../services/svg/PointFunctions";
+import { getMouseInMapSpace, getSVGPoint } from "../../../services/svg/PointFunctions";
 
-export function createMapaInputHandler(engine, state) {
+export function createMapaInputHandler(engine, state, svgRef, gRef) {
   return {
     onWheel(e) {
       if (!e.shiftKey) return;
@@ -34,16 +34,11 @@ export function createMapaInputHandler(engine, state) {
         return;
       }
 
-      // TRACK MOUSE (preview, snap, hover, etc)
-      if (state.actionConfig?.preview?.show) {
-        const pt = svg.createSVGPoint();
-        pt.x = e.clientX;
-        pt.y = e.clientY;
-  
-        const cursor = pt.matrixTransform(svg.getScreenCTM().inverse());
-  
-        engine.setMousePos(cursor);
+      // TRACK MOUSE (só com preview ou drag)
+      if (engine.showPreview || engine.showDrag) {
+        const mapPoint = getMouseInMapSpace(svgRef, gRef, e.clientX, e.clientY);
+        engine.setMousePos(mapPoint);
       }
-    }
+    },
   };
 }

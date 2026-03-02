@@ -88,12 +88,12 @@ function ListaAcoes ({colunas, dados, acoes,}) {
                     )}
                   </th>
                 ))}
-                <th width="20%">Ações</th>
+                <th>Ações</th>
               </tr>
             </thead>
             <tbody>
               {dadosOrdenados.map((dado, dado_idx) => (
-                <React.Fragment key={dado.id}>
+                <React.Fragment key={dado.id ?? `dado-${dado_idx}`}>
                   <tr>
                     {colunas.map((col, col_idx) => {
                       if (col.boolean) return (
@@ -136,7 +136,7 @@ function ListaAcoes ({colunas, dados, acoes,}) {
                         <Button
                         key = {dado[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
                         size="sm"
-                        variant= {dado[acao.toggle] ? acao?.variant || "primary" : acao?.variantFalse || "primary"}
+                        variant= {dado[acao.toggle] ? `${acao?.variant}` : `outline-${acao?.variant}`}
                         className="me-1"
                         onClick={dado[acao.toggle] ? () => acao.funcao(dado, dado_idx) : () => acao.funcaoFalse(dado, dado_idx)}
                       >
@@ -147,7 +147,7 @@ function ListaAcoes ({colunas, dados, acoes,}) {
                       <Button
                         key = {i}
                         size="sm"
-                        variant= {acao?.variant || "primary"}
+                        variant= {`outline-${acao?.variant}` || "primary"}
                         className="me-1"
                         onClick={() => acao.funcao(dado, dado_idx)}
                       >

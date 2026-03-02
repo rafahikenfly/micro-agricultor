@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
 import { validarEstado } from "@domain/estados.rules";
-import { renderOptions } from "../../../utils/formUtils";
+import { handleSaveForm, renderOptions } from "../../../utils/formUtils";
 import { VARIANTS } from "../../../utils/consts/VARIANTS";
 
 export default function EstadosPlantaModal({ show, onSave, onClose, data = {}, }) {
@@ -14,13 +14,7 @@ export default function EstadosPlantaModal({ show, onSave, onClose, data = {}, }
         setForm(validarEstado(data)); // edição
       }
     }, [data]);
-    
-      const salvar = () => {
-        onSave({
-          ...form,
-        });
-      };
-    
+        
     if (!show) return null;
     return (
     <Modal show onHide={onClose} size="lg">
@@ -29,7 +23,7 @@ export default function EstadosPlantaModal({ show, onSave, onClose, data = {}, }
       </Modal.Header>
 
         <Modal.Body>
-          <Form onSubmit={salvar}>
+          <Form>
 
             <Form.Group className="mb-3">
               <Form.Label>Nome</Form.Label>
@@ -69,7 +63,15 @@ export default function EstadosPlantaModal({ show, onSave, onClose, data = {}, }
         
         <Modal.Footer>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" onClick={salvar}>Salvar</Button>
+          <Button variant="success" onClick={()=>handleSaveForm({
+              onSave,
+              form,
+              setForm,
+              clearCache:"estados_planta"
+            })}
+          >
+            Salvar
+          </Button>
         </Modal.Footer>
       </Modal>
     )

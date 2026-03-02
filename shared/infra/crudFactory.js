@@ -4,7 +4,7 @@ export function createCRUDService(adapter, config) {
     parentId = null,
     subCollection = null,
     softDelete = true,
-    useArchive = true,
+    useArchive = true, //TODO: arquive
     collectionGroup = false,
   } = config;
 
@@ -51,6 +51,7 @@ export function createCRUDService(adapter, config) {
       });
     },
 
+    // SINGLE OPERATIONS
     async create(data, user) {
       const col = getCollection();
       return adapter.add(col, {
@@ -60,19 +61,75 @@ export function createCRUDService(adapter, config) {
         isDeleted: false,
         isArchived: false,
         version: 1,
-        createdBy: {id: user.id, nome: user.nome},
-        updatedBy: {id: user.id, nome: user.nome},
+        createdBy: {uid: user.uid, nome: user.nome},
+        updatedBy: {uid: user.uid, nome: user.nome},
       });
     },
-    criarRef(id = null) {
+    async upsert (
+      docRef,
+      data,
+      user = { uid: "anonimo", nome: "anônimo" },
+    ) {
+      return adapter.set(docRef, {
+        ...data,
+        createdAt: adapter.now(),
+        createdBy: { nome: user.nome, uid: user.uid },
+        updatedAt: adapter.now(),
+        updatedBy: { nome: user.nome, uid: user.uid },
+        isDeleted: false,
+        isArchived: false,
+        version: adapter.increment(1),
+      }, { merge: true });
+    },
+    async update(ref, data, user) {
+      return adapter.update(ref, {
+        ...data,
+        updatedAt: adapter.now(),
+        version: adapter.increment(1),
+        updatedBy: {uid: user.uid, nome: user.nome},
+      });
+    },
+    async remove(ref, user) {
+      if (!softDelete) return adapter.delete(ref);
+
+      return adapter.update(ref, {
+        isDeleted: true,
+        deletedAt: adapter.now(),
+        deletedBy: {uid: user.uid, nome: user.nome},
+      });
+    },
+    async restore(ref, user) {
+      if (!softDelete) return
+      return adapter.update(ref, {
+        isDeleted: false,
+        deletedAt: adapter.now(),
+        deletedBy: {uid: user.uid, nome: user.nome},
+      });
+    },
+    async archive(ref, user) {
+      if (!useArchive) return;
+
+      return adapter.update(ref, {
+        isArchived: true,
+        deletedAt: adapter.now(),
+        deletedBy: {uid: user.uid, nome: user.nome},
+      });
+    },
+    async restore(ref, user) {
+      if (!useArchive) return
+      return adapter.update(ref, {
+        isArchived: false,
+        deletedAt: adapter.now(),
+        deletedBy: {uid: user.uid, nome: user.nome},
+      });
+    },
+
+    // BATCH
+    getCreateRef(id = null) {
       const col = getCollection();
       return id ? col.doc(id) : col.doc();
     },
-    batchCreate (
-      data,
-      user = { id: "anonimo", nome: "anônimo" },
-      batch
-    ) {
+    batchCreate (data, user, batch) {
       if (!batch) throw new Error("batch é obrigatório em batchCreate");
 
       const col = getCollection();
@@ -85,51 +142,21 @@ export function createCRUDService(adapter, config) {
         isDeleted: false,
         isArchived: false,
         version: 1,
-        createdBy: { nome: user.nome, id: user.id },
-        updatedBy: { nome: user.nome, id: user.id },
+        createdBy: { nome: user.nome, uid: user.uid },
+        updatedBy: { nome: user.nome, uid: user.uid },
       });
 
       return docRef;
     },
-    async upsert (
-      docRef,
-      data,
-      user = { id: "anonimo", nome: "anônimo" },
-    ) {
-      return adapter.set(docRef, {
-        ...data,
-        createdAt: adapter.now(),
-        createdBy: { nome: user.nome, id: user.id },
-        updatedAt: adapter.now(),
-        updatedBy: { nome: user.nome, id: user.id },
-        isDeleted: false,
-        isArchived: false,
-        version: adapter.increment(1),
-      }, { merge: true });
-    },
-
-    async update(ref, data, user) {
-      return adapter.update(ref, {
-        ...data,
-        updatedAt: adapter.now(),
-        version: adapter.increment(1),
-        updatedBy: {id: user.id, nome: user.nome},
-      });
-    },
-    batchUpsert (
-      docRef,
-      data,
-      user = { id: "anonimo", nome: "anônimo" },
-      batch
-    ) {
+    batchUpsert (docRef, data, user, batch) {
       if (!batch) throw new Error("batch é obrigatório em batchUpsert");
 
       batch.set(docRef, {
         ...data,
         createdAt: adapter.now(),
-        createdBy: { nome: user.nome, id: user.id },
+        createdBy: { nome: user.nome, uid: user.uid },
         updatedAt: adapter.now(),
-        updatedBy: { nome: user.nome, id: user.id },
+        updatedBy: { nome: user.nome, uid: user.uid },
         isDeleted: false,
         isArchived: false,
         version: adapter.increment(1),
@@ -147,22 +174,12 @@ export function createCRUDService(adapter, config) {
         ...data,
         updatedAt: adapter.now(),
         version: adapter.increment(1),
-        updatedBy: { nome: user.nome, id: user.id }
+        updatedBy: { nome: user.nome, uid: user.uid }
       });
 
       return docRef;
     },
-
-
-    async remove(ref, user) {
-      if (!softDelete) return adapter.delete(ref);
-
-      return adapter.update(ref, {
-        isDeleted: true,
-        deletedAt: adapter.now(),
-        deletedBy: {id: user.id, nome: user.nome},
-      });
-    },
+    //TODO: Batch remove, restore, archive, unarchive
 
     async getDataById (id) {
       if (!id) throw new Error("id é obrigatório em getDataById");
@@ -173,7 +190,7 @@ export function createCRUDService(adapter, config) {
       if (!docSnap.exists) return null;
 
       return {
-        id: docSnap.id,
+        uid: docSnap.id,
         ...docSnap.data(),
       };
     },

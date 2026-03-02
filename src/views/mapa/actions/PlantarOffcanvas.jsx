@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Offcanvas, Form, Button, Row, Col, InputGroup } from "react-bootstrap";
+import { Offcanvas, Form, Button } from "react-bootstrap";
 import { catalogosService } from "../../../services/catalogosService";
-import { handleSelectIdNome, renderOptions } from "../../../utils/formUtils";
+import { handleSelectIdNome, renderOptions, StandardInput } from "../../../utils/formUtils";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
+import { ISOToReadableString, toDateTimeLocal, } from "../../../utils/dateUtils";
+import { getDimensaoVariedade } from "../../../../shared/domain/variedade.rules";
 
 export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel }) {
   const [especie, setEspecie] = useState(null);
@@ -12,6 +14,8 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
   const [colunas, setColunas] = useState(1);
   const [espacamentoX, setEspacamentoX] = useState(30); // cm
   const [espacamentoY, setEspacamentoY] = useState(30); // cm
+  const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
+  const [grid, setGrid] = useState(1);
   
   //CATALOGOS
   const [especies, setEspecies] = useState([]);
@@ -48,34 +52,41 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
     const tecnicasDaEspecie = especie.ciclo.filter(c => c.plantavel);
     if (tecnicasDaEspecie.length === 1) setVariedade(tecnicasDaEspecie[0]); // auto seleciona
     else setVariedade(null);                                                // força seleção manual
-
   }, [especie, variedades]);
 
   
   const handleConfirm = () => {
-    const configPlantio = {
-      especie,
-      tecnica,
-      variedade,
+    const date = new Date(stringTimestamp);
+    const timestamp = date.getTime();
+    const placingConfig = {
+      timestamp,
+      tipoEntidadeId: "planta",
       layout: {
         linhas: Number(linhas),
         colunas: Number(colunas),
         espacamentoColuna: Number(espacamentoX),
         espacamentoLinha: Number(espacamentoY),
       },
-      preview: {
-        show: true,
-        geometria: especie.aparencia.geometria,
+      metadata: {
+        especie,
+        tecnica,
+        variedade,
       }
     };
-    if (configPlantio.preview.geometria === "circle") {
-      configPlantio.preview.radius = Math.min(Number(espacamentoX), Number(espacamentoY)) * 0.45
-    }
-    if (configPlantio.preview.geometria === "rect") {
-      configPlantio.preview.width = Number(espacamentoX) * 0.90
-      configPlantio.preview.height = Number(espacamentoY) * 0.90
-    } //TODO: ellipse e polygon também precisam ser implantados (AQUI, GRID NO MAPAPREVIEW e return no SVGPREVIEW)
-    onConfirm(configPlantio);
+
+    const dimensaoVariedade = getDimensaoVariedade(variedade);
+
+    //TODO: Isso funciona para rect e para circle, mas não para ellipse e polygon
+    const preview = {
+      geometria: variedade.aparencia.geometria,
+      width:  dimensaoVariedade.x,
+      height: dimensaoVariedade.y,
+      radius: Math.max(dimensaoVariedade.x, dimensaoVariedade.y)/2,
+      serving: "place",
+      grid,
+    };
+
+    onConfirm(placingConfig, preview);
     onClose();
   };
 
@@ -92,9 +103,14 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
 
       <Offcanvas.Body>
         <Form>
-          {/* Espécie */}
-          <Form.Group className="mb-3">
-            <Form.Label>Espécie</Form.Label>
+          <StandardInput label="Data/hora" width="120px">
+            <Form.Control
+              type="datetime-local"
+              value={stringTimestamp}
+              onChange={(e)=> setStringTimestamp(e.target.value)}
+            />
+          </StandardInput>
+          <StandardInput label="Espécie" width="120px">
             <Form.Select
               value={especie?.id || ""}
               onChange={(e) => setEspecie(especies.find((es) => es.id === e.currentTarget.value))}>
@@ -104,11 +120,9 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
                 placeholder: "Selecione a espécie",
               })}
             </Form.Select>
-          </Form.Group>
+          </StandardInput>
 
-          {/* Técnica */}
-          <Form.Group className="mb-3">
-            <Form.Label>Técnica de plantio</Form.Label>
+          <StandardInput label="Técnica" width ="120px">
             <Form.Select
               value={tecnica?.estagioId || ""}
               onChange={(e) => handleSelectIdNome(e,{
@@ -128,11 +142,8 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
                 labelKey: "estagioNome",
               })}
             </Form.Select>
-          </Form.Group>
-
-          {/* Variedade */}
-          <Form.Group className="mb-3">
-            <Form.Label>Variedade</Form.Label>
+          </StandardInput>
+          <StandardInput label="Variedade" width="120px">
             <Form.Select
               value={variedade?.id || ""}
               onChange={(e) => {
@@ -147,36 +158,27 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
                 placeholder: "Selecione a variedade",
               })}
             </Form.Select>
-          </Form.Group>
+          </StandardInput>
 
-          {/* Layout */}
-          <Form.Group className="mb-3">
-            <Form.Label>Layout</Form.Label>
-            <Row>
-              <Col>
-                <Form.Control
-                  type="number"
-                  min={1}
-                  value={linhas}
-                  onChange={(e) => setLinhas(e.target.value)}
-                  placeholder="Linhas"
-                />
-              </Col>
-              <Col>
-                <Form.Control
-                  type="number"
-                  min={1}
-                  value={colunas}
-                  onChange={(e) => setColunas(e.target.value)}
-                  placeholder="Colunas"
-                />
-              </Col>
-            </Row>
-          </Form.Group>
+          <StandardInput label="Layout" unidade="un" width="120px" unidadeWidth="40px">
+            <Form.Control
+              type="number"
+              min={1}
+              value={linhas}
+              onChange={(e) => setLinhas(e.target.value)}
+              placeholder="Linhas"
+            />
+            <InputGroupText> x </InputGroupText>
+            <Form.Control
+              type="number"
+              min={1}
+              value={colunas}
+              onChange={(e) => setColunas(e.target.value)}
+              placeholder="Colunas"
+            />
+          </StandardInput>
 
-          {/* Espaçamento */}
-          <InputGroup className="mb-3">
-            <InputGroupText>Espaçamento (cm)</InputGroupText>
+          <StandardInput label="Espaçamento" unidade="cm" width="120px" unidadeWidth="40px">
             <Form.Control
               type="number"
               min={5}
@@ -190,23 +192,32 @@ export default function PlantarOffcanvas({ show, onClose, onConfirm, onCancel })
               value={espacamentoX}
               onChange={(e) => setEspacamentoX(e.target.value)}
             />
-          </InputGroup>
+          </StandardInput>
+          <StandardInput label="Grade" width="120px" unidade="cm" unidadeWidth="40px">
+            <Form.Control
+              type="number"
+              step="1"
+              value={grid}
+              onChange={(e) => setGrid(Number(e.target.value))}
+            />
+          </StandardInput>
 
-          {/* Preview semântico */}
           <div className="p-2 border rounded bg-light mb-3">
             <strong>Resumo do plantio</strong>
+            <div>Data/Hora: {ISOToReadableString(stringTimestamp)}</div>
             <div>Espécie: {especie?.nome || "-"}</div>
             <div>Técnica: {tecnica?.estagioNome || "-"}</div>
             <div>Variedade: {variedade?.nome || "-"}</div>
             <div>Quantidade: {linhas * colunas || 0} plantas</div>
             <div>Layout: {linhas} x {colunas}</div>
             <div>Espaçamento: {espacamentoY} x {espacamentoX} cm</div>
+            <div>Alinhar à grade de {grid}cm</div>
           </div>
 
           <div className="d-grid gap-2">
             <Button
               variant="success"
-              disabled={!especie || !tecnica || !variedade}
+              disabled={!stringTimestamp || !especie || !tecnica || !variedade}
               onClick={handleConfirm}
             >
               Plantar

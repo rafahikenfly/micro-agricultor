@@ -4,11 +4,12 @@ import { useMapaEngine } from "../MapaEngine";
 export default function MapaToolbar() {
   const {
     state,
-    isPlantMode,
-    isEditMode,
-    isViewMode,
-    openConfigPanel,
+    isPlacing,
     activatePlantTool,
+    isDrawing,
+    activateDrawTool,
+    showConfigPanel,
+    openConfigPanel,
     activateMonitorTool,
     activateInspectTool,
     activateHandleTool,
@@ -20,69 +21,50 @@ export default function MapaToolbar() {
   } = useMapaEngine();
 
   const tools = [
-    /*
-    {
-      id: "zoom",
-      label: "🔎",
-      toggle: state.hasZooming,
-      onClick: toggleZoom
-    },
-    {
-      id: "grid",
-      label: "⬛",
-      toggle: state.gridArray.length > 0,
-      onClick: toggleGrid
-    },
-    {
-      id: "retangulo",
-      label: "▭",
-      onClick: activateDrawRect
-    },
-    {
-      id: "circulo",
-      label: "◯",
-      onClick: activateDrawCircle
-    },
-    */
-    {
-      id: "plantar",
-      label: "🌱",
-      onClick: !isPlantMode ? activatePlantTool
-        : !state.showConfigPanel ? openConfigPanel
-        : resetTools
-    },
-    {
-      id: "pan",
+    { id: "pan",
       label: "🖐️",
       onClick: isForcePan ? resetTools : activatePanTool,
     },
-    {
-      id: "rotate",
-      label: "R",
+    { id: "rotate",
+      label: "⤵",
       onClick: isForceRotate ? resetTools : activateRotateTool,
     },
     {
+      id: "plant",
+      label: "🌱",
+      onClick: !isPlacing ? activatePlantTool
+        : !showConfigPanel ? openConfigPanel
+        : resetTools
+    },
+    {
+      id: "draw",
+      label: "📐",
+      onClick: !isDrawing ? activateDrawTool
+        : !showConfigPanel ? openConfigPanel
+        : resetTools
+    },
+    {
       id: "monitor",
-      label: "M",
+      label: "🔬",
       onClick: state.activeTool !== "monitor" ? activateMonitorTool
         : !state.showConfigPanel ? openConfigPanel
         : resetTools
     },
     {
+      id: "handle",
+      label: "🪏",
+      onClick:  state.activeTool !== "handle"  ? activateHandleTool
+        : !state.showConfigPanel ? openConfigPanel
+        : resetTools
+    },
+    {
       id: "inspect",
-      label: "I",
+      label: "🗺",
       onClick: state.activeTool !== "inspect"  ? activateInspectTool
         : !state.showConfigPanel ? openConfigPanel
         : resetTools
     },
 
-    {
-      id: "handle",
-      label: "H",
-      onClick:  state.activeTool !== "handle"  ? activateHandleTool
-        : !state.showConfigPanel ? openConfigPanel
-        : resetTools
-    },
   ];
 
   return <ToolBar tools={tools} activeTool={state.activeTool} />;

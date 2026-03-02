@@ -51,7 +51,7 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
       let opCount = 0;
       let entidadeManejada
       let entidadeRef
-      const eventoRef = eventosService.criarRef()
+      const eventoRef = eventosService.getCreateRef()
       const evento = montarLogEvento({
         data: {
           manejoId: manejoSelecionado.id,
@@ -60,7 +60,7 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
         },
         tipoEventoId: "manejo",
         alvos: [{id: entidade.id, tipoEntidadeId: tipoEntidadeId}],
-        origemId: user.id,
+        origemId: user.uid,
         origemTipo: "usuario",
       })
 
@@ -73,7 +73,7 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
           eventoId: eventoRef.id,
           timestamp: nowTimestamp(),
         });
-        entidadeRef = canteirosService.forParent(entidade.hortaId).getRefById(entidade.id);
+        entidadeRef = canteirosService.getRefById(entidade.id);
       } else if (tipoEntidadeId === "planta") {
         entidadeManejada = manejarPlanta ({
           planta: entidade,
@@ -99,7 +99,7 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
       // Se há efeitos no canteiro
       if (efeitosDoManejo.length) {
         // Atualiza estadoAtual da entidade pelo batch
-        if (tipoEntidadeId === "canteiro") canteirosService.forParent(entidade.hortaId).batchUpdate(entidadeRef, { estadoAtual: entidadeManejada.estadoAtual, }, user, batch);
+        if (tipoEntidadeId === "canteiro") canteirosService.batchUpdate(entidadeRef, { estadoAtual: entidadeManejada.estadoAtual, }, user, batch);
         if (tipoEntidadeId === "planta")   plantasService.batchUpdate(entidadeRef, { estadoAtual: entidadeManejada.estadoAtual, }, user, batch);
         opCount++;
       

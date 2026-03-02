@@ -16,15 +16,17 @@ export default function UsuarioDadosTab({ form, setForm, }) {
             <Form.Group className="mb-3">
               <Form.Label>Apelido</Form.Label>
               <Form.Control
-                value={form.nomeExibicao}
+                value={form.apelido}
                 onChange={e => setForm({...form, apelido: e.target.value})}
                 required
               />
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Descrição</Form.Label>
+              <Form.Label>Fale um pouco sobre você</Form.Label>
               <Form.Control
+                as="textarea"
+                rows="3"
                 value={form.descricao}
                 onChange={e => setForm({...form, descricao: e.target.value})}
                 required

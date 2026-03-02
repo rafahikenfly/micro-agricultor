@@ -1,24 +1,17 @@
-export function toggleSelecao(selecao = [], entidade, tipoEntidadeId) {
-  const idx = selecao.findIndex(
-    (s) =>
-      s.tipoEntidadeId === tipoEntidadeId &&
-      s.entidadeId === entidade.id
-  );
+export function toggleSelecao(selecao = [], entidadeId) {
+  const existe = selecao.includes(entidadeId);
 
-  // não existe → adiciona
-  if (idx === -1) {
-    return [
-      ...selecao,
-      { entidadeId: entidade.id, tipoEntidadeId }
-    ];
+  if (!existe) {
+    // adiciona
+    return [...selecao, entidadeId];
   }
 
-  // existe → remove
-  return selecao.filter((_, i) => i !== idx);
+  // remove
+  return selecao.filter(id => id !== entidadeId);
 }
 
 export function calcularCorHeatmap(valor, min, max) {
-  if (valor === undefined || valor === null) return "#B0B0B0"; // desconhecido
+  if (valor == null) return "#808080"; // desconhecido
 
   // clamp
   if (valor < min) valor = min;

@@ -1,0 +1,85 @@
+export const toDateTimeLocal = (date) => {
+  const pad = (n) => String(n).padStart(2, "0");
+
+  return (
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1) +
+    "-" +
+    pad(date.getDate()) +
+    "T" +
+    pad(date.getHours()) +
+    ":" +
+    pad(date.getMinutes())
+  );
+}
+
+export const ISOToReadableString = (ISOString) => {
+  const date = new Date(ISOString);
+
+  const weekday = date.toLocaleDateString("pt-BR", {
+    weekday: "short",
+  });
+
+  const rest = date.toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const formatted = `${weekday.replace(".", "")}, ${rest}`;
+
+  return formatted
+}
+
+export const unixToReadableString = (unixMs) => {
+  const date = new Date(unixMs);
+
+  const weekday = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+  }).format(date);
+
+  const dayMonthYear = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  }).format(date);
+
+  const time = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+
+  // Capitaliza a primeira letra
+  const weekdayFormatted =
+    weekday.charAt(0).toUpperCase() + weekday.slice(1);
+
+  return `${weekdayFormatted}, ${dayMonthYear}, ${time}`;
+};
+
+export const firebaseTSToReadableString = (timestamp) => {
+  if (!timestamp) return "";
+
+  const date = timestamp.toDate();
+
+  const parts = new Intl.DateTimeFormat("pt-BR", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(date);
+
+  const get = (type) => parts.find(p => p.type === type)?.value;
+
+  const weekday = get("weekday");
+  const weekdayFormatted =
+    weekday.charAt(0).toUpperCase() + weekday.slice(1);
+
+  return `${weekdayFormatted}, ${get("day")}/${get("month")}/${get("year")}, ${get("hour")}:${get("minute")}`;
+};

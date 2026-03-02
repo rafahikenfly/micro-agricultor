@@ -4,7 +4,7 @@ const aparenciaPadrao = {
   espessura: 3,
 }
 
-export default function SVGEntidade ({key, entidade, style, eventos}) {
+export default function SVGEntidade ({entidade, box, style, eventos}) {
   //console.log("SVGENTIDADE RENDER:", entidade.nome);
   /* ============== CONVERSÃO DE ARRAY DE VERTICES ============== */
   if (entidade.aparencia?.geometria === "polygon" && entidade.aparencia?.vertices?.length > 2) {
@@ -25,7 +25,6 @@ export default function SVGEntidade ({key, entidade, style, eventos}) {
   else if (entidade.aparencia?.geometria === "ellipse") {
     return (
       <ellipse
-//        key={item.id}
         cx={entidade.posicao.x}
         cy={entidade.posicao.y}
         rx={entidade.dimensao.x / 2}
@@ -41,11 +40,10 @@ export default function SVGEntidade ({key, entidade, style, eventos}) {
   else if (entidade.aparencia?.geometria === "rect") {
     return (
       <rect
-//        key={item.id}
-        x={entidade.posicao.x - (entidade.dimensao.x/2)}
-        y={entidade.posicao.y - (entidade.dimensao.y/2)}
-        width={entidade.dimensao.x}
-        height={entidade.dimensao.y}
+        x={box?.x || entidade.posicao.x - (entidade.dimensao.x/2)}
+        y={box?.y || entidade.posicao.y - (entidade.dimensao.y/2)}
+        width={box?.width || entidade.dimensao.x}
+        height={box?.height || entidade.dimensao.y}
         fill={entidade.aparencia?.fundo || aparenciaPadrao.fundo}
         stroke={entidade.aparencia?.borda || aparenciaPadrao.borda}
         strokeWidth={entidade.aparencia?.espessura || aparenciaPadrao.espessura}
@@ -57,10 +55,9 @@ export default function SVGEntidade ({key, entidade, style, eventos}) {
   else if (entidade.aparencia?.geometria === "circle") {
     return (
       <circle
-//        key={item.id}
-        cx={entidade.posicao.x}
-        cy={entidade.posicao.y}
-        r={Math.max(entidade.dimensao.x, entidade.dimensao.y) / 2}   // raio = diâmetro / 2
+        cx={box?.cx || entidade.posicao.x}
+        cy={box?.cy || entidade.posicao.y}
+        r={box?.r || Math.max(entidade.dimensao.x, entidade.dimensao.y) / 2}   // raio = diâmetro / 2
         fill={entidade.aparencia?.fundo || aparenciaPadrao.fundo}
         stroke={entidade.aparencia?.borda || aparenciaPadrao.borda}
         strokeWidth={entidade.aparencia?.espessura || aparenciaPadrao.espessura}
