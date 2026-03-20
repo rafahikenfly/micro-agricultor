@@ -5,10 +5,9 @@ const eventoPadrao = {
   tipoEventoId: "",   // ex: "chuva", "vasoMovido", "irrigacaoManual"
   tipoEventoNome: "", // denormalização consciente
   categoria: "",      // "natural" | "humano" | "sistema" | "estrutural"
-  timestamp: 0,      // quando o fato ocorreu no mundo
-  origem: {},
-  alvos: [],          // string[]
-  efeitos: [],        // {entidadeId, tipoEntidadeId, before, after}
+  timestamp: 0,       // quando o fato ocorreu no mundo
+  entidadesId: [],    // string[]
+  mutacoes: [],       // {entidadeId, tipoEntidadeId, before, after}
 }
 
 /**
@@ -22,24 +21,19 @@ export const validarObjetoEvento = (dataObj = {}) => {
   return valid;
 }
 
-export const criarEvento = ({tipoEvento, timestamp, alvos, efeitos, data = {}}) => {
+export const criarEvento = ({tipoEvento, timestamp, entidadesId, mutacoes, data = {}}) => {
   if (!tipoEvento) throw new Error ("Erro criando evento: tipoEvento é obrigatório.")
-  if (!alvos) console.warn ("Criando evento sem alvos.")
-  if (!efeitos) console.warn ("Criando evento sem efeitos.")
-  
+  if (!entidadesId) console.warn ("Criando evento sem alvos.")
+  if (!mutacoes) console.warn ("Criando evento sem mutações.")
 
-  // tipoEvento é obrigatório em um evento
-  // alvos é obrigatório em um evento
-  // efeitos é obrigatório em um evento
-  // timestamp é opcional em um evento e pode ser now
   const novoEvento = {
     ...data,
     tipoEventoId: tipoEvento.id,
     tipoEventoNome: tipoEvento.nome,
     categoria: tipoEvento.categoria,
     timestamp,
-    alvos,
-    efeitos,
+    entidadesId,
+    mutacoes,
   }
 
   return validarObjetoEvento(novoEvento)
@@ -52,10 +46,10 @@ export const criarEfeitosDoEvento = ({evento}) =>{
   const ESTADO_PADRAO = {confianca: 0, valor:0}
   const efeitosDoEvento = [];
 
-  // para cada alvo
-  for (const alvo of Object.values(evento.efeitos)) {
-    const estadoAntes = alvo?.before ?? {}
-    const estadoDepois = alvo?.after ?? {}
+  // para cada mutacao
+  for (const mutacao of Object.values(evento.mutacoes)) {
+    const estadoAntes = mutacao?.before ?? {}
+    const estadoDepois = mutacao?.after ?? {}
     const todasCaracteristicas = new Set([
       ...Object.keys(estadoAntes),
       ...Object.keys(estadoDepois),
@@ -79,8 +73,8 @@ export const criarEfeitosDoEvento = ({evento}) =>{
         confiancaDepois: depois.confianca ?? 0,
         valorAntes: antes.valor ?? 0,
         valorDepois: depois.valor ?? 0,
-        entidadeId: alvo.entidadeId,
-        tipoEntidadeId: alvo.tipoEntidadeId,
+        entidadeId: mutacao.entidadeId,
+        tipoEntidadeId: mutacao.tipoEntidadeId,
         timestamp: evento.timestamp,
       });
     }

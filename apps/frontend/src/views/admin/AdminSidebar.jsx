@@ -1,0 +1,77 @@
+import { Nav } from "react-bootstrap";
+import { NavLink } from "react-router-dom";
+
+export default function AdminSidebar() {
+  return (
+    <div
+      className="bg-light border-end"
+      style={{
+        width: "240px",
+        minHeight: "calc(100vh - 56px)"
+      }}
+    >
+      <Nav className="flex-column p-3">
+
+        <div className="text-muted small mb-2">Gerenciamento</div>
+
+        <Nav.Link as={NavLink} to="/admin/hortas">
+          Hortas
+        </Nav.Link>
+
+        <Nav.Link as={NavLink} to="/admin/canteiros">
+          Canteiros
+        </Nav.Link>
+
+        <Nav.Link as={NavLink} to="/admin/plantas">
+          Plantas
+        </Nav.Link>
+
+        <hr />
+
+        <div className="text-muted small mb-2">Cultivos</div>
+
+        <Nav.Link as={NavLink} to="/admin/especies">
+          Espécies
+        </Nav.Link>
+
+        <Nav.Link as={NavLink} to="/admin/variedades">
+          Variedades
+        </Nav.Link>
+
+        <hr />
+        <div className="text-muted small mb-2">Manejos</div>
+        <Nav.Link as={NavLink} to="/admin/manejos">
+          Manejos
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/sensores">
+          Sensores (TODO)
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/robos">
+          Robôs (TODO)
+        </Nav.Link>
+        <hr />
+
+        <div className="text-muted small mb-2">Configuração</div>
+        <Nav.Link as={NavLink} to="/admin/caracteristicas">
+          Características
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/estados-canteiro">
+          Estados de Canteiro
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/estados-planta">
+          Estados de Planta
+        </Nav.Link>
+        <hr />
+
+        <div className="text-muted small mb-2">Sistema</div>
+        <Nav.Link as={NavLink} to="/admin/tarefas">
+          Tarefas
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/midia">
+          Mídia
+        </Nav.Link>
+
+      </Nav>
+    </div>
+  );
+}

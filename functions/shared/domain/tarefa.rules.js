@@ -1,7 +1,13 @@
 //FUNCTION COPY
-import { JOBSTATE_TYPES } from "../types/JOBRUN_STATE";
-import { RECURRING_TYPES } from "../types/RECURRING_TYPES";
-import { mergeComValidacao } from "./rulesUtils";
+// TAREFA é um agregador que enriquece o contexto de uma ou mais NECESSIDADES.
+// Por definição, tarefa tem um contexto: um motivo, um tipo de entidade,
+// um tipo de evento a uma característica, um conjunto de entidades
+// Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
+// Cada tarefa tem um planejamento e uma resolução, além de estado.
+
+import { JOBSTATE_TYPES } from "../types/JOBRUN_STATE.js";
+import { RECURRING_TYPES } from "../types/RECURRING_TYPES.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const aparenciaPadrao = {
     fundo: "#f56f42",
@@ -15,20 +21,16 @@ const aparenciaPadrao = {
 const tarefaPadrao = {
   //dados
   nome: "Nova Tarefa",
-  descrição: "",
+  descricao: "",
   aparencia: aparenciaPadrao,
   estado: JOBSTATE_TYPES.PENDING,     // default seguro
-  recorrencia: RECURRING_TYPES.NONE,  // default seguro
-  fingerprint: "",
 
   //contexto
   contexto: {
-    tipoEntidadeId: "", // ENTITY_TYPES
-    alvos: [],      // string [ entidadeId ]
-    caracteristicaId: "",
-    motivo: "",
-//    confiancaAtual: 0,
-//    valorAtual: 0,
+    tipoEventoId: "",     // EVENTO_TYPES
+    caracteristicaId: "", // Catalogo Características
+    tipoEntidadeId: "",   // ENTITY_TYPES
+    entidadesId: [],      // string [ entidadeId ]
   },
 
 
@@ -36,16 +38,17 @@ const tarefaPadrao = {
   planejamento: {
     prioridade: 0,
     vencimento: 0,
-    recomendacao: "", // EVENTO_TYPES
+    recorrencia: RECURRING_TYPES.NONE,  // default seguro
   },
 
   //resolucao
   resolucao: {
-  //  tipo: RESOLVE_TYPES,
-  //  data: integer timestamp,
-  //  agente: {
-  //      tipo: SOURCE_TYPES.USER,
-  //        id: string,  
+    tipoResolucao: "",
+    timestamp: "",
+    agente: {
+        tipo: "",
+          id: "",  
+    }
   }
 }
 
@@ -66,7 +69,7 @@ export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => {
 }
 
 export const resolverTarefa = ({tarefa, resolucao}) => {
-  switch (tarefa.recorrencia) {
+  switch (tarefa.planejamento.recorrencia) {
     case RECURRING_TYPES.NONE:
       const tarefaConcluida = {
         ...tarefa,

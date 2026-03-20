@@ -1,9 +1,9 @@
 export const EVENTO_TYPES = {
-    RESIZE: "resize",
-    CREATE: "create",
-    MONITOR: "monitor",
-    HANDLE: "handle",
-    TIME: "time",
+  RESIZE: "resize",
+  CREATE: "create",
+  MONITOR: "monitor",
+  HANDLE: "handle",
+  TIME: "time",
 }
 
 export const EVENTO = {

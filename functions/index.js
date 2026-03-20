@@ -4,18 +4,17 @@ import { onSchedule } from "firebase-functions/v2/scheduler";
 import admin from "firebase-admin";
 
 import { criarEfeitosDoEvento, criarEvento } from "./shared/domain/evento.rules.js";
-import { calcularEvolucaoTemporalCanteiro, getCaracteristicasRelevantesCanteiro, getPendenciasCanteiro } from "./shared/domain/canteiro.rules.js";
-import { calcularEvolucaoTemporalPlanta, getCaracteristicasRelevantesPlanta, getPendenciasPlanta } from "./shared/domain/planta.rules.js";
-import { criarTarefa } from "./shared/domain/tarefa.rules.js";
+import { calcularEvolucaoTemporalCanteiro, getNecessidadesCanteiro } from "./shared/domain/canteiro.rules.js";
+import { calcularEvolucaoTemporalPlanta, getNecessidadesPlanta } from "./shared/domain/planta.rules.js";
 
 import { createHistoryService } from "./shared/infra/historyFactory.js";
 import { createCRUDService } from "./shared/infra/crudFactory.js";
 
 import { SOURCE_TYPES } from "./shared/types/SOURCE_TYPES.js";
 import { EVENTO_TYPES, EVENTO } from "./shared/types/EVENTO_TYPES.js";
-import { JOBSTATE_TYPES } from "./shared/types/JOBRUN_STATE.js";
 
 import { firebaseAdapter } from "./firebaseAdapter.js";
+import { getNecessidadeId } from "./shared/domain/necessidade.rules.js";
 
 
 
@@ -31,7 +30,7 @@ export const dailyMaintenance = onSchedule(
   },
   async () => {
     const maintenanceTasks = [
-      { name: "taskInspect", fn: taskInspect },
+      { name: "currentStateInspect", fn: currentStateInspect },
       // { name: "outraManutencao", fn: outraFuncao },
     ];
 
@@ -42,8 +41,8 @@ export const dailyMaintenance = onSchedule(
       console.error("Erro em timeEffect:", err);
     }
     const results = await Promise.allSettled([
-//      console.log("skip taskInspect()")
-      taskInspect()
+//      console.log("skip currentStateInspect()");
+      currentStateInspect()
       //...novas manutenções
     ]);
 
@@ -89,8 +88,8 @@ const timeEffect = async () => {
     tipoEvento: EVENTO[EVENTO_TYPES.TIME],
     timestamp,
     origem: {id: "timeEffect", tipo: SOURCE_TYPES.FUNCTIONS},
-    alvos: [],
-    efeitos: [],
+    entidadesId: [],
+    mutacoes: [],
   })
   evento.id = eventoId;
   
@@ -120,8 +119,8 @@ const timeEffect = async () => {
         Object.keys(mutation.estadoAtual).map(key => [key, planta.estadoAtual[key]])
       );
       if (mutation && Object.keys(mutation.estadoAtual).length > 0) {
-        evento.alvos.push(planta.id)
-        evento.efeitos.push({
+        evento.entidadesId.push(planta.id)
+        evento.mutacoes.push({
           entidadeId: planta.id,
           tipoEntidadeId: "planta",
           before: {estadoAtual: beforeFiltrado},
@@ -169,8 +168,8 @@ const timeEffect = async () => {
         Object.keys(mutation.estadoAtual).map(key => [key, canteiro.estadoAtual[key]])
       );
       if (mutation && Object.keys(mutation.estadoAtual).length > 0) {
-        evento.alvos.push(canteiro.id)
-        evento.efeitos.push({
+        evento.entidadesId.push(canteiro.id)
+        evento.mutacoes.push({
           entidadeId: canteiro.id,
           tipoEntidadeId: "canteiro",
           before: {estadoAtual: beforeFiltrado},
@@ -220,28 +219,24 @@ const timeEffect = async () => {
     await batch.commit();
   }
 }
-const taskInspect = async () => {
+const currentStateInspect = async () => {
   //TODO: Tem uma regra de negócio acoplada na leitura dos fingerpirnts ativos
   //TODO: Melhorar a descrição de nova tarefa (caracteristicaNome e entidadeNome)
 
-  const user = {uid: "taskInspect", nome: "firebase functions" }
+  const user = {uid: "currentStateInspect", nome: "firebase functions" }
   const timestamp = Date.now();
 
-  console.log("Iniciando inspeção de tarefas...");
+  console.log("Iniciando inspeção de estados atuais...");
 
-  // Carrega o catálogo de tarefas não resolvidas
-  const tarefasSnap = await db.collection("tarefas")
-  .where("estado", "==", JOBSTATE_TYPES.PENDING)
-  .get();
-  
-  const fingerprintsPendentes = new Set(
-    tarefasSnap.docs
-    .map(doc => doc.data())
-    .filter(t => t.isDeleted !== true && t.fingerprint)
-//    .filter(t => t.isArchived !== true) // considera undefined como false
-//    ...outras regras que definem o que é uma pendência ativa
-    .map(t => t.fingerprint)
-  );
+  // Carrega o catálogo de necessidades não atendidas registradas
+  const snapNecessidades = await db.collection("necessidades").get();
+  const mapaNecessidades = {};
+  snapNecessidades.docs.forEach(doc => {
+    const entidadeId = doc.id;
+    const data = doc.data();
+
+    mapaNecessidades[entidadeId] = data;
+  });
 
   // Carrega catálogo de variedades uma única vez
   const variedadesSnap = await db.collection("variedades").get();
@@ -260,119 +255,113 @@ const taskInspect = async () => {
     });
   });
 
-  const novasTarefas = []
-  
-  //TODO: está misturada essa lógica de alvo com objeto do array. Aqui funciona pq tenho certeza que é um
-  // alvo único, mas e quando não for?
-  const taskInspectCanteiros = ({canteiro, plantas, catalogoVariedades, caracteristicasMap}) => {
-    const plantasArr = plantas.filter((p)=> p.canteiroId === canteiro.id)
-    const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, catalogoVariedades})
-    const pendencias = getPendenciasCanteiro({canteiro, arrCaracteristicaIds});
-    console.log(`${pendencias.length} pendências para ${canteiro.id}`);
-    for (const contexto of pendencias) {
-      const fingerprint = [
-        contexto.tipoEntidadeId,
-        [...contexto.alvos].sort().join("-"),
-        contexto.caracteristicaId,
-        contexto.motivo
-      ].join("_");
-      if (!fingerprintsPendentes.has(fingerprint)) {
-        // obtem a caracteristica
-        const caracteristica =
-          caracteristicasMap.get(contexto.caracteristicaId);        
-        // enriquece o contexto
-        const contextoEnriquecido = {
-            ...contexto,
-            caracteristicaNome: caracteristica.nome ?? contexto.caracteristicaId,
-            alvos: contexto.alvos.map(id => ({
-              id,
-              nome: canteiro.nome,
-            }))
-          }
-        // salva no array
-        novasTarefas.push(criarTarefa({
-          contexto: contextoEnriquecido,
-          planejamento: {
-            vencimento: timestamp,
-            recomendacao: EVENTO_TYPES.MONITOR,
-            prioridade: 1},
-          dados: {
-            nome: `Monitorar ${contextoEnriquecido.caracteristicaNome} em ${canteiro.nome}`,
-            fingerprint
-          }}))
-        fingerprintsPendentes.add(fingerprint);
-      }
-    }
-  }
-
-  //TODO: está misturada essa lógica de alvo com objeto do array. Aqui funciona pq tenho certeza que é um
-  // alvo único, mas e quando não for?
-  const taskInspectPlantas = ({planta, catalogoVariedades, caracteristicasMap}) => {
-    const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, catalogoVariedades})
-    const pendencias = getPendenciasPlanta({planta, arrCaracteristicaIds});
-    console.log(`${pendencias.length} pendências para ${planta.id}`);
-    for (const contexto of pendencias) {
-      const fingerprint = [
-        contexto.tipoEntidadeId,
-        [...contexto.alvos].sort().join("-"),
-        contexto.caracteristicaId,
-        contexto.motivo
-      ].join("_");
-      if (!fingerprintsPendentes.has(fingerprint)) {
-        // obtem a caracteristica
-        const caracteristica =
-          caracteristicasMap.get(contexto.caracteristicaId);        
-        // enriquece o contexto
-        const contextoEnriquecido = {
-            ...contexto,
-            caracteristicaNome: caracteristica.nome ?? contexto.caracteristicaId,
-            alvos: contexto.alvos.map(id => ({
-              id,
-              nome: planta.nome,
-            }))
-          }
-        // salva no array
-        novasTarefas.push(criarTarefa({
-          contexto: contextoEnriquecido,
-          planejamento: {
-            vencimento: timestamp,
-            recomendacao: EVENTO_TYPES.MONITOR,
-            prioridade: 1},
-          dados: {
-            nome: `Monitorar ${contextoEnriquecido.caracteristicaNome} em ${planta.nome}`,
-            fingerprint
-          }}))
-        fingerprintsPendentes.add(fingerprint);
-      }
-    }
-  }
-
-  const plantas = []
+  // Carega plantas
   const plantasSnap = await db.collection("plantas").get();
-  console.log(`${plantasSnap.docs.length} plantas para avaliar`);
+
+  // Carrega canteiros
+  const canteirosSnap = await db.collection("canteiros").get();
+
+
+  const novasTarefas = [];
+  const novasNecessidades = [];
+
+  // inicializa o mapa de tarefas
+  const mapaTarefas = {}
+
+  // Avalia as plantas e preenche o array de plantas
+  console.log(`${plantasSnap.docs.length} plantas para inspecionar...`);
+  const plantas = [];
   for (const plantaDoc of plantasSnap.docs) {
     const planta = { id: plantaDoc.id, ...plantaDoc.data() };
     plantas.push(planta)
-    taskInspectPlantas({planta, catalogoVariedades, caracteristicasMap})
+    novasNecessidades.push(...getNecessidadesPlanta({
+      planta,
+      timestamp,
+      mapaTarefas,
+      mapaNecessidades,
+      catalogoVariedades,
+      caracteristicasMap
+    }))
   }
-  const canteirosSnap = await db.collection("canteiros").get();
-  console.log(`${canteirosSnap.docs.length} canteiros para avaliar`);
+
+  //Avalia os canteiros (consome o array de plantas) e inclui
+  //todas as necessidades ao array de necessidades.
+  console.log(`${canteirosSnap.docs.length} canteiros para inspecionar`);
   for (const canteiroDoc of canteirosSnap.docs) {
     const canteiro = { id: canteiroDoc.id, ...canteiroDoc.data() };
-    taskInspectCanteiros({canteiro, plantas, catalogoVariedades, caracteristicasMap})
+    novasNecessidades.push(...getNecessidadesCanteiro({
+      canteiro,
+      plantas,
+      timestamp,
+      mapaTarefas,
+      mapaNecessidades,
+      catalogoVariedades,
+      caracteristicasMap
+    }));
   }
+
+  //Converte o mapa de tarefas em um array e cria os Ids no mapa
+  novasTarefas.push(...Object.values(mapaTarefas));
+  console.log(`${novasTarefas.length} novas tarefas`);
 
   //Monta os serviços
   const tarefasService = createCRUDService(firebaseAdapter, {
     collection: "tarefas"
   });
+  const necessidadesService = createCRUDService(firebaseAdapter, {
+    collection: "necessidades"
+  })
 
-  console.log(`${novasTarefas.length} novas tarefas`)
+  //Salva as tarefas
+  console.log(`Salvando tarefas e necessidades...`)
   let batch = db.batch();
   let opCount = 0;
   for (const tarefa of novasTarefas) {
-    tarefasService.batchCreate(tarefa, user, batch);
+    //Gera o ref da tarefa
+    const tarefaRef = tarefasService.getCreateRef();
+    const tarefaId = tarefaRef.id;
+
+    //Inclui tarefa no batch
+    tarefasService.batchUpsert(
+      tarefaRef,
+      tarefa,
+      user,
+      batch
+    );
     opCount++;
+
+    // filtra necessidades dessa tarefa
+    const necessidadesDaTarefa =
+      novasNecessidades.filter(
+        n => n.caracteristicaId === tarefa.contexto.caracteristicaId
+      );
+
+    // vincula e inclui as necessidade da tarefa no batch
+    for (const necessidade of necessidadesDaTarefa) {
+
+      const necessidadeVinculada = {
+        ...necessidade,
+        vinculo: {
+          tipo: "tarefa",
+          id: tarefaId
+        }
+      };
+
+      //Inclui necessidade no batch
+      const necessidadeId = getNecessidadeId({
+        entidadeId: necessidadeVinculada.entidadeId,
+        caracteristicaId: necessidadeVinculada.caracteristicaId,
+        tipoEventoId: necessidadeVinculada.tipoEventoId
+      })
+      const necessidadeRef = necessidadesService.getRefById(necessidadeId);
+      necessidadesService.batchUpsert(
+        necessidadeRef,
+        necessidadeVinculada,
+        user,
+        batch
+      );
+      opCount++;
+    }
 
     if (opCount >= MAX_BATCH) {
       await batch.commit();
@@ -380,7 +369,7 @@ const taskInspect = async () => {
       opCount = 0;
     }
   }
-
-  if (opCount > 0) await batch.commit()
+  if (opCount > 0) await batch.commit();
+  console.log(`Manutenção diária concluída.`)
 }
 
