@@ -4,7 +4,7 @@
 // Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
 // Cada tarefa tem um planejamento e uma resolução, além de estado.
 
-import { JOBSTATE_TYPES } from "../types/JOBRUN_STATE";
+import { CVRUN_ESTADO } from "../types";
 import { RECURRING_TYPES } from "../types/RECURRING_TYPES";
 import { mergeComValidacao } from "./rulesUtils";
 
@@ -22,7 +22,7 @@ const tarefaPadrao = {
   nome: "Nova Tarefa",
   descrição: "",
   aparencia: aparenciaPadrao,
-  estado: JOBSTATE_TYPES.PENDING,     // default seguro
+  estado: CVRUN_ESTADO.PENDING.id,     // default seguro
 
   //contexto
   contexto: {

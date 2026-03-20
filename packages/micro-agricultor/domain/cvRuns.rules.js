@@ -1,4 +1,4 @@
-import { JOBSTATE_TYPES } from "../types/JOBRUN_STATE";
+import { CVRUN_ESTADO } from "../types";
 import { mergeComValidacao } from "./rulesUtils";
 
 const cvRunPadrao = {
@@ -107,7 +107,7 @@ export function criarCvJobRun({cvJobRunId, cvJobSpecs, entidade, tipoEntidadeId,
     nome: "Novo CVJob",
     cvJobSpecsId: cvJobSpecs.id,
     cvJobSpecsNome: cvJobSpecs.nome,
-    estado: JOBSTATE_TYPES.PENDING,
+    estado: CVRUN_ESTADO.PENDING.id,
     contexto: criarCvJobRunContext(entidade, tipoEntidadeId),
     imagem: {
         bucket: `micro-agricultor.firebasestorage.app`,

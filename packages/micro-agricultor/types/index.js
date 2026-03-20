@@ -1,6 +1,5 @@
 export * from "./ACTION_TYPES.js"
 export * from "./AMBIENT_TYPES.js"
-export * from "./CV_MODELS"
 export * from "./EVENTO_TYPES.js"
 export * from "./ENTITY_TYPES.js"
 export * from "./GEOMETRY_TYPES.js"
