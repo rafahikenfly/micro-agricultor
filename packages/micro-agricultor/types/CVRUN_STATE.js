@@ -1,8 +1,8 @@
 export const CVRUN_ESTADO_TYPES = {
-    PENDING: "pending",
-    PROCESSING: "processing",
-    ERROR: "error",
-    DONE: "done",
+    PENDING: "PENDING",
+    PROCESSING: "PROCESSING",
+    ERROR: "ERROR",
+    DONE: "DONE",
 }
 
 export const CVRUN_ESTADO = {

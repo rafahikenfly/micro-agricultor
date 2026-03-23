@@ -75,19 +75,19 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
   if (!show) return null;
   return (
   <Modal show onHide={onClose} size="lg">
-    <Modal.Header closeButton>
-      <Modal.Title>{data ? "Editar Planta" : "Nova Planta"}</Modal.Title>
-    </Modal.Header>
+    <Form onSubmit={(evt)=>handleSaveForm({
+        evt,
+        onSave,
+        form,
+        setForm,
+        clearCache: "plantas",
+      })}
+    >
+      <Modal.Header closeButton>
+        <Modal.Title>{data ? "Editar Planta" : "Nova Planta"}</Modal.Title>
+      </Modal.Header>
 
       <Modal.Body>
-        <Form onSubmit={(evt)=>handleSaveForm({
-            evt,
-            onSave,
-            form,
-            setForm,
-            clearCache: "plantas",
-          })}
-        >
           <Tabs
             activeKey={tab}
             onSelect={(k) => k && setTab(k)}
@@ -134,13 +134,13 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
               />
             </Tab>
           </Tabs>
-        </Form>
-      </Modal.Body>
+        </Modal.Body>
       
-      <Modal.Footer>
-        <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-        <Button variant="success" type="submit">Salvar</Button>
-      </Modal.Footer>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+          <Button variant="success" type="submit">Salvar</Button>
+        </Modal.Footer>
+      </Form>
     </Modal>
   )
 }

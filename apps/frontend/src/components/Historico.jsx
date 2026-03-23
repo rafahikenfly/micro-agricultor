@@ -14,7 +14,6 @@ const Historico = ({ entidades = [], caracteristicas = [] }) => {
 
 for (const caracteristica of caracteristicas) {
   for (const entidade of entidades) {
-    console.log(entidade.id, caracteristica.id)
       const dados = efeitosList
         .filter(efeito => efeito.entidadeId === entidade.id && efeito.caracteristicaId === caracteristica.id)
         .map(dado => {
@@ -186,8 +185,6 @@ states: {
   if (!caracteristicas.length) {
     return <div>Selecione ao menos uma característica</div>;
   }
-console.log("efeitos", catalogoEfeitos);
-console.log("series", series);
 
   return (
     <div>

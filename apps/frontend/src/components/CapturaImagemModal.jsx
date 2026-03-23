@@ -125,11 +125,11 @@ export default function CapturaImagemModal({
             style={{ width: "100%", borderRadius: 8 }}
           />
           <StandardInput label="Descrição">
-            <Form.control
-              as="text-area"
-              rows="3"
+            <Form.Control
+              as="textarea"
+              rows={3}
               value={descricao}
-              onChange={(e)=>setDescricao(e.target.value)}
+              onChange={e =>setDescricao(e.target.value)}
             />
           </StandardInput>
           </>

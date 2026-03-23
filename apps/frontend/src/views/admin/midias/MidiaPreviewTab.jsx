@@ -4,7 +4,7 @@ import CapturaImagemModal from "../../../components/CapturaImagemModal";
 
 import { storage } from "../../../firebase";
 import { useToast } from "../../../services/toast/toastProvider";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { MIME_TYPES, VARIANT_TYPES } from "micro-agricultor";
 import { getImageDimensions } from "../../../utils/blobUtils";
 
 async function salvarImagemStorage(blob, path) {
@@ -37,8 +37,9 @@ export default function MidiaPreviewTab({ midia, setForm }) {
   const [showCaptura, setShowCaptura] = useState(false);
 
   const url = midia?.metadados?.url;
-  const mime = midia?.mimeType;
+  const mime = MIME_TYPES[midia?.mimeType]?.nome;
 
+  console.log(midia?.mimeType)
   if (!url) {
     return (
       <>

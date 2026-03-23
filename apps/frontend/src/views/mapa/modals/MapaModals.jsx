@@ -81,7 +81,7 @@ export default function MapaModals() {
         <CapturaImagemModal
           show={true}
           onClose={() => setShowModal(null)}
-          onCapture={async ({ blob, previewUrl, descricao }) => {
+          onCapture={async ({ blob, previewUrl, descricao = ""}) => {
             try {
               const { largura, altura } = await getImageDimensions(blob);
               const id = toolSetup.fotografar.entidadeId

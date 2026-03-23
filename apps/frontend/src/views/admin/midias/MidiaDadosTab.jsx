@@ -1,5 +1,5 @@
 import { Form, } from "react-bootstrap";
-import { MIDIA, MIME_TYPES } from "micro-agricultor";
+import { CVRUN_ESTADO, MIDIA, MIME_TYPES } from "micro-agricultor";
 
 import { StandardInput, renderOptions } from "../../../utils/formUtils";
 import BaseTab from "../../../components/common/BaseTab";
@@ -35,16 +35,21 @@ export default function MidiaDadosTab({ form, setForm }) {
         })}
         </Form.Select>
       </StandardInput>
-      <StandardInput label="Estado">
-        <Form.Control
+      <StandardInput label="Estado do Processamento">
+        <Form.Select
           value = {form.estado}
-          onChange={e => setForm({...form, estado: e.target.value})}
-        />
+          onChange={e => setForm({...form, estado: e.target.value})}>
+        {renderOptions({
+            list: Object.values(CVRUN_ESTADO),
+            placeholder: "Selecione o estado do processamento do conteúdo",
+        })}
+        </Form.Select>
       </StandardInput>
       <StandardInput label="Último Run">
         <Form.Control
           value = {form.ultimoRunId}
           onChange={e => setForm({...form, ultimoRunId: e.target.value})}
+          disabled
         />
       </StandardInput>
     </BaseTab>

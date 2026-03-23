@@ -158,9 +158,12 @@ export default function MapaCanvas () {
       >
 
         <svg ref={svgRef} width="100%" height="100%"
-          onMouseDown={(evt)=>{if (dragActive) handleStartDrag(evt)}}
-          onMouseMove={(evt)=>{if (dragActive) dragMove(evt)}}
-          onMouseUp={(evt)=>{if (dragActive) handleFinishDrag(evt)}}        
+          style = {{
+            touchAction: "none"
+          }}
+          onPointerDown={(evt)=>{if (dragActive) handleStartDrag(evt)}}
+          onPointerMove={(evt)=>{if (dragActive) dragMove(evt)}}
+          onPointerUp={(evt)=>{if (dragActive) handleFinishDrag(evt)}}        
         >
           <g ref={gRef} >
             <MapaHorta

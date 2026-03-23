@@ -9,7 +9,7 @@ const midiaPadrao = {
   estado: CVRUN_ESTADO.PENDING.id,    //CVRUN_STATE_TYPES.id
   ultimoRunId: "",
   tipoMediaId: MIDIA.CAPTURA.id,      //MEDIA_TYPES.id
-  mimeType: MIME_TYPES.JPEG,          //MIME_TYPES.mime
+  mimeType: MIME_TYPES.JPEG.nome,          //MIME_TYPES.mime
   metadados: {
     anotada: false,
     bytes: 0,
