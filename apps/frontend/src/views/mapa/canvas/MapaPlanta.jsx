@@ -12,11 +12,13 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
   const { selection, activeTool, setMapDrag, setShowModal, setToolState } = useMapaEngine();
   const key = `${ENTITY_TYPES.PLANTA}:${planta.id}`;
   const selecionado = selection.isSelected(key);
+  const primaria = selection.isPrimary(key);
 
   const style = {
     opacity: 0.35,
   }
-  if (selecionado) style.opacity = 1
+  if (selecionado) style.opacity = 1.00
+  if (primaria) style.filter = "drop-shadow(0 0 6px rgba(226, 121, 9, 0.8))";
 
   const handleStartDrag = (evt) => {
     if (activeTool === "mover") {

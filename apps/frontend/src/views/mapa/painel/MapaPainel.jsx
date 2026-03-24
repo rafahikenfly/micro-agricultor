@@ -5,8 +5,13 @@ import { useMapaEngine } from "../MapaEngine";
 
 import PlantarOffcanvas from "./PlantarOffcanvas";
 import DesenharOffcanvas from "./DesenharOffCanvas";
-import MonitorarOffcanvas from "./MonitorarOffCanvas";
-import InspecionarOffCanvas from "./InspecionarOffCanvas";
+import PainelMonitorar from "./PainelMonitorar";
+import PainelInspecionar from "./PainelInspecionar";
+import PainelFotografar from "./PainelFotografar";
+import { Offcanvas } from "react-bootstrap";
+import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
+import { calcularArea } from "../../../utils/geometryUtils";
+import PainelManejar from "./PainelManejar";
 
 export default function MapaPainel() {
   const {
@@ -31,11 +36,13 @@ export default function MapaPainel() {
   const TOOL_PANELS = {
     plantar: PlantarOffcanvas,
     desenhar: DesenharOffcanvas,
-    monitorar: MonitorarOffcanvas,
-    inspecionar: InspecionarOffCanvas,
+    monitorar: PainelMonitorar,
+    inspecionar: PainelInspecionar,
+    fotografar: PainelFotografar,
+    manejar: PainelManejar,
   };
-  const PanelComponent = TOOL_PANELS[activeTool] || null;
-  if (!PanelComponent) return null;
+  const OffcanvasContent = TOOL_PANELS[activeTool] || null;
+  if (!OffcanvasContent) return null;
 
 
   // DEFINIÇÃO DE CONFIRMAÇÕES
@@ -67,9 +74,12 @@ export default function MapaPainel() {
       
     },
     monitorar: (toolState)=>console.log("monitorar", toolState),
-    inspecionar: (toolState)=>console.log("inspecionar", toolState)
+    inspecionar: (toolState)=>console.log("inspecionar", toolState),
+    fotografar: (toolState)=>console.log("fotografar", toolState),
+    manejar: (toolState)=>console.log("manejar",toolState)
   }
 
+  console.log(activeTool)
 return (
     <div
       style={{
@@ -101,23 +111,73 @@ return (
         ➤
       </button>
 
-      {showPainel && (
-        <div style={{ width: 300 }}>
-          <PanelComponent
+      <Offcanvas
+        show={showPainel}
+        onHide={()=>setShowPainel(false)}
+        placement="end"
+        backdrop={false}
+      >
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>{offcanvasHeader({
+            selection,
+            catalogs: {
+              [ENTITY_TYPES.PLANTA]: catalogoPlantas,
+              [ENTITY_TYPES.CANTEIRO]: catalogoCanteiros,
+            },
+            primary: false})}
+            </Offcanvas.Title>
+        </Offcanvas.Header>
+    
+        <Offcanvas.Body>
+          <OffcanvasContent
             show={showPainel}
             data={toolSetup[activeTool]}
             selection={selection}
+            primary={selection.primary}
+            primaryType={selection.primaryType()}
             catalogos={{
               [ENTITY_TYPES.PLANTA]: catalogoPlantas,
               [ENTITY_TYPES.CANTEIRO]: catalogoCanteiros,
             }}
             reading={reading}
-            onClose={() => setShowPainel(false)}
             onConfirm={TOOL_ONCONFIRM[activeTool]}
             onCancel={() => {resetToolState(); resetTool()}}
           />
-        </div>
-      )}
+        </Offcanvas.Body>
+      </Offcanvas>
     </div>
   );
+}
+
+
+
+export function offcanvasHeader ({tipoEntidadeId, selection, catalogs, primary = false}) {
+  if (!selection.primary) return <div><strong>Nenhuma seleção</strong></div>
+  const last = resolvePrimarySelection(selection, catalogs)
+  if (primary) return (
+    <div>
+      <strong>{last.nome}</strong>
+      <div className="text-muted small">
+          {(calcularArea(last)/10000).toFixed(2)} m²
+      </div>
+    </div>
+  )
+  if (!tipoEntidadeId) tipoEntidadeId = selection.primaryType()
+
+  const list = resolveSelection(selection, tipoEntidadeId, catalogs[tipoEntidadeId])
+  const displayArea = list.reduce((acc, sel) => {
+      return acc + calcularArea(sel);
+    }, 0);
+
+  let displayNome = last?.nome ?? `Sem ${tipoEntidadeId}s na seleção`
+  if (list.length > 1) displayNome =
+  `${last?.nome} e mais ${list.length - 1} ${tipoEntidadeId}${list.length > 2 ? "s" : ""}`
+
+  return ( <div>
+      <strong>{displayNome}</strong>
+      <div className="text-muted small">
+          {(displayArea/10000).toFixed(2)} m²
+      </div>
+    </div>
+  )
 }

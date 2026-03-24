@@ -32,7 +32,7 @@ export default function DesenharOffcanvas({ show, data = {}, onClose, onConfirm,
   }
 
   return (
-    <Offcanvas show={show} onHide={onClose} placement="end" backdrop={false}>
+    <Offcanvas show={show} onHide={onClose} placement="end">
       <Offcanvas.Header closeButton>
         <Offcanvas.Title>📐 Desenhar</Offcanvas.Title>
       </Offcanvas.Header>

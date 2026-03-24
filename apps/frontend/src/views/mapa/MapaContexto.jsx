@@ -102,6 +102,10 @@ function reducerMapa(state, action) {
       preview: {
         ...state.preview,
         active: false,
+      },
+      show: {
+        ...state.show,
+        painel: false,
       }
     };
   case ACOES_MAPA.TOOLSTATE_SET:

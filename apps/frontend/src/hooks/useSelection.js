@@ -24,15 +24,24 @@ export function useSelection() {
   };
 
   const toggle = (key) => {
+    let newPrimary = primary;
+
     setSelectedKeys(prev => {
       const next = new Set(prev);
 
       if (next.has(key)) {
         next.delete(key);
+        // Se era a primária, escolhe outra
+        if (newPrimary === key) {
+          const arr = Array.from(next);
+          newPrimary = arr.length ? arr[arr.length - 1] : null;
+        }       
       } else {
         next.add(key);
+        newPrimary = key;
       }
 
+      setPrimary(newPrimary);      
       return next;
     });
 
@@ -40,6 +49,20 @@ export function useSelection() {
   };
 
   const isSelected = (key) => selectedKeys.has(key);
+
+  const isPrimary = (key) => primary === key;
+
+  const primaryType = () => {
+    if (!primary) return null;
+    const [type] = primary.split(":");
+    return type || null;
+  }
+  const primaryId = () => {
+    if (!primary) return null;
+    const [type,id] = primary.split(":");
+    return id || null;
+  }
+
 
   const hasType = (tipoEntidadeId) => {
     for (const key of selectedKeys) {
@@ -68,7 +91,10 @@ export function useSelection() {
     add,
     toggle,
     isSelected,
+    isPrimary,
     hasType,
+    primaryType,
+    primaryId,
     getIdsByType,
   };
 }

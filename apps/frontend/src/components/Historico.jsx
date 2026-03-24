@@ -17,7 +17,6 @@ for (const caracteristica of caracteristicas) {
       const dados = efeitosList
         .filter(efeito => efeito.entidadeId === entidade.id && efeito.caracteristicaId === caracteristica.id)
         .map(dado => {
-          console.log("a")
           const c = (dado.confiancaDepois ?? 100)
           const incerteza =  Math.pow(1 - c/100, 2); //TODO: Mudar isso para um modelo estatístico de verdade
   

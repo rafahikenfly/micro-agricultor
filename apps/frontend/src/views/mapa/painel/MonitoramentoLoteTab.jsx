@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Form, Button, InputGroup, Row, Card, } from "react-bootstrap";
+import { useState } from "react";
+import { Form, Button, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import Loading from "../../../components/Loading";
 import { ENTITY_TYPES, processarMonitoramento } from "micro-agricultor";
@@ -13,7 +13,7 @@ import { useCatalogos } from "../../../hooks/useCatalogos";
 
 import { StandardCard, StandardInput } from "../../../utils/formUtils";
 
-export default function MonitoramentoGlobalTab({ entidades, tipoEntidadeId, showToast, stringTimestamp }) { 
+export default function MonitoramentoLoteTab({ entidades, tipoEntidadeId, showToast, stringTimestamp }) { 
   if (!entidades || entidades.length === 0) return null
   const { user } = useAuth();
   const engine = useMapaEngine();

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Alert, Button, ButtonGroup } from "react-bootstrap";
-import CapturaImagemModal from "../../../components/CapturaImagemModal";
 
 import { storage } from "../../../firebase";
 import { useToast } from "../../../services/toast/toastProvider";
 import { MIME_TYPES, VARIANT_TYPES } from "micro-agricultor";
 import { getImageDimensions } from "../../../utils/blobUtils";
+import CapturaImagemEntidade from "../../../components/CapturaImagemEntidade";
 
 async function salvarImagemStorage(blob, path) {
   const ref = storage.ref(path);
@@ -39,7 +39,6 @@ export default function MidiaPreviewTab({ midia, setForm }) {
   const url = midia?.metadados?.url;
   const mime = MIME_TYPES[midia?.mimeType]?.nome;
 
-  console.log(midia?.mimeType)
   if (!url) {
     return (
       <>
@@ -83,8 +82,8 @@ export default function MidiaPreviewTab({ midia, setForm }) {
 
       </div>
 
-        <CapturaImagemModal
-          show={showCaptura}
+        <CapturaImagemEntidade
+          entidade={{}}
           onClose={() => setShowCaptura(false)}
           onCapture={async ({ blob, previewUrl }) => {
             try {

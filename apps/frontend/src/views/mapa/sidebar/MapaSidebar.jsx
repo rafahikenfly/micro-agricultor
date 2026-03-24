@@ -62,20 +62,22 @@ export default function MapaSidebar() {
         setMapPreviewActive(false);
         //setmapdrag no canva
         setTool("mover")
+        setShowPainel(true);
       },
     },
     {
       id: "fotografar",
       icon: "📷",
       text: "Fotografar entidade",
-      onClick: activeTool === "fotografar" ? resetTool : () => {
+      onClick: activeTool === "fotografar" ? () => setShowPainel(false) : () => {
         //setmapdragactive(false)
         setMapPreviewActive(false);
-        setTool("fotografar")
+        setTool("fotografar");
+        setShowPainel(true);
       },
     },    
     {
-      id: "monitor",
+      id: "monitorar",
       icon: "🔬",
       text: "Monitorar características",
       onClick: activeTool === "monitorar" ? resetTool : () => {
@@ -86,7 +88,7 @@ export default function MapaSidebar() {
       },
     },
     {
-      id: "inspect",
+      id: "inspecionar",
       icon: "🗺",
       text: "Inspecionar características",
       onClick: activeTool ===  "inspecionar" ? resetTool : () => {
@@ -96,16 +98,17 @@ export default function MapaSidebar() {
         setShowPainel(true);
       }
     },     
-/*    {
-      id: "handle",
+    {
+      id: "manejar",
       icon: "🪏",
       text: "Manejar",
-      onClick:
-        state.activeTool !== "handle" ? activateHandleTool
-        : !state.showConfigPanel ? openConfigPanel
-        : resetTools
+      onClick: activeTool ===  "manejar" ? resetTool : () => {
+        //setmapdragactive(false)
+        setMapPreviewActive(false);
+        setTool("manejar");
+        setShowPainel(true);
+      }
     },
-*/
   ];
 
   return (

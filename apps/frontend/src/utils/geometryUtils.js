@@ -39,25 +39,3 @@ export function calcularArea(entidade) {
       return 0;
   }
 }
-
-
-export function offcanvasTabHeader ({tipoEntidadeId, list = []}) {
-  if (!tipoEntidadeId) return <div><strong>Sem seleção</strong></div>
-
-  const last = list.at(-1) || null;
-  const displayArea = list.reduce((acc, sel) => {
-      return acc + calcularArea(sel);
-    }, 0);
-
-  let displayNome = last ? last.nome : `Sem ${tipoEntidadeId}s na seleção`
-  if (list.length > 1) displayNome =
-  `${last.nome} e mais ${list.length - 1} ${tipoEntidadeId}${list.length > 2 ? "s" : ""}`
-
-  return ( <div>
-      <strong>{displayNome}</strong>
-      <div className="text-muted small">
-          {(displayArea/10000).toFixed(2)} m²
-      </div>
-    </div>
-  )
-}
