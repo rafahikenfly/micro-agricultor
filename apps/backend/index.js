@@ -1,5 +1,7 @@
+import { dailyMaintenance } from "./scheduler/dailyMaintenance";
+
 console.log("Backend iniciado 🚀");
+console.log("Iniciando tarefas agendadas...");
+dailyMaintenance(); //TODO: lock para evitar duplicação
 
-console.log("Nada por aqui ainda...");
-
-console.log("Backend finalizado...");
+console.log("Tarefas agendadas inicializadas...");

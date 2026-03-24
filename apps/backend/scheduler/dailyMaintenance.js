@@ -14,6 +14,8 @@ const maintenanceTasks = [
 ];
 
 export function dailyMaintenance() {
+  console.log("[CRON] dailyMaintenance agendado para 03:00");
+
   cron.schedule("0 3 * * *", async () => {
     console.log("Iniciando manutenção diária...");
 
