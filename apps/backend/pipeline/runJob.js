@@ -1,5 +1,4 @@
-// jobs/runJob.js
-import { jobRegistry } from "./runJob.js";
+import { jobRegistry } from "./jobRegistry.js";
 
 export async function runJob(name) {
   const job = jobRegistry[name];

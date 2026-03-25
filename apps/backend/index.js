@@ -1,4 +1,4 @@
-import { dailyMaintenance } from "./scheduler/dailyMaintenance";
+import { dailyMaintenance } from "./scheduler/dailyMaintenance.js";
 
 console.log("Backend iniciado 🚀");
 console.log("Iniciando tarefas agendadas...");
