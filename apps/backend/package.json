@@ -4,7 +4,7 @@
   "scripts": {
     "start": "node index.js",
     "start:bg": "pkill -f index.js || true && nohup node /home/cyberlavrador2/micro-agricultor/apps/backend/index.js > /home/cyberlavrador2/micro-agricultor/apps/backend/backend.log 2>&1 &",
-    "logs": "tail -f /home/cyberlavrador2/micro-agricultor/apps/backend/backend.log"
+    "logs": "tail -f /home/cyberlavrador2/scripts/backend.log"
   },
   "dependencies": {
     "node-cron": "^4.2.1"

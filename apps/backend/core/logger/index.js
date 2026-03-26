@@ -1,7 +1,7 @@
 import fs from "fs";
 
-//const LOG_FILE = "/home/cyberlavrador2/scripts/backend.log"; //RASP
-const LOG_FILE = "/Users/rcmachado/Documents/micro_agricultor_updater.log" //MACBOOK
+const LOG_FILE = "/home/cyberlavrador2/scripts/backend.log"; //RASP
+//const LOG_FILE = "/Users/rcmachado/Documents/micro_agricultor_updater.log" //MACBOOK
 
 
 export function log(...args) {
