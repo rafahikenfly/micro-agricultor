@@ -1,0 +1,11 @@
+{
+  "name": "backend",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "logs": "tail -f ../../backend.log"
+  },
+  "dependencies": {
+    "node-cron": "^4.2.1"
+  }
+}
