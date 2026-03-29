@@ -1,4 +1,4 @@
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const cvModeloPadrao = {
     nome: "Novo Modelo",

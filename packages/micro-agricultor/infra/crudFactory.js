@@ -61,7 +61,7 @@ export function createCRUDService(adapter, config) {
       if (orderBy) {
         query = adapter.orderBy(query, orderBy.field, orderBy.direction || "asc");
       }
-      return adapter.get(query);
+      return adapter.get(query)
     },
 
     // SINGLE OPERATIONS

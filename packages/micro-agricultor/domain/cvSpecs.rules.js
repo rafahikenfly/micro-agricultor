@@ -1,6 +1,5 @@
-import { ROUTING_POLICIES } from "../types/ROUTING_POLICIES"
-import { MODELO } from "../types/MODEL_TYPES"
-import { mergeComValidacao } from "./rulesUtils";
+import { ROUTING_POLICIES, MODELO } from "../types/index.js"
+import { mergeComValidacao } from "./rulesUtils.js";
 
 export const cvSpecsPadrao = {
   nome: "Novo Trabalho de Visão",

@@ -1,4 +1,4 @@
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const aparenciaPadrao = {
     fundo: "#4CAF50",

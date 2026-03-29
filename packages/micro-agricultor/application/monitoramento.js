@@ -1,11 +1,11 @@
-import { db } from "../../../apps/frontend/src/firebase"; //TODO: TEM QUE SAIR ESSE DB DAQUI
-import { monitorarCanteiro } from "../domain/canteiro.rules";
-import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules";
-import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules";
-import { monitorarPlanta } from "../domain/planta.rules";
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES";
-import { EVENTO, EVENTO_TYPES } from "../types/EVENTO_TYPES";
-import { SOURCE_TYPES } from "../types/SOURCE_TYPES";
+import { db } from "../../../apps/frontend/src/firebase.js"; //TODO: TEM QUE SAIR ESSE DB DAQUI
+import { monitorarCanteiro } from "../domain/canteiro.rules.js";
+import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules.js";
+import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules.js";
+import { monitorarPlanta } from "../domain/planta.rules.js";
+import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
+import { ORIGEM_TYPES } from "../types/ORIGEM.js";
 
 /**
  * Aplica monitoramento em múltiplas entidades de múltiplas caracteristicas
@@ -109,7 +109,7 @@ export async function processarMonitoramento({
       // Atualiza a necessidade
       const necessidadeAtualizada = atenderNecessidade({
         necessidade,
-        agente: {uid: user.uid, tipo: SOURCE_TYPES.USER},
+        agente: {uid: user.uid, tipo: ORIGEM_TYPES.USER},
         timestamp
       });
 

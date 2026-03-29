@@ -32,6 +32,7 @@ export function createHistoryService(adapter, config) {
   };
 
   return {
+    // GET
     subscribe(callback, filters = [], orderBy = null) {
       let query = getCollection();
 
@@ -48,7 +49,28 @@ export function createHistoryService(adapter, config) {
         callback(data);
       });
     },
+    async getDataById(id) {
+      if (!id) throw new Error("id é obrigatório em getDataById");
 
+      const col = getCollection();
+      const docSnap = await col.doc(id).get();
+
+      if (!docSnap.exists) return null;
+
+      return {
+        id: docSnap.id,
+        ...docSnap.data(),
+      };
+    },
+    getRefById(id) {
+      if (!id) throw new Error("id é obrigatório em getRefById");
+
+      const col = getCollection();
+      return col.doc(id);
+    },
+
+
+    // SINGLE WRITE
     async append(
       data,
       user = { id: "ND", nome: "ND" }
@@ -70,6 +92,7 @@ export function createHistoryService(adapter, config) {
       return id ? col.doc(id) : col.doc();
     },
 
+    // BATCH WRITE
     batchAppend(data, user, batch ) {
       if (!batch) throw new Error("batch é obrigatório em batchCreate");
 
@@ -101,30 +124,5 @@ export function createHistoryService(adapter, config) {
     },
 
 
-    getAppendRef(id = null) {
-      const col = getCollection();
-      return id ? col.doc(id) : col.doc();
-    },
-
-    async getDataById(id) {
-      if (!id) throw new Error("id é obrigatório em getDataById");
-
-      const col = getCollection();
-      const docSnap = await col.doc(id).get();
-
-      if (!docSnap.exists) return null;
-
-      return {
-        id: docSnap.id,
-        ...docSnap.data(),
-      };
-    },
-
-    getRefById(id) {
-      if (!id) throw new Error("id é obrigatório em getRefById");
-
-      const col = getCollection();
-      return col.doc(id);
-    },
   };
 }

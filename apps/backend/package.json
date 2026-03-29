@@ -4,9 +4,14 @@
   "scripts": {
     "start": "node index.js",
     "start:bg": "pkill -f index.js || true && nohup node /home/cyberlavrador2/micro-agricultor/apps/backend/index.js > /home/cyberlavrador2/micro-agricultor/apps/backend/backend.log 2>&1 &",
-    "logs": "tail -f /home/cyberlavrador2/scripts/backend.log"
+    "backendlog": "tail -f /home/cyberlavrador2/scripts/backend.log",
+    "updaterlog": "tail -f /home/cyberlavrador2/scripts/updater.log",
+    "test:dailyEffect": "node scheduler/dailyEffect.js"
   },
   "dependencies": {
-    "node-cron": "^4.2.1"
+    "mqtt": "^5.15.1",
+    "node-cron": "^4.2.1",
+    "micro-agricultor": "file:../../packages/micro-agricultor",
+    "firebase": "^8.10.1"
   }
 }

@@ -5,6 +5,7 @@ import { dailyEffect } from "./dailyEffect.js";
 import { currentStateInspector } from "./currentStateInspector.js";
 import { mediaStateInspector } from "./mediaStateInspector.js";
 import { runJob } from "../pipeline/runJob.js";
+import { log } from "node:console";
 
 
 const maintenanceTasks = [
@@ -14,15 +15,15 @@ const maintenanceTasks = [
 ];
 
 export function dailyMaintenance() {
-  console.log("[CRON] dailyMaintenance agendado para 03:00");
+  log("[CRON] dailyMaintenance agendado para 03:00");
 
   cron.schedule("0 3 * * *", async () => {
-    console.log("Iniciando manutenção diária...");
+    log("[dailyMaintenance] Iniciando manutenção diária...");
 
     try {
       await dailyEffect();
     } catch (err) {
-      console.error("Erro em timeEffect:", err);
+      log("ERROR - [dailyMaintenance] Erro em timeEffect:", err);
     }
 
     const results = await Promise.allSettled([
@@ -32,7 +33,7 @@ export function dailyMaintenance() {
 
     results.forEach((result, index) => {
       if (result.status === "rejected") {
-        console.error(`Erro na função ${maintenanceTasks[index].name}:`, result.reason);
+        log(`ERROR - [dailyMaintenance] Erro na função ${maintenanceTasks[index].name}:`, result.reason);
       }
     });
   });

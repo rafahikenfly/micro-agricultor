@@ -1,4 +1,4 @@
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 const acessoPadrao = {
     admin: false,
     dev: false,

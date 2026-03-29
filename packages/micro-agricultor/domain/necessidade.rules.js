@@ -4,7 +4,7 @@
 // verdade relacionado com a necessidade de se fazer ou não alguma coisa e todas
 // as ações que são tomadas estão registradas na chave correspondente.
 
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const necessidadePadrao = {
   ativo: true,  

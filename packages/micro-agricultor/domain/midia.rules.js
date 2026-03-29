@@ -1,12 +1,11 @@
-import { MIDIA, MIME_TYPES } from "../types";
-import { CVRUN_ESTADO, CVRUN_ESTADO_TYPES } from "../types/CVRUN_STATE";
-import { mergeComValidacao } from "./rulesUtils";
+import { ESTADO_TAREFA, MIDIA, MIME_TYPES } from "../types/index.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 //TODO: reavaliar esse default de imagem JPEG
 const midiaPadrao = {
   nome: "",                           //string
   descricao: "",                      //string
-  estado: CVRUN_ESTADO.PENDING.id,    //CVRUN_STATE_TYPES.id
+  estado: ESTADO_TAREFA.PENDING.id,   //ESTADO_TAREFA[].id
   ultimoRunId: "",
   tipoMediaId: MIDIA.CAPTURA.id,      //MEDIA_TYPES.id
   mimeType: MIME_TYPES.JPEG.nome,          //MIME_TYPES.mime

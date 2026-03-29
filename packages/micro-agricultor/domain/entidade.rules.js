@@ -1,12 +1,81 @@
-import { VALUE_EFFECT_TYPES } from "../types/VALUE_EFFECT_TYPES";
+import { VALUE_EFFECT_TYPES } from "../types/index.js";
+import { criarMutacao } from "./mutacao.rules.js";
 
-export function monitorarEstadoAtual({entidade, medidas, eventoId, timestamp}) {
+/**
+ * Processa uma entidade utilizando um batch, passando uma função.
+ * A função recebe como argumentos: {entidade, evento.timestamp, eventoId}
+ * @param {tipoEntidadeId, entidade, regra, serviceEntidade, serviceMutacoes, evento, contexto, batch, user} args
+ * @returns null
+ */
+export function aplicarRegraPorBatch({
+  tipoEntidadeId,
+  entidade,
+  regra,
+  serviceEntidade,
+  serviceMutacoes,
+  evento,
+  contexto,
+  batch,
+  user
+}) {
+
+  let opCount = 0;
+  try {
+    const results = regra({
+      [tipoEntidadeId]: entidade,
+      entidade,
+      timestamp: evento.timestamp,
+      eventoId: evento.id,
+      ...contexto,
+    });
+
+    if (!results?.after || !Object.keys(results.after).length)
+      return null;
+
+    const entidadeProcessada = {
+      ...entidade,
+      estadoAtual: { ...entidade.estadoAtual, ...results.after }
+    };
+
+    // Inclui update da entidade processada no batch
+    const ref = serviceEntidade.getRefById(entidade.id);
+    serviceEntidade.batchUpdate(ref, entidadeProcessada, user, batch);
+    opCount++;
+
+    // Inclui create das mutações no batch
+    for (const caracteristicaId of Object.keys(results.after)) {
+      const antes = results.before[caracteristicaId];
+      const depois= results.after[caracteristicaId];
+
+      serviceMutacoes.batchAppend(
+        criarMutacao({
+          evento,
+          caracteristicaId,
+          depois,
+          antes,
+          tipoEntidadeId,
+          entidade,
+      }), user, batch);
+      opCount++;
+    }
+
+
+    return { processado: entidadeProcessada, before: (results.before ?? {}), after: (results.after ?? {}), opCount};
+
+  } catch (err) {
+    console.log(`[aplicarRegraPorBatch] Erro processando ${tipoEntidadeId} ${entidade.id}:`, err);
+    return null;
+  }
+}
+
+
+export function monitorarEntidade({entidade, tipoEntidadeId, medidas, eventoId, timestamp}) {
   if (!entidade) throw new Error ("monitorarEstadoAtual: entidade obrigatório.")
-  if (!medidas) throw new Error ("monitorarEstadoAtual: caracteristicasMedidas obrigatório.")
+  if (!medidas) throw new Error ("monitorarEstadoAtual: medidas obrigatório.")
   if (!eventoId) throw new Error ("monitorarEstadoAtual: eventoId obrigatório.")
   if (!timestamp) throw new Error("monitorarEstadoAtual: timestamp obrigatório");
 
-  // Cria uma cópia do canteiro para não modificar o original, garantindo a existencia da chave estadoAtual
+  // Cria uma cópia da entidade para não modificar o original, garantindo a existencia da chave estadoAtual
   const entidadeManejada = {
     ...entidade,
     estadoAtual: {
@@ -27,9 +96,9 @@ export function monitorarEstadoAtual({entidade, medidas, eventoId, timestamp}) {
       manejos: [],                  // Limpa manejos anteriores após medição
       calculadoEm: timestamp,
     }
-    // Reinicializa apenas a característica com a medida
-    entidadeManejada.estadoAtual[caracteristicaId] = {...after[caracteristicaId]}
   });
+  // Atualiza características alteradas
+  entidadeManejada.estadoAtual = {...entidadeManejada.estadoAtual, ...after}
   return {entidadeManejada, before, after};
 }
 

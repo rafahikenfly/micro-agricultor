@@ -1,11 +1,11 @@
-import { db } from "../../../apps/frontend/src/firebase"; //TODO: TEM QUE SAIR ESSE DB DAQUI
-import { manejarCanteiro, monitorarCanteiro } from "../domain/canteiro.rules";
-import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules";
-import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules";
-import { manejarPlanta, monitorarPlanta } from "../domain/planta.rules";
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES";
-import { EVENTO, EVENTO_TYPES } from "../types/EVENTO_TYPES";
-import { SOURCE_TYPES } from "../types/SOURCE_TYPES";
+//import { db } from "../../../apps/frontend/src/firebase"; //TODO: TEM QUE SAIR ESSE DB DAQUI
+import { manejarCanteiro, monitorarCanteiro } from "../domain/canteiro.rules.js";
+import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules.js";
+import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules.js";
+import { manejarPlanta, monitorarPlanta } from "../domain/planta.rules.js";
+import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
+import { ORIGEM_TYPES } from "../types/ORIGEM.js";
 
 /**
  * Aplica manejo em múltiplas entidades
@@ -40,17 +40,18 @@ export async function processarManejo({
     timestamp,
     entidadesId: [],
     mutacoes: [],
+    batch,
   })
   evento.id = eventoId;
   
   // Prepara o batch
   const MAX_OPS = 450;
-  let batch = db.batch(); //TODO: acessar via service
+//  let batch = db.batch(); //TODO: acessar via service
   let opCount = 0;
   const commitIfNeeded = async () => {
     if (opCount >= MAX_OPS) {
       await batch.commit();
-      batch = db.batch();
+//      batch = db.batch();
       opCount = 0;
     }
   };  
@@ -115,7 +116,7 @@ export async function processarManejo({
       // Atualiza a necessidade
       const necessidadeAtualizada = atenderNecessidade({
         necessidade,
-        agente: {uid: user.uid, tipo: SOURCE_TYPES.USER},
+        agente: {uid: user.uid, tipo: ORIGEM_TYPES.USER},
         timestamp
       });
 

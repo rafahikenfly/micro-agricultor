@@ -1,8 +1,8 @@
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
-import { EVENTO_TYPES } from "../types/EVENTO_TYPES.js";
+import { ENTIDADE, ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { EVENTO_TYPES } from "../types/EVENTO.js";
 import { REASON_TYPES } from "../types/REASON_TYPES.js";
 import { VALUE_EFFECT_TYPES } from "../types/VALUE_EFFECT_TYPES.js";
-import { manejarEntidade, monitorarEstadoAtual } from "./monitoramento.rules.js";
+import { manejarEntidade, monitorarEntidade } from "./entidade.rules.js";
 import { getNecessidadeId } from "./necessidade.rules.js";
 import { calcularConfiancaPorTempoTotal, estimarDiasDaInformacao, mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -160,8 +160,16 @@ export function manejarCanteiro({canteiro, manejo, eventoId, timestamp}) { //ent
  * valor de uma determinada característica.
  */
 export function monitorarCanteiro({canteiro, medidas, eventoId, timestamp}) {
-  const results = monitorarEstadoAtual({entidade: canteiro, medidas, eventoId, timestamp})
-  // OUTRAS CONDICOES DE CANTEIROS
+  // Monitoramenteo básico results = {entidadeManejada, before, after}
+  const results = monitorarEntidade({
+    entidade: canteiro,
+    tipoEntidadeId:
+    ENTIDADE.CANTEIRO.id,
+    medidas,
+    eventoId,
+    timestamp
+  })
+  // Outras condições específicas de canteiros
   return results;
 }
 

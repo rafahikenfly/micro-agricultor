@@ -1,4 +1,4 @@
-import { resolverTarefa } from "../domain/tarefa.rules";
+import { resolverTarefa } from "../domain/tarefa.rules.js";
 
 export async function concluirTarefa({ tarefa, resolucao, user, tarefasService }) {
 

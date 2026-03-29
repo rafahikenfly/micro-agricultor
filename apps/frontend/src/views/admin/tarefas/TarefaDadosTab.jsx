@@ -3,7 +3,7 @@ import { Form, } from "react-bootstrap";
 import { renderOptions, StandardInput } from "../../../utils/formUtils";
 
 import BaseTab from "../../../components/common/BaseTab";
-import { CVRUN_ESTADO } from "micro-agricultor/types";
+import { ESTADO_TAREFA } from "micro-agricultor/types";
 
 export default function TarefaDadosTab({ form, setForm }) {
   return (
@@ -17,7 +17,7 @@ export default function TarefaDadosTab({ form, setForm }) {
           onChange={e => setForm({...form, estado: e.target.value})}
         >
           {renderOptions({
-            list: Object.values(CVRUN_ESTADO),
+            list: Object.values(ESTADO_TAREFA),
             placeholder: "Selecione o estado da tarefa",
           })}
         </Form.Select>

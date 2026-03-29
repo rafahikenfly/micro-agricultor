@@ -4,9 +4,8 @@
 // Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
 // Cada tarefa tem um planejamento e uma resolução, além de estado.
 
-import { CVRUN_ESTADO } from "../types";
-import { RECURRING_TYPES } from "../types/RECURRING_TYPES";
-import { mergeComValidacao } from "./rulesUtils";
+import { ESTADO_TAREFA, RECURRING_TYPES } from "../types/index.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const aparenciaPadrao = {
     fundo: "#f56f42",
@@ -22,7 +21,7 @@ const tarefaPadrao = {
   nome: "Nova Tarefa",
   descrição: "",
   aparencia: aparenciaPadrao,
-  estado: CVRUN_ESTADO.PENDING.id,     // default seguro
+  estado: ESTADO_TAREFA.PENDING.id,     // default seguro
 
   //contexto
   contexto: {

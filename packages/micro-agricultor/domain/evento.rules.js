@@ -5,8 +5,7 @@ const eventoPadrao = {
   tipoEventoNome: "", // denormalização consciente
   categoria: "",      // "natural" | "humano" | "sistema" | "estrutural"
   timestamp: 0,       // quando o fato ocorreu no mundo
-  entidadesId: [],    // string[]
-  mutacoes: [],       // {entidadeId, tipoEntidadeId, before, after}
+  entidadesKey: [],   // string[]
 }
 
 /**
@@ -20,10 +19,9 @@ export const validarObjetoEvento = (dataObj = {}) => {
   return valid;
 }
 
-export const criarEvento = ({tipoEvento, timestamp, entidadesId, mutacoes, data = {}}) => {
+export const criarEvento = ({tipoEvento, timestamp, entidadesKey, data = {}}) => {
   if (!tipoEvento) throw new Error ("Erro criando evento: tipoEvento é obrigatório.")
-  if (!entidadesId) console.warn ("Criando evento sem alvos.")
-  if (!mutacoes) console.warn ("Criando evento sem mutações.")
+  if (!entidadesKey) console.warn ("Criando evento sem entidades associadas.")
 
   const novoEvento = {
     ...data,
@@ -31,13 +29,13 @@ export const criarEvento = ({tipoEvento, timestamp, entidadesId, mutacoes, data 
     tipoEventoNome: tipoEvento.nome,
     categoria: tipoEvento.categoria,
     timestamp,
-    entidadesId,
-    mutacoes,
+    entidadesKey,
   }
 
   return validarObjetoEvento(novoEvento)
 }
 
+//DEPRECATED
 export const criarEfeitosDoEvento = ({evento}) =>{
   if (!evento) throw new Error ("Erro criando efeitos do evento: evento é obrigatório.")
   if (!evento.id) throw new Error ("Erro criando efeitos do evento: evento recebido sem id.")
@@ -82,7 +80,7 @@ export const criarEfeitosDoEvento = ({evento}) =>{
   return efeitosDoEvento;
 }
 
-
+/* 
 export const montarEfeitoHistorico = ({eventoId, tipoEventoId, entidadeId, entidadeTipoId, caracteristicaId, estadoAntes, estadoDepois, createdAt, data = {}}) => {
   if (!eventoId) throw new Error ("Erro montando lista de efeitos: eventoId obrigatório.")
   if (!tipoEventoId) throw new Error ("Erro montando lista de efeitos: tipoEventoId obrigatório.")
@@ -106,9 +104,9 @@ export const montarEfeitoHistorico = ({eventoId, tipoEventoId, entidadeId, entid
     eventoId,
     createdAt,
   }
-}
+} */
 
-export const calcularEfeitosDoEvento = ({entidadeId, eventoId, tipoEventoId, estadoAntes, estadoDepois, tipoEntidadeId, createdAt}) => {
+/* export const calcularEfeitosDoEvento = ({entidadeId, eventoId, tipoEventoId, estadoAntes, estadoDepois, tipoEntidadeId, createdAt}) => {
   if (!entidadeId) throw new Error ("Erro calculando efeitos do evento: entidadeId obrigatório.")
   if (!eventoId) throw new Error ("Erro calculando efeitos do evento: eventoId obrigatório.")
   if (!tipoEventoId) throw new Error ("Erro calculando efeitos do evento: eventoId obrigatório.")
@@ -136,4 +134,4 @@ export const calcularEfeitosDoEvento = ({entidadeId, eventoId, tipoEventoId, est
     }));
   }
   return efeitosDoEvento;
-}
+} */

@@ -1,5 +1,5 @@
-import { CVRUN_ESTADO } from "../types";
-import { mergeComValidacao } from "./rulesUtils";
+import { ESTADO_TAREFA } from "../types/index.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const cvRunPadrao = {
   midiaId: "",
@@ -107,7 +107,7 @@ export function criarCvJobRun({cvJobRunId, cvJobSpecs, entidade, tipoEntidadeId,
     nome: "Novo CVJob",
     cvJobSpecsId: cvJobSpecs.id,
     cvJobSpecsNome: cvJobSpecs.nome,
-    estado: CVRUN_ESTADO.PENDING.id,
+    estado: ESTADO_TAREFA.PENDING.id,
     contexto: criarCvJobRunContext(entidade, tipoEntidadeId),
     imagem: {
         bucket: `micro-agricultor.firebasestorage.app`,

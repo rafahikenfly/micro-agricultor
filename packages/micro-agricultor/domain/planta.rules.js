@@ -1,7 +1,5 @@
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
-import { EVENTO_TYPES } from "../types/EVENTO_TYPES.js";
-import { REASON_TYPES } from "../types/REASON_TYPES.js";
-import { monitorarEstadoAtual } from "./monitoramento.rules.js";
+import { REASON_TYPES, ENTITY_TYPES, EVENTO_TYPES } from "../types/index.js";
+import { monitorarEntidade } from "./entidade.rules.js";
 import { getNecessidadeId } from "./necessidade.rules.js";
 import { estimarDiasDaInformacao, calcularConfiancaPorTempoTotal,  mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -100,7 +98,7 @@ export function mudarVariedade(planta, novaVariedade) {
  * @returns {Object} after
  */
 export function manejarPlanta({planta, manejo, eventoId, timestamp}) {
-  const results = monitorarEstadoAtual({entidade: planta, manejo, eventoId, timestamp})
+  const results = monitorarEntidade({entidade: planta, manejo, eventoId, timestamp})
   // OUTRAS CONDICOES DE PLANTAS
   return results;
 }
@@ -120,100 +118,108 @@ export function manejarPlanta({planta, manejo, eventoId, timestamp}) {
  * valor de uma determinada característica.
  * */
 export function monitorarPlanta({planta, medidas, eventoId, timestamp}) {
-  const results = monitorarEstadoAtual({entidade: planta, medidas, eventoId, timestamp})
+  const results = monitorarEntidade({entidade: planta, medidas, eventoId, timestamp})
   // OUTRAS CONDICOES DE PLANTAS
   return results;
 }
 
-export function calcularEvolucaoTemporalPlanta({planta, catalogo, eventoId, timestamp}) {
-  if (!planta) throw new Error ("Erro recalculando caracteristicas do planta: planta obrigatória.")
-  if (!catalogo) throw new Error ("Erro recalculando caracteristicas do planta: catalogo obrigatório.")
-  if (!eventoId) throw new Error ("Erro recalculando caracteristicas do planta: eventoId obrigatório.")
-  if (!timestamp) throw new Error ("Erro recalculando caracteristicas do planta: timestamp obrigatório.")
+export function evoluirCaracteristicas({entidade, mapaCaracteristicas, eventoId, timestamp}) {
+  if (!entidade) throw new Error ("Erro evoluindo entidade: planta obrigatória.")
+  if (!mapaCaracteristicas) throw new Error ("Erro evoluindo entidade: catalogoCaracteristicas obrigatório no contexto.")
+  if (!eventoId) throw new Error ("Erro evoluindo entidade: eventoId obrigatório.")
+  if (!timestamp) throw new Error ("Erro evoluindo entidade: timestamp obrigatório.")
 
-  // Se não há condições de calcular ou entidade é morta, retorna estadoAtual Vazio
-  const mutation = {estadoAtual: {}};
+  // Se não há condições de calcular ou entidade é morta, não há mutação.
+  if (!entidade?.estadoAtual)  return {};
+  if (entidade.isDeleted)      return {};
+  if (entidade.isArchived)     return {};
 
-  if (!planta?.estadoAtual) {console.log (`${planta.id} sem estado atual`); return mutation}
-  if (planta.isDeleted)     {console.log(`${planta.id} deletada`); return mutation}
-  if (planta.isArchived)    {console.log (`${planta.id} arquivada`); return mutation};
-
-  
-  // para cada caracteristica presente no estado atual
-  for (const caracteristicaId of Object.keys(planta.estadoAtual)) {
-    const caracteristica = planta.estadoAtual[caracteristicaId];
-    const caracteristicaCatalogo = catalogo.find(
-      c => c.id === caracteristicaId
-    );
-
-    // Primeiro analisa se a característica tem condições de ser calculada
-    if (!caracteristica) {
-      console.log (`${planta.id} sem caracteristica ${caracteristicaId}`)
-      continue;
+  function podeEvoluir({estado, caracteristica}) {
+    // Para poder evoluir, o estado precisa:
+    // - existir
+    // - ter uma data de cálculo
+    // - aplicar pelo menos um efeito de tempo (obsolescência ou variação)
+    // - ter valores para os efeitos de tempo selecionados (obsolescência e/ou variação)
+    if (!estado)             return false;
+    if (!caracteristica)     return false;
+    if (!estado.calculadoEm) return false;
+    if (!caracteristica.aplicarObsolescencia && !caracteristica.aplicarVariacao) return false;
+    if (caracteristica.aplicarObsolescencia) {
+      if (!estado.confianca && !caracteristica.longevidade) {
+        throw new Error(`${caracteristica.nome} com obsolescência inválida!`);
+      }
     }
-    if (!caracteristica.calculadoEm){
-      console.log (`${planta.id} sem data de cálculo para ${caracteristicaId}`)
-      continue;
+    if (caracteristica.aplicarVariacao) {
+      if (estado.valor === null && !caracteristica.variacaoDiaria){
+        throw new Error(`${caracteristica.nome} com degradação inválida!`);
+      }
     }
-    if (!caracteristicaCatalogo.aplicarObsolescencia && !caracteristicaCatalogo.aplicarVariacao) {
-      console.log (`Nada a fazer com ${caracteristicaId}`)
-      continue
-    }
-    if (caracteristicaCatalogo.aplicarObsolescencia &&
-      !caracteristica.confianca  && 
-      !caracteristicaCatalogo.longevidade ){
-      console.log(`Obsolescência inválida para ${caracteristicaId} em ${planta.id}`);
-      continue;
-    }
-    if (caracteristicaCatalogo.aplicarVariacao &&
-      caracteristica.valor === null &&
-      !caracteristicaCatalogo.variacaoDiaria) {
-      console.log(`Valor inválido para ${caracteristicaId} em ${planta.id}`);
-      continue;
-    }
-      
-      
-
-    const dtMs = timestamp - caracteristica.calculadoEm;
-    if (dtMs <= 0) {
-      console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${planta.id}`);
-      continue;
-    }
-
-    const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
-
-    // Depois analisa se a confiança da característica varia
-    let novaConfianca = caracteristica.confianca;
-    if (caracteristicaCatalogo.aplicarObsolescencia) {
-      
-      const diasEstimados = estimarDiasDaInformacao(
-        caracteristica.confianca,
-        caracteristicaCatalogo.longevidade
-      );
-      novaConfianca = calcularConfiancaPorTempoTotal(
-        diasEstimados + diasDecorridos,
-        caracteristicaCatalogo.longevidade
-      );
-    }
-    // Finalmente, analisa se o valor da característica varia
-    let novoValor = caracteristica.valor;
-    if (caracteristicaCatalogo.aplicarVariacao) {
-      novoValor = caracteristica.valor + diasDecorridos * caracteristicaCatalogo.variacaoDiaria
-    }
-
-    // Salva a mutação
-    if (novoValor !== caracteristica.valor || novaConfianca !== caracteristica.confianca) {
-      mutation.estadoAtual[caracteristicaId] = {
-        ...caracteristica,
-        confianca: novaConfianca,
-        valor: novoValor,
-        calculadoEm: timestamp,
-        eventos: [... (caracteristica.eventos ?? []), eventoId],
-      };
-    }
+    return true;
   }
 
-  return mutation;
+  const before = {};
+  const after = {};
+  const entidadeEvoluida = {
+    ...entidade,
+    estadoAtual: {
+      ...(entidade.estadoAtual ?? {})
+    },
+  };
+
+  // para cada caracteristica presente no estado atual
+  for (const caracteristicaId of Object.keys(entidade.estadoAtual)) {
+    const estado = entidade.estadoAtual[caracteristicaId];
+    const caracteristica = mapaCaracteristicas.get(caracteristicaId);
+    
+    if (podeEvoluir({estado, caracteristica})) {
+
+      const dtMs = timestamp - estado.calculadoEm;
+      if (dtMs <= 0) {
+        console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${entidade.id}`);
+        continue;
+      }
+
+      const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
+
+      // Calcula a nova confianca da característica
+      let novaConfianca = estado.confianca;
+      if (caracteristica.aplicarObsolescencia) {
+        const diasEstimados = estimarDiasDaInformacao(
+          estado.confianca,
+          caracteristica.longevidade
+        );
+        novaConfianca = calcularConfiancaPorTempoTotal(
+          diasEstimados + diasDecorridos,
+          caracteristica.longevidade
+        );
+      }
+
+      // Calcula novo valor da característica
+      let novoValor = estado.valor;
+      if (caracteristica.aplicarVariacao) {
+        novoValor = estado.valor + diasDecorridos * caracteristica.variacaoDiaria
+      }
+
+      // Processa a mutação
+      if (novoValor !== estado.valor || novaConfianca !== estado.confianca) {
+        before[caracteristicaId] = estado
+        after[caracteristicaId] = {
+          ...estado,
+          confianca: novaConfianca,
+          valor: novoValor,
+          calculadoEm: timestamp,
+          eventos: [... (estado.eventos ?? []), eventoId],
+        };
+        // Reinicializa apenas a característica com a medida
+        entidadeEvoluida.estadoAtual[caracteristicaId] = {...after[caracteristicaId]}
+      }
+    }
+
+  }
+  // Atualiza características alteradas
+  entidadeEvoluida.estadoAtual = {...entidadeEvoluida.estadoAtual, ...after}
+
+  return {entidadeEvoluida, before, after};
 }
 
 export function plantarVariedade({especie, variedade, tecnica, canteiro, posicao}) {

@@ -1,6 +1,6 @@
  //TODO: ESSE ARQUIVO PRECISA SER RENOMEADO PARA tables.rules.js
 
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const estadoPadrao = {
     nome: "Novo Estado",
