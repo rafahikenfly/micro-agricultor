@@ -25,5 +25,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-/frontend/src/firebaseConfig.js
-/backend/infra/firebaseConfig.js
+servicekey.json
+firebaseConfig.js

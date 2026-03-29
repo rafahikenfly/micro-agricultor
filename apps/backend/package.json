@@ -9,9 +9,10 @@
     "test:dailyEffect": "node scheduler/dailyEffect.js"
   },
   "dependencies": {
-    "mqtt": "^5.15.1",
-    "node-cron": "^4.2.1",
+    "firebase": "^8.10.1",
+    "firebase-admin": "^13.7.0",
     "micro-agricultor": "file:../../packages/micro-agricultor",
-    "firebase": "^8.10.1"
+    "mqtt": "^5.15.1",
+    "node-cron": "^4.2.1"
   }
 }
