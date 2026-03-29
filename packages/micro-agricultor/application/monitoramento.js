@@ -1,4 +1,4 @@
-import { db } from "../../../apps/frontend/src/firebase.js"; //TODO: TEM QUE SAIR ESSE DB DAQUI
+import { db } from "../../../apps/backend/infra/firebase.js"; //TODO: TEM QUE SAIR ESSE DB DAQUI
 import { monitorarCanteiro } from "../domain/canteiro.rules.js";
 import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules.js";
 import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules.js";
