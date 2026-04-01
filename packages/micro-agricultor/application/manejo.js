@@ -1,7 +1,7 @@
 //import { db } from "../../../apps/frontend/src/firebase"; //TODO: TEM QUE SAIR ESSE DB DAQUI
 import { manejarCanteiro, monitorarCanteiro } from "../domain/canteiro.rules.js";
 import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules.js";
-import { atenderNecessidade, getNecessidadeId } from "../domain/necessidade.rules.js";
+import { atenderNecessidade, getNecessidadeKey } from "../domain/necessidade.rules.js";
 import { manejarPlanta, monitorarPlanta } from "../domain/planta.rules.js";
 import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
 import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
@@ -106,7 +106,7 @@ export async function processarManejo({
     const listaNecessidades = [ ...Object.keys(after), manejo.id]
     for (const caracteristicaId of listaNecessidades) {
       // Recupera a necessidade
-      const necessidadeId = getNecessidadeId({
+      const necessidadeId = getNecessidadeKey({
         entidadeId: entidade.id,
         caracteristicaId,
         tipoEventoId: tipoEvento.id

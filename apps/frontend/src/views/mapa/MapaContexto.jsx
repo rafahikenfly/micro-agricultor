@@ -10,7 +10,6 @@ export const ACOES_MAPA = {
   DRAG_SET: "DRAG_SET",
   DRAG_UPDATE: "DRAG_UPDATE",
   DRAG_ACTIVE: "DRAG_ACTIVE",
-  DRAG_INACTIVE: "DRAG_INACTIVE",
 
   PREVIEW_SET: "PREVIEW_SET",
   PREVIEW_UPDATE: "PREVIEW_UPDATE",
@@ -23,10 +22,6 @@ export const ACOES_MAPA = {
   // HEATMAP
   HEATMAP_SET: "HEATMAP_SET",
   HEATMAP_RESET: "HEATMAP_RESET",
-  // PENDING MUTATION
-  SET_PENDING_MUTATION: "SET_PENDING_MUTATION",
-  RESET_PENDING_MUTATION: "RESET_PENDING_MUTATION",
-
 };
 
 
@@ -68,18 +63,6 @@ const estadoInicialMapa = {
     modal: null,
     painel: false,
   },
-/*   // UI SERVICES
-  pendingMutation: {      // tipo de evento para registro da persistencia
-    actionType: null,
-    before: null,
-    after: null,
-  },
-  heatmap: {
-    active: false,
-    caracteristicaId: null,
-    min: null,
-    max: null,
-  }, */
 };
 
 /* ================= REDUCER ================= */
@@ -140,17 +123,9 @@ function reducerMapa(state, action) {
       ...state,
       drag: {
         ...state.drag,
-        active: true,
-        start: {x:0,y:0},
-        current: {x:0,y:0},
-      },
-    };
-  case ACOES_MAPA.DRAG_INACTIVE:
-    return {
-      ...state,
-      drag: {
-        ...state.drag,
-        active: false
+        active: action.payload,
+        start: action.payload ? { x: 0, y: 0 } : state.drag.current,
+        current: action.payload ? { x: 0, y: 0 } : state.drag.current,
       },
     };
     // ===== PREVIEW =====
@@ -191,25 +166,6 @@ function reducerMapa(state, action) {
       }
   };
 /* 
-  // PENDING MUTATION
-  case ACOES_MAPA.SET_PENDING_MUTATION:
-    return {
-      ...state,
-      pendingMutation: {
-        ...state.pendingMutation,
-        ...action.payload,
-      }
-  };
-  case ACOES_MAPA.RESET_PENDING_MUTATION:
-    return {
-      ...state,
-      pendingMutation: {
-        actionType: null,
-        before: null,
-        after: null,
-      }
-  };
-  // HEATMAP
   case ACOES_MAPA.HEATMAP_SET:
     return {
       ...state,

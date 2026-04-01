@@ -4,6 +4,7 @@ import { validarEspecie, VARIANT_TYPES } from "micro-agricultor";
 
 import { catalogosService } from "../../../services/catalogosService";
 import { useToast } from "../../../services/toast/toastProvider";
+import { useCache } from "../../../hooks/useCache";
 
 import AparenciaTab from "../../../components/common/AparenciaTab";
 
@@ -14,12 +15,11 @@ import EspecieCicloTab from "./EspecieCicloTab";
 
 export default function EspecieModal({ show, onSave, onClose, data }) {
   const { toastMessage } = useToast();  
+  const { cacheCategoriasEspecie, cacheEstagiosEspecie, reading } = useCache([
+    "categoriasEspecie",
+  ]);
   // Controle de tab
   const [tab, setTab] = useState("dados");
-  // Catalogos
-  const [categorias_especie, setCategorias_especie] = useState([]);
-  const [estagios_especie, setEstagios_especie] = useState([]);
-  const [reading, setReading] = useState(false);
   // Formulário
   const [form, setForm] = useState(validarEspecie(data));
 
@@ -81,7 +81,7 @@ export default function EspecieModal({ show, onSave, onClose, data }) {
               <EspecieDadosTab
                 form={form}
                 setForm={setForm}
-                categorias_especie={categorias_especie}
+                categorias_especie={cacheCategoriasEspecie?.list}
                 loading={reading}
               />
             </Tab>
@@ -89,7 +89,7 @@ export default function EspecieModal({ show, onSave, onClose, data }) {
               <EspecieCicloTab
                 ciclo={form.ciclo}
                 setCiclo={ciclo => setForm({ ...form, ciclo })}
-                estagios={estagios_especie}
+                estagios={cacheEstagiosEspecie?.list}
                 loading={reading}
               />
             </Tab>

@@ -7,7 +7,7 @@ export function EntidadeEstadoAtualTab ({formEstadoAtual, setFormEstadoAtual, ca
 
   const caracteristicasComEstadoAtual = new Set( Object.keys(formEstadoAtual) );
 
-  const caracteristicasAplicaveisSemEstadoAtual = (caracteristicas ?? [])
+  const caracteristicasAplicaveisSemEstadoAtual = (caracteristicas?.list ?? [])
   .filter(c =>
     c.aplicavel?.[tipoEntidadeId] === true &&
     !caracteristicasComEstadoAtual.has(c.id)
@@ -27,10 +27,7 @@ export function EntidadeEstadoAtualTab ({formEstadoAtual, setFormEstadoAtual, ca
         </StandardBadgeGroup>
       </StandardCard>
       {Object.entries(formEstadoAtual).map(([caracteristicaId, estado]) => {
-        const caracteristica = caracteristicas?.find(
-          c => c.id === caracteristicaId
-        );
-
+        const caracteristica = caracteristicas.map?.get(caracteristicaId);
         if (!caracteristica) return null;
 
         return (

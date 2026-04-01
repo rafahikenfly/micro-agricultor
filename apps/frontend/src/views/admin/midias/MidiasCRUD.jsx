@@ -16,7 +16,6 @@ import { useToast } from "../../../services/toast/toastProvider";
 import MidiaModal from "./MidiaModal";
 
 export default function MidiasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 

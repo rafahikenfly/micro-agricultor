@@ -1,13 +1,5 @@
-export function toggleSelecao(selecao = [], entidadeId) {
-  const existe = selecao.includes(entidadeId);
-
-  if (!existe) {
-    // adiciona
-    return [...selecao, entidadeId];
-  }
-
-  // remove
-  return selecao.filter(id => id !== entidadeId);
+export function pluralizar(count, singular, plural) {
+  return count === 1 ? singular : (plural || singular + "s");
 }
 
 export function calcularCorHeatmap(valor, min, max) {

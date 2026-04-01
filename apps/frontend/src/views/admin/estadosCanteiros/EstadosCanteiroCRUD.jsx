@@ -15,7 +15,6 @@ import EstadosCanteiroModal from "./EstadoCanteiroModal";
 
 
 export default function EstadosCanteiroCRUD() {
-  const {tostMessage} = useToast()
   const { user } = useAuth();
   if (!user) return <NoUser />
 

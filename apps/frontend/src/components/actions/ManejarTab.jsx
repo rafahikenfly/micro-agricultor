@@ -11,37 +11,15 @@ import { manejarCanteiro, monitorarCanteiro } from "@domain/canteiro.rules";
 import { manejarPlanta} from "@domain/planta.rules";
 import { calcularEfeitosDoEvento, montarLogEvento } from "@domain/evento.rules";
 import { db, nowTimestamp, } from "../../firebase";
+import { useCache } from "../../hooks/useCache";
 
 export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
   const { user } = useAuth();
-  const [manejos, setManejos] = useState([]);
+  const { cacheManejos, reading } = useCache(["manejos"]);
   const [manejoSelecionado, setManejoSelecionado] = useState(null);
+
   const [form, setForm] = useState({});
-  const [reading, setReading] = useState(false);
   const [writing, setWriting] = useState(false);
-
-
-  /* ================= CARREGAR DADOS ================= */
-  useEffect(() => {
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getManejos(),
-    ]).then(([mans,]) => {
-      if (!ativo) return;
-  
-      setManejos(mans);
-      setReading(false);
-    });
-  
-    return () => { ativo = false };
-  }, []);
-
-  const selecionarManejo = (manejo) => {
-    setManejoSelecionado(manejo);
-    setForm({});
-  };
 
   const aplicarManejo = async () => {
     setWriting(true);
@@ -143,10 +121,10 @@ export default function ManejarTab({ entidade, tipoEntidadeId, showToast }) {
         <Form.Label>Manejo</Form.Label>
         <Form.Select
           value={manejoSelecionado?.id ?? ""}
-          onChange={(e) => selecionarManejo( manejos.find((m) => m.id === e.target.value) )}
+          onChange={(e) => setManejoSelecionado(cacheManejos?.map?.get(e.target.value) ?? null)}
         >
           {renderOptions({
-            list: manejos.filter( (m) => m.tipoEntidade === tipoEntidadeId),
+            list: cacheManejos.list.filter( (m) => m.tipoEntidade === tipoEntidadeId),
             loading: reading,
             placeholder: "Selecione o manejo",
           })}

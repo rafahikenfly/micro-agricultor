@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Button, Form } from "react-bootstrap";
 import { StandardInput } from "../utils/formUtils";
 import { useMapaEngine } from "../views/mapa/MapaEngine";
+import { VARIANT_TYPES } from "micro-agricultor";
 
 export default function CapturaImagemEntidade({
   onCancel,
@@ -132,7 +133,7 @@ export default function CapturaImagemEntidade({
           alt="Preview"
           style={{ width: "100%", borderRadius: 8 }}
         />
-        <StandardInput label="Descrição">
+        <StandardInput label="Descrição" stacked>
           <Form.Control
             as="textarea"
             rows={3}
@@ -146,13 +147,13 @@ export default function CapturaImagemEntidade({
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
       <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-        <Button variant="secondary" onClick={onCancel}>Cancelar</Button>
+        <Button variant={VARIANT_TYPES.GREY} onClick={onCancel}>Cancelar</Button>
 
         {!previewUrl ?
-          <Button variant="primary" disabled={!entidade?.id} onClick={capturar}>Capturar</Button>
+          <Button variant={VARIANT_TYPES.GREEN} disabled={!entidade?.id} onClick={capturar}>Capturar</Button>
         : <>
-            <Button variant="outline-secondary" onClick={refazer}>Refazer</Button>
-            <Button variant="success" onClick={confirmar}>Confirmar</Button>
+            <Button variant={VARIANT_TYPES.RED} onClick={refazer}>Refazer</Button>
+            <Button variant={VARIANT_TYPES.GREEN} onClick={confirmar}>Confirmar</Button>
           </>
         }
       </div>

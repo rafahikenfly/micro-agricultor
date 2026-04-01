@@ -1,5 +1,4 @@
-import { ENTITY_TYPES } from "micro-agricultor";
-import { useAuth } from "../../../services/auth/authContext";
+import { ENTIDADE } from "micro-agricultor";
 import { useMapaEngine } from "../MapaEngine";
 import { getMouseInMapSpace, pointNearBorder } from "../../../utils/coordinatesUtils";
 
@@ -7,10 +6,8 @@ import SVGEntidade from "../../../services/svg/SVGEntidade";
 
 export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn}) {
 
-  const { user } = useAuth();
-  const engine = useMapaEngine();
   const { selection, activeTool, setMapDrag, setShowModal, setToolState } = useMapaEngine();
-  const key = `${ENTITY_TYPES.PLANTA}:${planta.id}`;
+  const key = `${ENTIDADE.planta.id}:${planta.id}`;
   const selecionado = selection.isSelected(key);
   const primaria = selection.isPrimary(key);
 
@@ -36,7 +33,7 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
             pointerEvents: "none",
           },
         });
-        dragStart(evt, {type: "redimensionar", direction, entity: planta})
+        dragStart(evt, {type: "redimensionar", direction, entidade: planta, tipoEntidadeId: ENTIDADE.planta.id})
       } else {
         setMapDrag({
           active: true,
@@ -48,15 +45,41 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
             pointerEvents: "none",
           },
         });
-        dragStart(evt, {type: "mover", entity: planta})
+        dragStart(evt, {type: "mover", entidade: planta, tipoEntidadeId: ENTIDADE.planta.id})
       }
     }
   }
-
+  const handleMouseMove = (evt) => {
+    if (drag.isDragging) {
+      dragMove(evt);
+      return;
+    }
+    const mapPoint = getMouseInMapSpace(svgRef.current, gRef.current, evt.clientX, evt.clientY)
+    const direction = pointNearBorder(mapPoint, planta, planta.aparencia.espessura);
+    function getCursor(direction) {
+      switch (direction) {
+        case "n":
+        case "s":
+          return "ns-resize";
+        case "e":
+        case "w":
+          return "ew-resize";
+        case "ne":
+        case "sw":
+          return "nesw-resize";
+        case "nw":
+        case "se":
+          return "nwse-resize";
+        default:
+          return "default";
+      }
+    }
+    evt.target.style.cursor = getCursor(direction);
+  }
   // Não renderiza se é a entidade sendo movida
   if (drag.isDragging
     && drag.type === "mover"
-    && drag.entity?.id === planta.id) return null;
+    && drag.entidade?.id === planta.id) return null;
   return (
     <SVGEntidade 
       entidade={planta}
@@ -65,10 +88,6 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
           evt.stopPropagation();
           // Prioridade de pointerTool
           if (activeTool === "fotografar") {
-            setToolState({
-              timestamp: Date.now(),
-              entidadeId: planta.id,
-              entidadeNome: planta.nome});
             setShowModal({
               tipoEntidadeId: "fotografar",
             })
@@ -86,7 +105,7 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
           }
         },
         onMouseDown: (evt) => handleStartDrag(evt),
-        onMouseMove: (evt) => {if (drag.isDragging) dragMove(evt)},
+        onMouseMove: (evt) => handleMouseMove(evt),
         onDoubleClick: (evt) => { 
           evt.stopPropagation();
           // Navegação
@@ -96,7 +115,7 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
           }
           // Edição
           setShowModal({
-          tipoEntidadeId: ENTITY_TYPES.PLANTA,
+          tipo: ENTIDADE.planta.id,
           data: planta
         });}
       }}

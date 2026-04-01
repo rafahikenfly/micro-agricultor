@@ -1,12 +1,14 @@
-import { ENTIDADE, ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
 import { EVENTO_TYPES } from "../types/EVENTO.js";
 import { REASON_TYPES } from "../types/REASON_TYPES.js";
-import { VALUE_EFFECT_TYPES } from "../types/VALUE_EFFECT_TYPES.js";
-import { manejarEntidade, monitorarEntidade } from "./entidade.rules.js";
-import { getNecessidadeId } from "./necessidade.rules.js";
-import { calcularConfiancaPorTempoTotal, estimarDiasDaInformacao, mergeComValidacao } from "./rulesUtils.js";
+import { desenharEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
+import { getNecessidadeKey } from "./necessidade.rules.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
 
+// =====
+// CONSTANTES E VALIDAÇÃO
+// =====
 const estadoInicial = {
   id: "Gcam9slyNqHMx2flaGfP",
   nome: "Vazio",
@@ -35,7 +37,6 @@ const canteiroPadrao = {
   hortaNome: "",
   estadoAtual: {},
 }
-
 /**
  * Protege contra problemas no objeto.
  * @param {*} dataObj 
@@ -47,237 +48,83 @@ export const validarObjetoCanteiro = (dataObj = {}) => {
   return valid;
 }
 
-/**
- * Aplica um manejo já registrado em um canteiro, retornando o canteiro modificado.
- * @param {canteiro} canteiro - entidade do canteiro a ser manejado
- * @param {manejo} manejo - entidade do manejo a ser aplicado
- * @param {string} eventoId - id do evento associado ao manejo
- * @param {number} timestamp - timestamp do manejo
- * @returns {canteiro} entidadeManejada
- * @returns {Object} before
- * @returns {Object} after
- */
-export function manejarCanteiro({canteiro, manejo, eventoId, timestamp}) { //entradas: CONSIDERAR AS ENTRADAS DO MANEJO
-/*   if (!canteiro) throw new Error ("Erro monitorando canteiro: canteiro obrigatório.")
-  if (!manejo) throw new Error ("Erro monitorando canteiro: manejo obrigatório.")
-  if (!eventoId) throw new Error ("Erro monitorando canteiro: eventoId obrigatório.")
-  if (!timestamp) throw new Error ("Erro monitorando canteiro: timestamp obrigatório.")
-
-  // Cria uma cópia do canteiro para não modificar o original, garantindo a existencia da chave estadoAtual
-  const canteiroManejado = {
-    ...canteiro,
-    estadoAtual: {
-      ...(canteiro.estadoAtual ?? {}),
-    },
-  };
-  const before = {};
-  const after = {};
-
-  // Atualiza o estado de destino do canteiro conforme o manejo
-  // Só há mudança de estado se a entidade estiver no estado de origem
-  // E houver um estado de destino
-  if (manejo.estadoDestinoId && canteiro.estado === manejo.estadoOrigemId) {
-    canteiroManejado.estadoId = manejo.estadoDestinoId;
-    canteiroManejado.estadoNome = manejo.estadoDestinoNome;
-  }
-
-  // Processa os efeitos do manejo
-  if (Array.isArray(manejo.efeitos)) {
-    for (const efeito of manejo.efeitos) {
-      // Garante que a característica exista no estadoAtual e salva no before
-      const atual = canteiroManejado.estadoAtual[efeito.caracteristicaId] ?? {valor: 0, confianca: 0};
-      before[efeito.caracteristicaId] = {
-        valor: atual.valor ?? null,
-        confianca: atual.confianca ?? null,
-      };
-
-
-      //TODO: PROCESSAR AS ENTRADAS DO MANEJO
-
-      
-      let novoValor = atual.valor;
-      // Calcula o novo valor conforme o tipo
-      switch (efeito.tipoEfeitoValorId) {
-        case VALUE_EFFECT_TYPES.NONE: break;
-        case VALUE_EFFECT_TYPES.DELTA: novoValor += Number(efeito.efeitoValor); break;
-        case VALUE_EFFECT_TYPES.MULTIPLIER:  novoValor *= Number(efeito.efeitoValor); break;
-        case VALUE_EFFECT_TYPES.FIXED: novoValor = Number(efeito.efeitoValor); break;
-        default:
-          throw new Error( `Tipo de efeito sobre valor ${efeito.tipoEfeitoValorId} inválido no manejo ${manejo.nome} (${manejo.id})` );
-      }
-      let novaConfianca = atual.confianca;
-      // Calcula o novo valor conforme o tipo
-      switch (efeito.tipoEfeitoConfiancaId) {
-        case VALUE_EFFECT_TYPES.NONE: break;
-        case VALUE_EFFECT_TYPES.DELTA: novaConfianca += Number(efeito.efeitoConfianca); break;
-        case VALUE_EFFECT_TYPES.MULTIPLIER:  novaConfianca *= Number(efeito.efeitoConfianca); break;
-        case VALUE_EFFECT_TYPES.FIXED: novaConfianca = Number(efeito.efeitoConfianca); break;
-        default:
-          throw new Error( `Tipo de efeito sobre confiança ${efeito.tipoEfeitoConfiancaId} inválido no manejo ${manejo.nome} (${manejo.id})` );
-      }
-
-      // Atualiza a característica com novos valores, incluindo novo evento na lista
-      canteiroManejado.estadoAtual[efeito.caracteristicaId] = {
-        ...atual,
-        valor: novoValor,                             // Novo valor da característica
-        confianca: novaConfianca,                     // Nova confiança da característica (se houver)
-        manejos: [...(atual.manejos ?? []), eventoId],// Adiciona manejos aos anteriores
-        // TODO: se um manejo tiver duas vezes a mesma caracteristica, o manejo aparecerá duplicado aqui.
-        calculadoEm: timestamp,
-      };
-
-      // Salva no after
-      after[efeito.caracteristicaId] = {
-        valor: novoValor,
-        confianca: novaConfianca,
-      };
-    };
-  }
-  //TODO: criar a regra de manejo independente de entidade, assim como foi feito no monitoramento.
-  return {entidadeMonitorada: canteiroManejado, before, after}
-  */
-  const results = manejarEntidade({entidade: canteiro, manejo, eventoId, timestamp})
+// =====
+// REGRAS DE CRIAÇÃO DE CANTEIRO
+// =====
+export function criarCanteiro({ entidade }) {
+  const valid = validarObjetoCanteiro(entidade);
   // OUTRAS CONDICOES DE CANTEIROS
-  return results;
-
+  return valid;
 }
 
-
+// =====
+// REGRAS DE TRANSFORMAÇÃO DE ESTADO ATUAL DE CANTEIRO
+// =====
 /**
- * Monitorar um canteiro com as medidas fornecidas, retornando o canteiro modificado. O Monitoramento
+ * Monitorar uma canteiro com as medidas fornecidas, retornando a canteiro modificada. O Monitoramento
  * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
  * do cálculo do Estado Atual da característica atualizada.
  * @param {object} canteiro 
  * @param {object} medidas 
  * @param {string} eventoId 
  * @param {number} timestamp
- * @returns {object} EntidadeMonitorada: objeto resultante do monitoramento.
- * @returns {object} before: objeto com as características alteradas, antes do monitoramento
- * @returns {object} after: objeto com as caracteristicas alteradas, após o monitoramento
+ * @returns {entidadeMonitorada, before, after}
  * 
  * TODO: monitorarCanteiro deveria salvar os eventos/manejos e a diferença acumulada quando
  * há um estadoAtual anterior? Isso pode ser importante para calcular o decaimento de confiança e
  * valor de uma determinada característica.
- */
-export function monitorarCanteiro({canteiro, medidas, eventoId, timestamp}) {
-  // Monitoramenteo básico results = {entidadeManejada, before, after}
-  const results = monitorarEntidade({
-    entidade: canteiro,
-    tipoEntidadeId:
-    ENTIDADE.CANTEIRO.id,
-    medidas,
-    eventoId,
-    timestamp
-  })
-  // Outras condições específicas de canteiros
+ * */
+export function monitorarCanteiro({entidade, medidas, eventoId, timestamp}) {
+  const results = monitorarEntidade({entidade, medidas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE CANTEIROS
+  return results;
+}
+/**
+ * Evoluir uma canteiro usando o mapa de características fornecido, retornando a canteiro modificada. 
+ * @param {object} canteiro 
+ * @param {object} mapaCaracteristicas 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {entidadeEvoluida, before, after}
+ * */
+export function evoluirCanteiro({entidade, mapaCaracteristicas, eventoId, timestamp}) {
+  const results = evoluirEntidade({entidade, mapaCaracteristicas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE CANTEIROS
+  return results;
+}
+/**
+ * Manejar uma canteiro com o manejo fornecidas, retornando a canteiro modificada. O Monitoramento
+ * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
+ * do cálculo do Estado Atual da característica atualizada.
+ * @param {object} canteiro 
+ * @param {object} manejo 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {entidadeManejada, before, after}
+ * */
+export function manejarCanteiro({entidade, manejo, eventoId, timestamp}) {
+  const results = manejarEntidade({entidade, manejo, eventoId, timestamp})
+  // OUTRAS CONDICOES DE CANTEIROS
+  return results;
+}
+// =====
+// OUTRAS REGRAS DE TRANSFORMAÇÃO DE CANTEIRO
+// =====
+export function movimentarCanteiro({entidade, posicao}) {
+  const results = movimentarEntidade({entidade, posicao})
+  // OUTRAS CONDICOES DE CANTEIROS
+  return results;
+}
+export function redimensionarCanteiro({entidade, dimensao, posicao}) {
+  const results = redimensionarEntidade({entidade, dimensao, posicao})
+  // OUTRAS CONDICOES DE CANTEIROS
   return results;
 }
 
-export function calcularEvolucaoTemporalCanteiro({canteiro, catalogo, eventoId, timestamp}) {
-  if (!canteiro) throw new Error ("Erro recalculando caracteristicas do canteiro: canteiro obrigatória.")
-  if (!catalogo) throw new Error ("Erro recalculando caracteristicas do canteiro: catalogo obrigatório.")
-  if (!eventoId) throw new Error ("Erro recalculando caracteristicas do canteiro: eventoId obrigatório.")
-  if (!timestamp) throw new Error ("Erro recalculando caracteristicas do canteiro: timestamp obrigatório.")
-
-  // Se não há condições de calcular ou entidade é morta, retorna estadoAtual Vazio
-  const mutation = {estadoAtual: {}};
-
-  if (!canteiro?.estadoAtual) {console.log (`${canteiro.id} sem estado atual`); return mutation}
-  if (canteiro.isDeleted)     {console.log(`${canteiro.id} deletado`); return mutation}
-  if (canteiro.isArchived)    {console.log (`${canteiro.id} arquivado`); return mutation};
-
-  
-  // para cada caracteristica presente no estado atual
-  for (const caracteristicaId of Object.keys(canteiro.estadoAtual)) {
-    const caracteristica = canteiro.estadoAtual[caracteristicaId];
-    const caracteristicaCatalogo = catalogo.find(
-      c => c.id === caracteristicaId
-    );
-
-    // Primeiro analisa se a característica tem condições de ser calculada
-    if (!caracteristica) {
-      console.log (`${canteiro.id} sem caracteristica ${caracteristicaId}`)
-      continue;
-    }
-    if (!caracteristica.calculadoEm){
-      console.log (`${canteiro.id} sem data de cálculo para ${caracteristicaId}`)
-      continue;
-    }
-    if (!caracteristicaCatalogo.aplicarObsolescencia && !caracteristicaCatalogo.aplicarVariacao) {
-      console.log (`Nada a fazer com ${caracteristicaId}`)
-      continue
-    }
-    if (caracteristicaCatalogo.aplicarObsolescencia &&
-      !caracteristica.confianca  && 
-      !caracteristicaCatalogo.longevidade ){
-      console.log(`Obsolescência inválida para ${caracteristicaId} em ${canteiro.id}`);
-      continue;
-    }
-    if (caracteristicaCatalogo.aplicarVariacao &&
-      caracteristica.valor === null &&
-      !caracteristicaCatalogo.variacaoDiaria) {
-      console.log(`Valor inválido para ${caracteristicaId} em ${canteiro.id}`);
-      continue;
-    }
-
-    const dtMs = timestamp - caracteristica.calculadoEm;
-    if (dtMs <= 0) {
-      console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${canteiro.id}`);
-      continue;
-    }
-
-    const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
-
-    // Depois analisa se a confiança da característica varia
-    let novaConfianca = caracteristica.confianca;
-    if (caracteristicaCatalogo.aplicarObsolescencia) {
-      
-      const diasEstimados = estimarDiasDaInformacao(
-        caracteristica.confianca,
-        caracteristicaCatalogo.longevidade
-      );
-      novaConfianca = calcularConfiancaPorTempoTotal(
-        diasEstimados + diasDecorridos,
-        caracteristicaCatalogo.longevidade
-      );
-    }
-    // Finalmente, analisa se o valor da característica varia
-    let novoValor = caracteristica.valor;
-    if (caracteristicaCatalogo.aplicarVariacao) {
-      novoValor = caracteristica.valor + diasDecorridos * caracteristicaCatalogo.variacaoDiaria
-    }
-
-    // Salva a mutação
-    if (novoValor !== caracteristica.valor || novaConfianca !== caracteristica.confianca) {
-      mutation.estadoAtual[caracteristicaId] = {
-        ...caracteristica,
-        confianca: novaConfianca,
-        valor: novoValor,
-        calculadoEm: timestamp,
-        eventos: [... (caracteristica.eventos ?? []), eventoId],
-      };
-    }
-  }
-
-  return mutation;
-}
-
-export function criarCanteiro({horta, estado, data = {}, }) {
-  if (!horta) throw new Error ("Erro criando canteiro: horta é obrigatória.")
-
-  // horta é obrigatória em um canteiro
-  // estado {id, nome} é opcional e pode vir do data ou buscar do padrão
-  const novoCanteiro = {
-    ...data,
-    hortaId: horta.id,
-    hortaNome: horta.nome,
-    estadoId: estado?.id ?? data?.estadoId,
-    estadoNome: estado?.nome ?? data?.estadoNome,
-  }
-
-  return validarObjetoCanteiro(novoCanteiro)
-}
-
+// =====
+// REGRAS DE INFORMAÇÃO DE CANTEIRO
+// =====
+// ** UNDER REVIEW **
 export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedades}) => {
   //const caracteristicasSet = new Set();
   const caracteristicasRelevantes = {};
@@ -335,7 +182,6 @@ export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedade
   return caracteristicasRelevantes;
   //return Array.from(caracteristicasSet);
 }
-
 /**
  * Retorna as pendências de um canteiro.
  * A diferença entre uma pendência e uma necessidade é apenas que ela não tem um
@@ -346,6 +192,7 @@ export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedade
  * @param {object} faixaIdeal {[caracteristicaId]: {min, max}}
  * @returns [ {tipoEntidadeId, alvos, caracteristicaId, motivo} ]
  */
+// ** UNDER REVIEW **
 export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
   const pendencias = [];
 
@@ -404,7 +251,7 @@ export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
 
   return pendencias;
 }
-
+// ** UNDER REVIEW **
 export const getNecessidadesCanteiro = ({canteiro, plantas, timestamp, mapaTarefas, mapaNecessidades, catalogoVariedades, caracteristicasMap}) => {
   const entidadeId = canteiro.id
   
@@ -423,7 +270,7 @@ export const getNecessidadesCanteiro = ({canteiro, plantas, timestamp, mapaTaref
   // Verifica cada pendência se já está ativa
   for (const pendencia of pendencias) {
     const caracteristicaId = pendencia.caracteristicaId
-    const necessidadeId = getNecessidadeId({entidadeId, caracteristicaId, tipoEventoId: pendencia.tipoEventoId})
+    const necessidadeId = getNecessidadeKey({entidadeId, caracteristicaId, tipoEventoId: pendencia.tipoEventoId})
     if (!mapaNecessidades?.[necessidadeId]?.ativo) {
       // Se não está ativa, monta contexto
       const caracteristica = caracteristicasMap.get(caracteristicaId);

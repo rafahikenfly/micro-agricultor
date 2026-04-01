@@ -41,11 +41,12 @@ export function useMapaEngine() {
       payload: config,
     });
   };
-  const startMapDrag = () => {
+  const setMapDragActive = (active) => {
     dispatch({
       type: ACOES_MAPA.DRAG_ACTIVE,
+      payload: active,
     });
-  } //TODO: setMapDragActive
+  }
   const finishMapDrag = () => {
     dispatch({
       type: ACOES_MAPA.DRAG_INACTIVE,
@@ -64,10 +65,10 @@ export function useMapaEngine() {
       payload: config,
     });
   };
-  const setMapPreviewActive = (payload) => {
+  const setMapPreviewActive = (active) => {
     dispatch({
       type: ACOES_MAPA.PREVIEW_ACTIVE,
-      payload: payload
+      payload: active
     });
   }
 
@@ -141,7 +142,7 @@ export function useMapaEngine() {
 
     setMapDrag,
     updateMapDrag,
-    startMapDrag,
+    setMapDragActive,
     finishMapDrag,
     dragActive,
     dragSetup,

@@ -1,36 +1,23 @@
 import { Tabs, Tab, Form, } from "react-bootstrap";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { StandardInput } from "../../../utils/formUtils";
 import { toDateTimeLocal } from "../../../utils/dateUtils";
-import MonitoramentoLoteTab from "./MonitoramentoLoteTab";
-import MonitoramentoIndividualTab from "./MonitoramentoIndividualTab";
+import MonitoramentoPorCaracteristica from "./MonitoramentoPorCaracteristica";
+import MonitoramentoPorEntidade from "./MonitoramentoPorEntidade";
 import { resolveSelection } from "../../../utils/catalogUtils";
 
 
-export default function PainelMonitorar({ selection, catalogos, primaryType }) {
-  //TODO: SE TIVER APENAS UM TIPO DE SELEÇÃO, CARREGA O TIPOENTIDADEID
+export default function PainelMonitorar({ selection, caches }) {
   if (!selection) return null;
-
-  //TODO: USAR FORM
-  //const [primaryType, setTipoEntidadeId] = useState(null);
+  
+  const [primaryType, setPrimaryType] = useState(selection.primaryType());
   const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
-  const list = resolveSelection(selection, primaryType, catalogos[primaryType]);
+  const list = resolveSelection(selection, primaryType, caches[primaryType]);
+  
+  useEffect(()=>setPrimaryType(selection.primaryType()), [selection]);
 
   return (
     <>
-      {/* <StandardInput label="Monitorar" width="120px">
-        <Form.Select
-          value={primaryType ?? ""}
-          onChange={(e)=>setTipoEntidadeId(e.target.value)}
-        >
-          {renderOptions({
-            list: Object.values(ENTIDADE).filter((a)=>a.monitoravel),
-            placeholder: "Selecione o tipo de entidade",
-            nullOption: true,
-            isOptionDisabled: (a) => !selection.hasType(a.id),
-          })}
-          </Form.Select>
-      </StandardInput> */}
       <StandardInput label="Data/hora" width="120px">
         <Form.Control
           type="datetime-local"
@@ -40,15 +27,15 @@ export default function PainelMonitorar({ selection, catalogos, primaryType }) {
       </StandardInput>
 
       {primaryType && list.length > 0 && <Tabs className="px-3 pt-2" defaultActiveKey="lote">
-        <Tab eventKey="lote" title="Em Lote">
-          <MonitoramentoLoteTab
+        <Tab eventKey="lote" title="Por característica">
+          <MonitoramentoPorCaracteristica
             entidades={list}
             tipoEntidadeId={primaryType}
             stringTimestamp={stringTimestamp}
           />
         </Tab>
-        {list.length > 1 && <Tab eventKey="individual" title="Ajuste Individual">
-          <MonitoramentoIndividualTab
+        {list.length > 1 && <Tab eventKey="individual" title={`Por ${primaryType}`}>
+          <MonitoramentoPorEntidade
             entidades={list}
             tipoEntidadeId={primaryType}
             stringTimestamp={stringTimestamp}

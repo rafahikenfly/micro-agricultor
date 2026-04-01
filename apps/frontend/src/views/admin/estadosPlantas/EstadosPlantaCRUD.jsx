@@ -15,7 +15,6 @@ import EstadoPlantaModal from "./EstadoPlantaModal";
 
 
 export default function EstadosPlantaCRUD() {
-  const {tostMessage} = useToast()
   const { user } = useAuth();
   if (!user) return <NoUser />
 

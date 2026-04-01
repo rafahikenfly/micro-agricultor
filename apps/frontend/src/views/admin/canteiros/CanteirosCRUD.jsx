@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { VARIANT_TYPES } from "micro-agricultor";
 
 import { canteirosService } from "../../../services/crud/canteirosService";
-import { catalogosService } from "../../../services/catalogosService";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 import { useCrudUI } from "../../../services/ui/crudUI";
+import { useCache } from "../../../hooks/useCache";
 
 import ListaAcoes from "../../../components/common/ListaAcoes";
 import Loading from "../../../components/Loading";
@@ -16,15 +14,15 @@ import CanteiroModal from "./CanteiroModal";
 
 
 export default function CanteirosCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
+  const { cacheEstadosCanteiro, reading } = useCache([
+    "estadosCanteiro"
+  ]);
+
   if (!user) return <NoUser />
 
   const [canteiros, setCanteiros] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [estados_canteiro, setEstados_canteiro] = useState([]);
-  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -41,31 +39,6 @@ export default function CanteirosCRUD() {
     });
 
     return unsub;
-  }, []);
-
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getEstados_canteiro(),
-    ]).then(([estc, ]) => {
-      if (!ativo) return;
-      setEstados_canteiro(estc);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos do canteiro:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */
@@ -97,7 +70,7 @@ export default function CanteirosCRUD() {
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: reading ? {} : estados_canteiro,},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: cacheEstadosCanteiro?.map ?? {},},
               {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[

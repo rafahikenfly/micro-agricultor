@@ -1,9 +1,12 @@
 import { REASON_TYPES, ENTITY_TYPES, EVENTO_TYPES } from "../types/index.js";
-import { monitorarEntidade } from "./entidade.rules.js";
-import { getNecessidadeId } from "./necessidade.rules.js";
-import { estimarDiasDaInformacao, calcularConfiancaPorTempoTotal,  mergeComValidacao } from "./rulesUtils.js";
+import { evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade, } from "./entidade.rules.js";
+import { getNecessidadeKey } from "./necessidade.rules.js";
+import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
 
+// =====
+// CONSTANTES E VALIDAÇÃO
+// =====
 const estadoInicial = {
   id: "HLRvq5eExZAiKSZOcnaF",
   nome: "Prevista",
@@ -15,7 +18,6 @@ const aparenciaPadrao = {
     geometria: "circle",
     vertices: [],
 };
-
 const plantaPadrao = {
     aparencia: aparenciaPadrao,
     ciclo: [
@@ -38,8 +40,7 @@ const plantaPadrao = {
     especieNome: "",
     variedadeId: "",
     variedadeNome: "",
-  }
-
+}
 const cicloPadrao = {
   estagioId: "",
   estagioNome: "",
@@ -63,8 +64,139 @@ const cicloPadrao = {
 //      limite: 4, }
 //      ...
     },
-  };
+};
+export function validarPlanta(dataObj) {
+  const valid = mergeComValidacao(plantaPadrao, dataObj);
+  return valid;
+}
+// ** UNDER REVIEW ** ISSO É REFERENTE À VARIEDADE, NÃO À PLANTA
+export function validarCiclo(dataObj) {
+    const valid = mergeComValidacao(cicloPadrao, dataObj);
+    return valid;
+}
 
+
+  
+// =====
+// REGRAS DE CRIAÇÃO DE PLANTA
+// =====
+export function criarPlanta({ entidade }) {
+  const valid = validarPlanta(entidade);
+  // OUTRAS CONDICOES DE PLANTA
+  return valid;
+}
+export function derivarPlanta({especie, variedade, tecnica, canteiro, posicao}) {
+  if (!especie) throw new Error ("derivarPlanta: especie obrigatório.")
+  if (!variedade) throw new Error ("derivarPlanta: variedade obrigatório.")
+  if (!tecnica) throw new Error ("derivarPlanta: tecnica obrigatório.")
+  if (!canteiro) throw new Error ("derivarPlanta: canteiro obrigatório.")
+  if (!posicao) throw new Error ("derivarPlanta: posicao obrigatório.")
+  const estagio = variedade?.ciclo?.find(
+    est => est.estagioId === tecnica.estagioId
+  );
+
+  if (!estagio?.dimensao) {
+    throw new Error(
+      `derivarPlanta: Variedade ${variedade.nome} não possui dimensão no estágio ${tecnica.estagioNome}.`
+    );
+  }
+
+  const plantaDerivada = {
+    aparencia: variedade.aparencia,
+    canteiroId: canteiro.id,
+    canteiroNome: canteiro.nome,
+    dimensao: {
+      x: estagio.dimensao.x ?? 1,
+      y: estagio.dimensao.y ?? 1,
+      z: estagio.dimensao.z ?? 1,
+    },
+    especieId: especie.id,
+    especieNome: especie.nome,
+    estadoId: estadoInicial.id,
+    estadoNome: estadoInicial.nome,
+    estagioId: tecnica.estagioId,
+    estagioNome: tecnica.estagioNome,
+    hortaId: canteiro.hortaId,
+    hortaNome: canteiro.hortaNome,
+    nome: `${variedade.nome} • ${posicao.coordenada} • ${canteiro.nome}`,
+    variedadeId: variedade.id,
+    variedadeNome: variedade.nome,
+    posicao: {
+      x: posicao.x ?? 0,
+      y: posicao.y ?? 0,
+      z: posicao.z ?? 0,
+    }
+  }
+
+  const entidade = criarPlanta({entidade: plantaDerivada})
+  return { entidade, operacao: "CREATE"}
+}
+
+// =====
+// REGRAS DE TRANSFORMAÇÃO DE ESTADO ATUAL DE PLANTA
+// =====
+/**
+ * Monitorar uma planta com as medidas fornecidas, retornando a planta modificada. O Monitoramento
+ * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
+ * do cálculo do Estado Atual da característica atualizada.
+ * @param {object} planta 
+ * @param {object} medidas 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {entidadeMonitorada, before, after}
+ * 
+ * TODO: monitorarPlanta deveria salvar os eventos/manejos e a diferença acumulada quando
+ * há um estadoAtual anterior? Isso pode ser importante para calcular o decaimento de confiança e
+ * valor de uma determinada característica.
+ * */
+export function monitorarPlanta({entidade, medidas, eventoId, timestamp}) {
+  const results = monitorarEntidade({entidade, medidas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE PLANTAS
+  return results;
+}
+/**
+ * Evoluir uma planta usando o mapa de características fornecido, retornando a planta modificada. 
+ * @param {object} planta 
+ * @param {object} mapaCaracteristicas 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {entidadeEvoluida, before, after}
+ * */
+export function evoluirPlanta({entidade, mapaCaracteristicas, eventoId, timestamp}) {
+  const results = evoluirEntidade({entidade, mapaCaracteristicas, eventoId, timestamp})
+  // OUTRAS CONDICOES DE PLANTAS
+  return results;
+}
+/**
+ * Manejar uma planta com o manejo fornecidas, retornando a planta modificada. O Monitoramento
+ * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
+ * do cálculo do Estado Atual da característica atualizada.
+ * @param {object} planta 
+ * @param {object} manejo 
+ * @param {string} eventoId 
+ * @param {number} timestamp
+ * @returns {entidadeManejada, before, after}
+ * */
+export function manejarPlanta({entidade, manejo, eventoId, timestamp}) {
+  const results = manejarEntidade({entidade, manejo, eventoId, timestamp})
+  // OUTRAS CONDICOES DE PLANTAS
+  return results;
+}
+
+// =====
+// OUTRAS REGRAS DE TRANSFORMAÇÃO DE PLANTAS
+// =====
+export function desenharPlanta({entidade, posicao}) {
+  const results = movimentarEntidade({entidade, posicao})
+  // OUTRAS CONDICOES DE PLANTA
+  return results;
+}
+export function redimensionarPlanta({entidade, dimensao, posicao}) {
+  const results = redimensionarEntidade({entidade, dimensao, posicao})
+  // OUTRAS CONDICOES DE PLANTA
+  return results;
+}
+// ** UNDER REVIEW **
 export function mudarVariedade(planta, novaVariedade) {
     return {
       ...planta,
@@ -85,190 +217,12 @@ export function mudarVariedade(planta, novaVariedade) {
       },
   
     };
-  }
-  
-/**
- * Aplica um manejo já registrado em uma planta, retornando a planta modificada.
- * @param {planta} planta - entidade da planta a ser manejado
- * @param {manejo} manejo - entidade do manejo a ser aplicado
- * @param {string} eventoId - id do evento associado ao manejo
- * @param {number} timestamp - timestamp do manejo
- * @returns {planta} entidadeManejada
- * @returns {Object} before
- * @returns {Object} after
- */
-export function manejarPlanta({planta, manejo, eventoId, timestamp}) {
-  const results = monitorarEntidade({entidade: planta, manejo, eventoId, timestamp})
-  // OUTRAS CONDICOES DE PLANTAS
-  return results;
 }
 
-/**
- * Monitorar uma planta com as medidas fornecidas, retornando a planta modificada. O Monitoramento
- * é aplicado reinicializando os valores das características medidas, limpando eventos e manejos anteriores
- * do cálculo do Estado Atual da característica atualizada.
- * @param {object} planta 
- * @param {object} medidas 
- * @param {string} eventoId 
- * @param {number} timestamp
- * @returns {object} canteiroMonitorado
- * 
- * TODO: monitorarPlanta deveria salvar os eventos/manejos e a diferença acumulada quando
- * há um estadoAtual anterior? Isso pode ser importante para calcular o decaimento de confiança e
- * valor de uma determinada característica.
- * */
-export function monitorarPlanta({planta, medidas, eventoId, timestamp}) {
-  const results = monitorarEntidade({entidade: planta, medidas, eventoId, timestamp})
-  // OUTRAS CONDICOES DE PLANTAS
-  return results;
-}
-
-export function evoluirCaracteristicas({entidade, mapaCaracteristicas, eventoId, timestamp}) {
-  if (!entidade) throw new Error ("Erro evoluindo entidade: planta obrigatória.")
-  if (!mapaCaracteristicas) throw new Error ("Erro evoluindo entidade: catalogoCaracteristicas obrigatório no contexto.")
-  if (!eventoId) throw new Error ("Erro evoluindo entidade: eventoId obrigatório.")
-  if (!timestamp) throw new Error ("Erro evoluindo entidade: timestamp obrigatório.")
-
-  // Se não há condições de calcular ou entidade é morta, não há mutação.
-  if (!entidade?.estadoAtual)  return {};
-  if (entidade.isDeleted)      return {};
-  if (entidade.isArchived)     return {};
-
-  function podeEvoluir({estado, caracteristica}) {
-    // Para poder evoluir, o estado precisa:
-    // - existir
-    // - ter uma data de cálculo
-    // - aplicar pelo menos um efeito de tempo (obsolescência ou variação)
-    // - ter valores para os efeitos de tempo selecionados (obsolescência e/ou variação)
-    if (!estado)             return false;
-    if (!caracteristica)     return false;
-    if (!estado.calculadoEm) return false;
-    if (!caracteristica.aplicarObsolescencia && !caracteristica.aplicarVariacao) return false;
-    if (caracteristica.aplicarObsolescencia) {
-      if (!estado.confianca && !caracteristica.longevidade) {
-        throw new Error(`${caracteristica.nome} com obsolescência inválida!`);
-      }
-    }
-    if (caracteristica.aplicarVariacao) {
-      if (estado.valor === null && !caracteristica.variacaoDiaria){
-        throw new Error(`${caracteristica.nome} com degradação inválida!`);
-      }
-    }
-    return true;
-  }
-
-  const before = {};
-  const after = {};
-  const entidadeEvoluida = {
-    ...entidade,
-    estadoAtual: {
-      ...(entidade.estadoAtual ?? {})
-    },
-  };
-
-  // para cada caracteristica presente no estado atual
-  for (const caracteristicaId of Object.keys(entidade.estadoAtual)) {
-    const estado = entidade.estadoAtual[caracteristicaId];
-    const caracteristica = mapaCaracteristicas.get(caracteristicaId);
-    
-    if (podeEvoluir({estado, caracteristica})) {
-
-      const dtMs = timestamp - estado.calculadoEm;
-      if (dtMs <= 0) {
-        console.log(`Sem tempo mínimo decorrido para ${caracteristicaId} em ${entidade.id}`);
-        continue;
-      }
-
-      const diasDecorridos = dtMs / (1000 * 60 * 60 * 24);
-
-      // Calcula a nova confianca da característica
-      let novaConfianca = estado.confianca;
-      if (caracteristica.aplicarObsolescencia) {
-        const diasEstimados = estimarDiasDaInformacao(
-          estado.confianca,
-          caracteristica.longevidade
-        );
-        novaConfianca = calcularConfiancaPorTempoTotal(
-          diasEstimados + diasDecorridos,
-          caracteristica.longevidade
-        );
-      }
-
-      // Calcula novo valor da característica
-      let novoValor = estado.valor;
-      if (caracteristica.aplicarVariacao) {
-        novoValor = estado.valor + diasDecorridos * caracteristica.variacaoDiaria
-      }
-
-      // Processa a mutação
-      if (novoValor !== estado.valor || novaConfianca !== estado.confianca) {
-        before[caracteristicaId] = estado
-        after[caracteristicaId] = {
-          ...estado,
-          confianca: novaConfianca,
-          valor: novoValor,
-          calculadoEm: timestamp,
-          eventos: [... (estado.eventos ?? []), eventoId],
-        };
-        // Reinicializa apenas a característica com a medida
-        entidadeEvoluida.estadoAtual[caracteristicaId] = {...after[caracteristicaId]}
-      }
-    }
-
-  }
-  // Atualiza características alteradas
-  entidadeEvoluida.estadoAtual = {...entidadeEvoluida.estadoAtual, ...after}
-
-  return {entidadeEvoluida, before, after};
-}
-
-export function plantarVariedade({especie, variedade, tecnica, canteiro, posicao}) {
-  if (!especie) throw new Error ("Erro plantando variedade: especie obrigatório.")
-  if (!variedade) throw new Error ("Erro plantando variedade: variedade obrigatório.")
-  if (!tecnica) throw new Error ("Erro plantando variedade: tecnica obrigatório.")
-  if (!canteiro) throw new Error ("Erro plantando variedade: canteiro obrigatório.")
-  if (!posicao) throw new Error ("Erro plantando variedade: posicao obrigatória.")
-  if (!variedade?.ciclo?.find(est => est.estagioId === tecnica.estagioId)?.dimensao)
-    throw new Error (`Variedade ${variedade.nome} não possui dimensão no estágio ${tecnica.estagioNome}.`)
-
-  
-  const novaPlanta = {
-    aparencia: variedade.aparencia,
-    canteiroId: canteiro.id,
-    canteiroNome: canteiro.nome,
-    dimensao: variedade?.ciclo?.find(est => est.estagioId === tecnica.estagioId)?.dimensao,// ?? {x:1,y:1,z:0},
-    especieId: especie.id,
-    especieNome: especie.nome,
-    estadoId: estadoInicial.id,
-    estadoNome: estadoInicial.nome,
-    estagioId: tecnica.estagioId,
-    estagioNome: tecnica.estagioNome,
-    hortaId: canteiro.hortaId,
-    hortaNome: canteiro.hortaNome,
-    nome: "Nova planta",
-    posicao: {
-      x: Math.round(posicao.x) || 0,
-      y: Math.round(posicao.y) || 0,
-      z: Math.round(posicao.z) || 0,
-    },
-    variedadeId: variedade.id,
-    variedadeNome: variedade.nome,
-  }
-  return novaPlanta
-}
-
-
-export function validarPlanta(dataObj) {
-    const valid = mergeComValidacao(plantaPadrao, dataObj);
-    return valid;
-}
-
-//TODO: ISSO É REFERENTE À VARIEDADE, NÃO À PLANTA
-export function validarCiclo(dataObj) {
-    const valid = mergeComValidacao(cicloPadrao, dataObj);
-    return valid;
-}
-
+// =====
+// REGRAS DE INFORMAÇÃO DE PLANTA
+// =====
+// ** UNDER REVIEW **
 export const getCaracteristicasRelevantesPlanta = ({planta, catalogoVariedades}) => {
   const caracteristicasSet = new Set();
 
@@ -307,7 +261,7 @@ export const getCaracteristicasRelevantesPlanta = ({planta, catalogoVariedades})
 
   return Array.from(caracteristicasSet);
 }
-
+// ** UNDER REVIEW **
 export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
   const pendencias = [];
 
@@ -341,7 +295,7 @@ export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
 
   return pendencias;
 }
-
+// ** UNDER REVIEW **
 export const getNecessidadesPlanta = ({
   planta,
   timestamp,
@@ -368,7 +322,7 @@ export const getNecessidadesPlanta = ({
   // Verifica cada pendência se já está ativa
   for (const pendencia of pendencias) {
     const caracteristicaId = pendencia.caracteristicaId
-    const necessidadeId = getNecessidadeId({entidadeId, caracteristicaId, tipoEventoId})
+    const necessidadeId = getNecessidadeKey({entidadeId, caracteristicaId, tipoEventoId})
     if (!mapaNecessidades?.[necessidadeId]?.ativo) {
       // recupera a característica para construir o nome e descrição
       const caracteristica = caracteristicasMap.get(caracteristicaId);

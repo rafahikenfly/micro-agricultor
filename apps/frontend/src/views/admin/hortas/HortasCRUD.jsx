@@ -14,7 +14,6 @@ import HortaModal from "./HortaModal";
 
 
 export default function HortasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 

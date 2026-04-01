@@ -1,44 +1,41 @@
 import { useEffect, useState } from "react";
 import { Form, Button, } from "react-bootstrap";
-import { ENTITY_TYPES, processarMonitoramento, VARIANT_TYPES } from "micro-agricultor";
+import { ENTIDADE, ENTITY_TYPES, monitorar, VARIANT_TYPES } from "micro-agricultor";
 import { useMapaEngine } from "../MapaEngine";
 import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
-import { useCatalogos } from "../../../hooks/useCatalogos";
+import { useCache } from "../../../hooks/useCache";
 
 import { canteirosService } from "../../../services/crud/canteirosService";
 import { plantasService } from "../../../services/crud/plantasService";
-import { historicoEfeitosService } from "../../../services/history/efeitosService";
+import { eventosService, mutacoesService } from "../../../services/historyService";
+import { batchService } from "../../../services/batchService";
 import { necessidadesService } from "../../../services/crud/necessidadesService";
-import { eventosService } from "../../../services/history/eventosService";
 
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import Loading from "../../../components/Loading";
 
-export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, stringTimestamp }) { 
+export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, stringTimestamp }) { 
   if (!entidades || entidades.length === 0) return null
   const { user } = useAuth();
+  const { setShowPainel } = useMapaEngine();
   const { toastMessage } = useToast();
-  const engine = useMapaEngine();
-  const { catalogoCaracteristicas, reading } = useCatalogos(["caracteristicas"]);
+  const { catalogoCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   const [form, setForm] = useState({});
   const [writing, setWriting] = useState(false);
 
   const caracteristica = catalogoCaracteristicas?.map?.get(form.caracteristicaId)
 
-  const monitorar = async () => {
+  const preparaMonitorar = async () => {
     
     // Recupera o timestamp
     const date = new Date(stringTimestamp);
     const timestamp = date.getTime();
 
-
-
     // Recupera as medidas do formulário
-    // O form da inserção individual não carrega a característica
-    // form = {[entidadeId]: {atualizar, valor, confianca}}
-    // ela é recuperada do form.caracteristicaId
+    // O form do monitoramento por entidade não carrega a entidade, apenas os valores
+    // form = {[caracteristicaId]: {valor, confianca}}
     const medidas = {};
     for (const [entidadeId, dados] of Object.entries(form)) {
       if (!dados.atualizar) continue
@@ -52,7 +49,21 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
     }
     
     // Verifica se há alguma medida para atualizar
-    if (Object.keys(medidas).length === 0) {
+    function countCaracteristicas(medidas) {
+      const set = new Set();
+
+      for (const caracteristicas of Object.values(medidas)) {
+        if (!caracteristicas) continue;
+
+        for (const caracteristicaId of Object.keys(caracteristicas)) {
+          set.add(caracteristicaId);
+        }
+      }
+
+      return set.size;
+    }
+    const totalCaracteristicasMonitoradas = countCaracteristicas(medidas)
+    if (totalCaracteristicasMonitoradas === 0) {
       toastMessage({
         body: "Selecione ao menos uma característica para atualizar.",
         variant: VARIANT_TYPES.YELLOW,
@@ -61,7 +72,7 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
     }
     
     // Recupera o tipoEntidadeId
-    // no formulário global, tipoEntidadeId é recebido como parâmetro
+    // no monitoramento por característica, tipoEntidadeId é recebido como parâmetro
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o monitoramento. Tipo de entidade indefinido.",
@@ -71,7 +82,7 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
     }
 
     // Monta o array de entidades
-    // no formulario global, as entidades são recebidas como parâmetro
+    // no monitoramento por entidade, a entidade é recebidas como parâmetro (único elemento do array)
     if (!entidades || entidades.length === 0) {
       toastMessage({
         body: "Erro registrando o monitoramento. Nenhuma entidade selecionada.",
@@ -84,20 +95,21 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
     // Processa os monitoramentos com user, tipoEntidadeId, entidades, medidas e timestamp
     setWriting(true);
     const servicesMap = {
-      [ENTITY_TYPES.CANTEIRO]: canteirosService,
-      [ENTITY_TYPES.PLANTA]: plantasService,
+      [ENTIDADE.canteiro.id]: canteirosService,
+      [ENTIDADE.planta.id]: plantasService,
     }
     try {
-      await processarMonitoramento({
-        user,
+     await monitorar({
         tipoEntidadeId,
-        timestamp,
-        medidas,
         entidades,
+        medidas,
+        timestamp,
+        user,
         services: {
+          batch: batchService,
           eventos: eventosService,
           entidade: servicesMap[tipoEntidadeId],
-          historicoEfeitos: historicoEfeitosService,
+          mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }
       })
@@ -122,12 +134,16 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
      
       //Limpa seleção
       setForm({});
-      engine.hideConfigPanel();
+      toastMessage({
+        body: `Registrado o monitoramento de ${totalCaracteristicasMonitoradas} ${pluralizar(totalCaracteristicasMonitoradas,"característica")} de ${entidades.length} ${pluralizar(totalCaracteristicasMonitoradas,tipoEntidadeId)}.`,
+        variant: VARIANT_TYPES.GREEN,
+      });
+      setShowPainel(false);
     } catch (err) {
       console.error(err)
       toastMessage({
         body: `Erro ao registrar monitoramento.`,
-        variang: "danger"
+        variang: VARIANT_TYPES.RED,
       });
     } finally {
       setWriting(false);
@@ -212,7 +228,7 @@ export default function MonitoramentoIndividualTab({ entidades, tipoEntidadeId, 
         variant="success"
         className="mt-3 w-100"
         disabled={writing || !form.caracteristicaId}
-        onClick={monitorar}
+        onClick={preparaMonitorar}
       >
         {writing ? "Aplicando monitoramento..."
           : `Monitorar ${caracteristica?.nome}`

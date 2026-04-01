@@ -4,7 +4,7 @@ import CvSpecDadosTab from "./CvSpecDadosTab";
 import CvJobSpecsPolicyTab from "./CvJobSpecsPolicyTab";
 import CvJobSpecsOutputTab from "./CvJobSpecsOutputTab";
 import { catalogosService } from "../../services/catalogosService";
-import { useCatalogos } from "../../../hooks/useCatalogos";
+import { useCache } from "../../../hooks/useCache";
 import { validarCvSpecs } from "micro-agricultor";
 
 export default function CvJobSpecsModal({ show, onSave, onClose, data = {}, }) {
@@ -12,7 +12,7 @@ export default function CvJobSpecsModal({ show, onSave, onClose, data = {}, }) {
   const [tab, setTab] = useState("dados");
   // Formulário
   const [form, setForm] = useState(validarCvSpecs(data))
-  const { cvModelos, caracteristicas, estados_planta, estados_canteiro, reading} = useCatalogos(["cvModelos", "caracteristicas", "estados_planta", "estados_canteiro"])
+  const { cvModelos, caracteristicas, estados_planta, estados_canteiro, reading} = useCache(["cvModelos", "caracteristicas", "estados_planta", "estados_canteiro"])
 
   // Sanitiza data
   useEffect(() => { setForm(validarCvJobSpecs(data));}, [data]);

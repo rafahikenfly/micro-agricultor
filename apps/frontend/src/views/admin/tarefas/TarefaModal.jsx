@@ -13,7 +13,7 @@ import TarefaPlanejamentoTab from "./TarefaPlanejamentoTab";
 import TarefaResolucaoTab from "./TarefaResolucao";
 
 export default function TarefaModal({ show, onSave, onClose, data }) {
-  const { catalogoCaracteristicas, reading } = useCatalogos(["caracteristicas"]);
+  const { catalogoCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   // Controle de tab
   const [tab, setTab] = useState("dados");

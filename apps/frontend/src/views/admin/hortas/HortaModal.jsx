@@ -12,15 +12,17 @@ import AparenciaTab from "../../../components/common/AparenciaTab";
 import HortaDadosTab from "./HortaDadosTab";
 import HortaPosicaoTab from "./HortaPosicaoTab";
 import HortaMembrosTab from "./HortaMembros";
+import { useCache } from "../../../hooks/useCache";
 
 
 export default function HortaModal({ show, onClose, onSave, data}) {
   const { toastMessage } = useToast();
+  const { cacheUsuarios, reading } = useCache([
+    "usuarios",
+  ]);
+
   // Controle de tab
   const [tab, setTab] = useState("dados");
-  // Catalogos
-  const [usuarios, setUsuarios] = useState([]);
-  const [reading, setReading] = useState(false);
   // Formulário
   const [form, setForm] = useState(validarHorta(data));
 
@@ -100,7 +102,7 @@ export default function HortaModal({ show, onClose, onSave, data}) {
               <HortaMembrosTab
                 formMembros={form.membros}
                 setFormMembros={(membros) => setForm({ ...form, membros }) }
-                usuarios={usuarios}
+                usuarios={cacheUsuarios?.list}
                 loading={reading}
               />
             </Tab>

@@ -38,3 +38,5 @@ export function calcularConfiancaPorTempoTotal(diasTotais, longevidade) {
   const lambda = -Math.log(0.2) / longevidade;
   return 100 * Math.exp(-lambda * diasTotais);
 }
+
+export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));

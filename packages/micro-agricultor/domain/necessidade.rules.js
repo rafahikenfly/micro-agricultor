@@ -34,10 +34,10 @@ export const validarNecessidade = (dataObj = {}) => {
     return valid;
 }
 
-export const getNecessidadeId = ({ entidadeId, caracteristicaId, tipoEventoId }) => {
-  if (!entidadeId) throw new Error ("getNecessidadeId: entidadeId obrigatório para gerar chave de necessidade");
-  if (!caracteristicaId) throw new Error ("getNecessidadeId: caracteristicaId obrigatório para gerar chave de necessidade");
-  if (!tipoEventoId) throw new Error ("getNecessidadeId: tipoEventoId obrigatório para gerar chave de necessidade");
+export const getNecessidadeKey = ({ entidadeId, caracteristicaId, tipoEventoId }) => {
+  if (!entidadeId) throw new Error ("getNecessidadeKey: entidadeId obrigatório para gerar chave de necessidade");
+  if (!caracteristicaId) throw new Error ("getNecessidadeKey: caracteristicaId obrigatório para gerar chave de necessidade");
+  if (!tipoEventoId) throw new Error ("getNecessidadeKey: tipoEventoId obrigatório para gerar chave de necessidade");
   return `${entidadeId}_${caracteristicaId}_${tipoEventoId}`;
 }
 

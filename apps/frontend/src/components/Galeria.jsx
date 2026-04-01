@@ -1,24 +1,38 @@
 import { useState } from "react";
-import { useCatalogos } from "../hooks/useCatalogos";
+import { useCache } from "../hooks/useCache";
 import { MediaGrid } from "./galeria/MediaGrid";
 import { MidiaTimeline } from "./galeria/MediaTimeline";
 import { MediaToolbar } from "./galeria/MediaToolbar";
+import Loading from "./Loading";
 
 export default function Galeria({ entidadeId }) {
-  const { catalogoMidias, reading } = useCatalogos(["midias"]);
+  const { cacheMidias, reading } = useCache(["midias"]);
 
   const [selected, setSelected] = useState(null);
-  const [mode, setMode] = useState("timeline");
+  const [options, setOptions] = useState({
+    mode: "timeline",
+    timeRange: "DIA",
+    timeRangeValue: 86400000,
+    tipo: "CAPTURA",
+    anotada: false,
+    busca: "",
+  });
 
-  const midias = (catalogoMidias?.list ?? []).filter((a)=>a.contexto.entidadeId === entidadeId)
+  const midias = (cacheMidias?.list ?? [])
+    .filter((a)=>a.contexto.entidadeId === entidadeId)
+    .filter((a)=>a.contexto.timestamp > Date.now() - options.timeRangeValue)
+    .filter((a)=>a.metadados.anotada === options.anotada)
+    .filter((a)=>options.busca === "" || a.descricao.includes(options.busca))
+
+  if (reading) return <Loading />;
   return (
     <div className="media-tab">
       <MediaToolbar
-        onChange={(a)=>setMode(a.mode)}
-        defaultMode="grid"
+        onChange={(option)=>setOptions({...options, ...option})}
+        options={options}
       />
 
-      {mode === "grid" ? (
+      {options === "grid" ? (
         <MediaGrid midias={midias} onSelect={setSelected} />
       ) : (
         <MidiaTimeline midias={midias} onSelect={setSelected} />

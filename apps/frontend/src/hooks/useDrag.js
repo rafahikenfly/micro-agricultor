@@ -13,11 +13,12 @@ export function useDrag() {
     // Pegar coordenadas relativas ao SVG/Container
     const mouse = {x: e.clientX, y: e.clientY}
 
-    const { entity = {}, direction = "", customStart = mouse, type = "generic" } = options;
+    const { entidade = {}, tipoEntidadeId = "", direction = "", customStart = mouse, type = "generic" } = options;
 
 
     setDrag({
-      entity,
+      entidade,
+      tipoEntidadeId,
       direction,
       isDragging: true,
       type,

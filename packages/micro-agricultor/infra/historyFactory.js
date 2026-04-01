@@ -68,6 +68,19 @@ export function createHistoryService(adapter, config) {
       const col = getCollection();
       return col.doc(id);
     },
+    get(filters = [], orderBy = null) {
+      console.log("b",filters)
+      let query = getCollection();
+
+      filters.forEach(f => {
+        query = adapter.where(query, f.field, f.op, f.value);
+      });
+
+      if (orderBy) {
+        query = adapter.orderBy(query, orderBy.field, orderBy.direction || "asc");
+      }
+      return adapter.get(query)
+    },
 
 
     // SINGLE WRITE

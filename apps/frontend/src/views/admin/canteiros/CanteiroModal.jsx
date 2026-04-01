@@ -2,8 +2,6 @@ import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
 import { validarObjetoCanteiro } from "micro-agricultor";
 
-import { catalogosService } from "../../../services/catalogosService";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import AparenciaTab from "../../../components/common/AparenciaTab";
 import { EntidadeEstadoAtualTab } from "../../../components/common/EntidadeEstadoAtualTab";
@@ -12,52 +10,19 @@ import { handleSaveForm } from "../../../utils/formUtils";
 
 import { CanteiroLocalizacaoTab } from "./CanteiroLocalizacaoTab";
 import CanteiroDadosTab from "./CanteiroDadosTab";
+import { useCache } from "../../../hooks/useCache";
 
 export default function CanteiroModal({ show, onSave, onClose, data }) {
-  const { toastMessage } = useToast();  
-  // Controle de tab
+  const { cacheEstadosCanteiro, cacheHortas, cacheCaracteristicas, reading } = useCache([
+    "estadosCanteiro",
+    "hortas",
+    "caracteristicas"
+  ]);
   const [tab, setTab] = useState("dados");
-  // Catalogos
-  const [estados_canteiro, setEstados_canteiro] = useState([]);
-  const [hortas, setHortas] = useState([]);
-  const [caracteristicas, setCaracteristicas] = useState([]);
-  const [reading, setReading] = useState(false);
-  // Formulário
   const [form, setForm] = useState(() => validarObjetoCanteiro(data ?? {}));
 
-  // ========== CARREGAR DADOS ==========
   // Sanitiza data
   useEffect(() => { setForm(validarObjetoCanteiro(data ?? {})); }, [data]);
-  // Carrega catálogos
-  useEffect(() => {
-    if (!show) return;
-  
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getEstados_canteiro(),
-      catalogosService.getHortas(),
-      catalogosService.getCaracteristicas(),
-    ]).then(([estc, hort, carac]) => {
-      if (!ativo) return;
-      setEstados_canteiro(estc);
-      setHortas(hort);
-      setCaracteristicas(carac.list);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos do canteiro:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: "warning"
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
-  }, [show]);
   
   if (!show) return null;
   return (
@@ -84,7 +49,7 @@ export default function CanteiroModal({ show, onSave, onClose, data }) {
             <CanteiroDadosTab
               form={form}
               setForm={setForm}
-              estadosCanteiro={estados_canteiro}
+              estadosCanteiro={cacheEstadosCanteiro}
               loading={reading}
             />
           </Tab>
@@ -92,7 +57,7 @@ export default function CanteiroModal({ show, onSave, onClose, data }) {
             <CanteiroLocalizacaoTab
               form={form}
               setForm={setForm}
-              hortas={hortas}
+              hortas={cacheHortas}
               loading={reading}
             />
           </Tab>
@@ -105,7 +70,7 @@ export default function CanteiroModal({ show, onSave, onClose, data }) {
           <Tab eventKey="estadoAtual" title="Estado">
             <EntidadeEstadoAtualTab
               tipoEntidadeId="canteiro"
-              caracteristicas={caracteristicas}
+              caracteristicas={cacheCaracteristicas}
               formEstadoAtual={form.estadoAtual ?? {}}
               setFormEstadoAtual={(estadoAtual) => setForm({ ...form, estadoAtual })}
             />

@@ -1,11 +1,15 @@
-import { criarEvento, aplicarRegraPorBatch, ENTIDADE, EVENTO, ORIGEM, evoluirCaracteristicas } from "micro-agricultor";
+import { criarEvento, aplicarRegraPorBatch, ENTIDADE, EVENTO, ORIGEM, evoluirEntidade } from "micro-agricultor";
 import { log } from "../core/logger/index.js";
 import { db } from "../infra/firebase.js";
 import { cacheService, plantasService, canteirosService, eventosService, mutacoesService } from "../services/index.js";
 
 export async function dailyEffect() {
-    console.log("Iniciando cálculo de efeitos do tempo...")
+    console.log("Iniciando cálculo de efeitos do tempo de todo o banco de dados...")
     const user = { uid: "dailyEffect", nome: ORIGEM.BACKEND.id };
+
+    //TODO: usar o application evoluir!
+    //Recupera as plantas e faz a evolução delas,
+    //Recupera os canteiros e faz a evolução deles
 
     // Monta contexto da regra de evolução
     const cacheCaracteristicas = await cacheService.getCaracteristicas();
@@ -20,7 +24,7 @@ export async function dailyEffect() {
     const evento = criarEvento({
       tipoEvento: EVENTO.EVOLUCAO,
       timestamp,
-      origem: {id: "dailyEffect", tipo: ORIGEM.BACKEND},
+      origem: {id: "dailyEffect", tipo: ORIGEM.BACKEND.id},
       entidadesKey: [],
     })
     const entidadesKeySet = new Set();
@@ -53,7 +57,7 @@ export async function dailyEffect() {
       const results = aplicarRegraPorBatch({
         tipoEntidadeId: ENTIDADE.planta.id,
         entidade: planta,
-        regra: evoluirCaracteristicas,
+        regra: evoluirEntidade,
         contexto,
         serviceEntidade: plantasService,
         serviceMutacoes: mutacoesService,
@@ -88,7 +92,7 @@ export async function dailyEffect() {
       const results = aplicarRegraPorBatch({
         tipoEntidadeId: ENTIDADE.canteiro.id,
         entidade: canteiro,
-        regra: evoluirCaracteristicas,
+        regra: evoluirEntidade,
         contexto,
         serviceEntidade: canteirosService,
         serviceMutacoes: mutacoesService,

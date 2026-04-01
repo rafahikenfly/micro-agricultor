@@ -1,8 +1,7 @@
-import { criarEfeitosDoEvento, criarEvento, monitorarCanteiro, manejarCanteiro, SOURCE_TYPES } from "micro-agricultor";
+import { criarEfeitosDoEvento, criarEvento, monitorarCanteiro, manejarCanteiro, ORIGEM } from "micro-agricultor";
 import { db } from "../../firebase";
 import { canteirosService } from "../crud/canteirosService";
-import { historicoEfeitosService } from "../history/efeitosService";
-import { eventosService } from "../history/eventosService";
+import { eventosService, mutacoesService } from "../historyService";
 
 //TODO: levar para shared/types
 const tipoEventoMap = {
@@ -41,7 +40,7 @@ export const salvarCanteiro = async ({
   const evento = criarEvento({
     tipoEvento: tipoEventoMap[mutation.actionType],
     timestamp: timestamp ?? Date.now(),
-    origem: {id: user.uid, tipo: SOURCE_TYPES.USER},
+    origem: {id: user.uid, tipo: ORIGEM.USER},
     alvos: [id],
     efeitos: [
       { entidadeId: id,
@@ -56,7 +55,7 @@ export const salvarCanteiro = async ({
   if (!efeitos.length) return;
 
   const batch = db.batch()
-  for (const efeito of efeitos) { historicoEfeitosService.batchAppend(efeito, user, batch) }
+  for (const efeito of efeitos) { mutacoesService.batchAppend(efeito, user, batch) }
   await batch.commit()
 };
 
@@ -75,7 +74,7 @@ export const monitorarMultiplosCanteiros = async ({
   const evento = criarEvento({
     tipoEvento,
     timestamp: timestamp ?? Date.now(),
-    origem: {id: user.uid, tipo: SOURCE_TYPES.USER},
+    origem: {id: user.uid, tipo: ORIGEM.USER},
     alvos: [],
     efeitos: [],
   })
@@ -114,7 +113,7 @@ export const monitorarMultiplosCanteiros = async ({
   // gera efeitos históricos
   const efeitos = criarEfeitosDoEvento(evento);
   for (const efeito of efeitos) {
-    historicoEfeitosService.batchAppend(efeito, user, batch);
+    mutacoesService.batchAppend(efeito, user, batch);
     opCount++;
   }
 
@@ -143,7 +142,7 @@ export const manejarMultiplosCanteiros = async ({
   const evento = criarEvento({
     tipoEvento,
     timestamp,
-    origem: {id: user.uid, tipo: SOURCE_TYPES.USER},
+    origem: {id: user.uid, tipo: ORIGEM.USER},
     alvos: [],
     efeitos: [],
   })
@@ -182,7 +181,7 @@ export const manejarMultiplosCanteiros = async ({
   // gera efeitos históricos
   const efeitos = criarEfeitosDoEvento(evento);
   for (const efeito of efeitos) {
-    historicoEfeitosService.batchAppend(efeito, user, batch);
+    mutacoesService.batchAppend(efeito, user, batch);
     opCount++;
   }
 

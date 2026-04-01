@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
-import { catalogosService } from "../services/catalogosService";
+import { cacheService } from "../services/cacheService";
 
-export function useCatalogos(catalogos = []) {
+export function useCache(keys = []) {
   const [data, setData] = useState({});
   const [reading, setReading] = useState(false);
 
-  const key = catalogos.sort().join(",");
+  const key = keys.sort().join(",");
 
   useEffect(() => {
-    if (!catalogos || catalogos.length === 0) return;
+    if (!keys || keys.length === 0) return;
 
     let ativo = true;
     setReading(true);
 
-    const loaders = catalogos.map(name => {
-      const fn = catalogosService[`get${capitalize(name)}`];
-      if (!fn) throw new Error(`Catálogo ${name} não existe no catalogosService`);
+    const loaders = keys.map(name => {
+      const fn = cacheService[`get${capitalize(name)}`];
+      if (!fn) throw new Error(`Cache ${name} não existe no cacheService`);
       return fn();
     });
 
@@ -24,14 +24,14 @@ export function useCatalogos(catalogos = []) {
         if (!ativo) return;
 
         const obj = {};
-        catalogos.forEach((name, i) => {
-          obj[`catalogo${capitalize(name)}`] = results[i];
+        keys.forEach((name, i) => {
+          obj[`cache${capitalize(name)}`] = results[i];
         });
 
         setData(obj);
       })
       .catch(err => {
-        console.error("Erro ao carregar catálogos:", err);
+        console.error("Erro ao carregar cache:", err);
       })
       .finally(() => {
         if (ativo) setReading(false);

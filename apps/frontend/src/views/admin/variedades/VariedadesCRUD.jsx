@@ -15,14 +15,11 @@ import VariedadeModal from "./VariedadeModal";
 
 
 export default function VariedadesCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [variedades, setVariedades] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -40,31 +37,6 @@ export default function VariedadesCRUD() {
     });
 
     return unsub;
-  }, []);
-  // Catalogos
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-//      catalogosService.getEstagios_especie(),
-    ]).then(([este, ]) => {
-      if (!ativo) return;
-//      setEstagios_especie(este);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos da variedade:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */

@@ -19,8 +19,9 @@ export const validarObjetoEvento = (dataObj = {}) => {
   return valid;
 }
 
-export const criarEvento = ({tipoEvento, timestamp, entidadesKey, data = {}}) => {
+export const criarEvento = ({tipoEvento, timestamp, origem, entidadesKey, data = {}}) => {
   if (!tipoEvento) throw new Error ("Erro criando evento: tipoEvento é obrigatório.")
+  if (!tipoEvento) throw new Error ("Erro criando evento: origem {id, tipo} é obrigatória.")
   if (!entidadesKey) console.warn ("Criando evento sem entidades associadas.")
 
   const novoEvento = {
@@ -28,6 +29,7 @@ export const criarEvento = ({tipoEvento, timestamp, entidadesKey, data = {}}) =>
     tipoEventoId: tipoEvento.id,
     tipoEventoNome: tipoEvento.nome,
     categoria: tipoEvento.categoria,
+    origem,
     timestamp,
     entidadesKey,
   }

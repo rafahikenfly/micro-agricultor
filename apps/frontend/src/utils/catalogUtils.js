@@ -1,15 +1,15 @@
-export const resolveSelection = (selection, tipoEntidadeId, catalog) => {
-  if (!selection || !tipoEntidadeId || !catalog) return [];
+export const resolveSelection = (selection, tipoEntidadeId, cache) => {
+  if (!selection || !tipoEntidadeId || !cache) return [];
   return selection
     .getIdsByType(tipoEntidadeId)
-    .map(id => catalog.map.get(id))
+    .map(id => cache.map.get(id))
     .filter(Boolean);
 };
 
-export const resolvePrimarySelection = (selection, catalogs) => {
-  if (!selection?.primary || !catalogs) return null;
+export const resolvePrimarySelection = (selection, caches) => {
+  if (!selection?.primary || !caches) return null;
   
   const [tipo, id] = selection.primary.split(":");
 
-  return catalogs?.[tipo]?.map?.get(id) ?? null;
+  return caches?.[tipo]?.map?.get(id) ?? null;
 };

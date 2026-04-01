@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
 import { especiesService } from "../../../services/crud/especiesService";
-import { catalogosService } from "../../../services/catalogosService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
+import { useCache } from "../../../hooks/useCache";
 
 import ListaAcoes from "../../../components/common/ListaAcoes";
 import Loading from "../../../components/Loading";
@@ -16,13 +16,12 @@ import { VARIANT_TYPES } from "micro-agricultor";
 export default function EspeciesCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
+  const { cacheCategoriasEspecie, reading } = useCache([
+    "categoriasEspecie",
+  ]);
 
   const [especies, setEspecies] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [categorias_especie, setCategorias_especie] = useState([]);
-  const [estagios_especie, setEstagios_especie] = useState([]);
-  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -39,30 +38,6 @@ export default function EspeciesCRUD() {
     });
 
     return unsub;
-  }, []);
-
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getCategorias_especie(),
-      catalogosService.getEstagios_especie(),
-    ]).then(([cate, este]) => {
-      if (!ativo) return;
-      setCategorias_especie(cate);
-      setEstagios_especie(este);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos da espécie:", err);
-      showToast("Erro ao carregar catálogos.", VARIANT_TYPES.RED);
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */
@@ -94,7 +69,7 @@ export default function EspeciesCRUD() {
             dados = {especies}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome", },
-              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: reading ? {} : categorias_especie, width: "100px"},
+              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: reading ? {} : cacheCategoriasEspecie?.list, width: "100px"},
               {rotulo: "Estágios", dataKey: "ciclo", contar: true, width: "50px"},
               {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, width: "50px"},
             ]}

@@ -41,11 +41,9 @@ export function useSelection() {
         newPrimary = key;
       }
 
-      setPrimary(newPrimary);      
+      setPrimary(newPrimary);
       return next;
     });
-
-    setPrimary(prev => (prev === key ? null : key));
   };
 
   const isSelected = (key) => selectedKeys.has(key);

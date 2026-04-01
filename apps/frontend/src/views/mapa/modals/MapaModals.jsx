@@ -1,4 +1,4 @@
-import { ENTITY_TYPES, VARIANT_TYPES, ENTIDADE } from "micro-agricultor";
+import { VARIANT_TYPES, ENTIDADE } from "micro-agricultor";
 import CanteiroModal from "../../admin/canteiros/CanteiroModal";
 import PlantaModal from "../../admin/plantas/PlantaModal";
 import { useMapaEngine } from "../MapaEngine";
@@ -11,7 +11,7 @@ import InspecaoModal from "./InspecaoModal";
 export default function MapaModals() {
   const { user } = useAuth();
   const { toastMessage } = useToast();
-  const { showModal, setShowModal, toolSetup} = useMapaEngine();
+  const { showModal, setShowModal } = useMapaEngine();
 
   if (!showModal) return null;
 
@@ -43,8 +43,8 @@ export default function MapaModals() {
   }
 
 
-  switch (showModal.tipoEntidadeId) {
-    case ENTITY_TYPES.CANTEIRO:
+  switch (showModal.tipo) {
+    case ENTIDADE.canteiro.id:
       return (
         <CanteiroModal
           show={true}
@@ -54,7 +54,7 @@ export default function MapaModals() {
         />
       );
 
-    case ENTITY_TYPES.PLANTA:
+    case ENTIDADE.planta.id:
       return (
         <PlantaModal
           show={true}
@@ -63,7 +63,7 @@ export default function MapaModals() {
           onClose={() => setShowModal(null)}
         />
       );
-    case "inspecionar": 
+    case "inspecionar": //TODO: isso aqui deveria vir de um type
       return (
         <InspecaoModal
           show={true}

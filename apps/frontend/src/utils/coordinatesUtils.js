@@ -1,4 +1,5 @@
 import { GEOMETRY_TYPES } from "micro-agricultor";
+import { circleFromEntity, moveCircle, moveRect, rectFromEntity, resizeCircleBox, resizeCircleRadius, resizeRect, viewFromCircle, viewFromRect } from "./geometryUtils";
 
 export const getMouseInMapSpace = (svg, g, clientX, clientY) => {
   const svgPoint = getSVGPoint(svg, clientX, clientY)
@@ -148,61 +149,64 @@ export function resolveDrawCirclePreview(startMap, currentMap) {
   };
 }
 
+// PREVIEW UTILS
+export const getPreviewPoints = ({ start, geometria, layout }) => {
+  if (!geometria || !start || !layout) return [];
+
+  function getColumnLabel(n) {
+    let label = "";
+
+    while (n >= 0) {
+      label = String.fromCharCode((n % 26) + 65) + label;
+      n = Math.floor(n / 26) - 1;
+    }
+
+    return label;
+  }  
+  const offsetX = layout.espacamentoColuna;
+  const offsetY = layout.espacamentoLinha;
+  
+  const result = [];
+  for (let l = 0; l < layout.linhas; l++) {
+    for (let c = 0; c < layout.colunas; c++) {
+      const letra = getColumnLabel(c);
+      result.push({
+        x: start.x + (c * offsetX),
+        y: start.y + (l * offsetY),
+        linha: l + 1,
+        coluna: c + 1,
+        coordenada: `${letra}${l + 1}`
+      });
+    }
+  }
+  return result;
+};
+
+//RECT PREVIEW
 export function resolveResizeRectPreview(startMap, currentMap, direction, entity) {
+  const rect = rectFromEntity(entity);
+  const resized = resizeRect({rect, direction, currentMap});
 
-  const cx = entity.posicao.x;
-  const cy = entity.posicao.y;
-  const w = entity.dimensao.x;
-  const h = entity.dimensao.y;
-
-  const halfW = w / 2;
-  const halfH = h / 2;
-
-  let left   = cx - halfW;
-  let right  = cx + halfW;
-  let top    = cy - halfH;
-  let bottom = cy + halfH;
-
-  // altera apenas os lados correspondentes
-  if (direction.includes("n")) top = currentMap.y;
-  if (direction.includes("s")) bottom = currentMap.y;
-  if (direction.includes("w")) left = currentMap.x;
-  if (direction.includes("e")) right = currentMap.x;
-
-  // resolve o retângulo
-  const start = { x: left, y: top };
-  const end   = { x: right, y: bottom };
-
-  return resolveDrawRectPreview(start, end);
+  return viewFromRect(resized);
 }
-
 export function resolveMoveRectPreview(startMap, currentMap, entity) {
-  const dx = currentMap.x - startMap.x;
-  const dy = currentMap.y - startMap.y;
-
-  const cx = entity.posicao.x + dx;
-  const cy = entity.posicao.y + dy;
-
-  const width = entity.dimensao.x;
-  const height = entity.dimensao.y;
-
-  return {
-    x: cx - width / 2,
-    y: cy - height / 2,
-    width: entity.dimensao.x,
-    height: entity.dimensao.y
-  }; 
+  const rect = rectFromEntity(entity);
+  const moved = moveRect({rect, startMap, currentMap});
+  return viewFromRect(moved);
 }
+
+//CIRCLE PREVIEW
 export function resolveMoveCirclePreview(startMap, currentMap, entity) {
-  const dx = currentMap.x - startMap.x;
-  const dy = currentMap.y - startMap.y;
-
-  const cx = entity.posicao.x + dx;
-  const cy = entity.posicao.y + dy;
-
-  return {
-    cx,
-    cy,
-    r: Math.max(entity.dimensao.x, entity.dimensao.y)
-  };
+  const circle = circleFromEntity(entity);
+  const moved = moveCircle({ circle, startMap, currentMap });
+  return viewFromCircle(moved);
 }
+export function resolveResizeCirclePreview(startMap, currentMap, direction, entity) {
+  const circle = circleFromEntity(entity);
+  const resized = resizeCircleRadius({ circle, currentMap });
+  return viewFromCircle(resized);
+}
+
+//ELLIPSE PREVIEW
+
+//POLYGON PREVIEW

@@ -1,10 +1,8 @@
-import { ENTITY_TYPES, GEOMETRY_TYPES } from "micro-agricultor";
+import { ENTIDADE, GEOMETRY_TYPES } from "micro-agricultor";
 
-import { useCatalogos } from "../../../hooks/useCatalogos";
+import { useCache } from "../../../hooks/useCache";
 import { useMapaEngine } from "../MapaEngine";
 
-import PlantarOffcanvas from "./PlantarOffcanvas";
-import DesenharOffcanvas from "./DesenharOffCanvas";
 import PainelMonitorar from "./PainelMonitorar";
 import PainelInspecionar from "./PainelInspecionar";
 import PainelFotografar from "./PainelFotografar";
@@ -12,6 +10,9 @@ import { Offcanvas } from "react-bootstrap";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
 import { calcularArea } from "../../../utils/geometryUtils";
 import PainelManejar from "./PainelManejar";
+import { pluralizar } from "../../../utils/uiUtils";
+import PainelDesenhar from "./PainelDesenhar";
+import PainelPlantar from "./PainelPlantar";
 
 export default function MapaPainel() {
   const {
@@ -26,7 +27,7 @@ export default function MapaPainel() {
     setMapPreview,
     selection,
   } = useMapaEngine();
-  const { catalogoPlantas, catalogoCanteiros, reading } = useCatalogos([
+  const { cachePlantas, cacheCanteiros, reading } = useCache([
     "plantas",
     "canteiros"
   ]);
@@ -34,8 +35,8 @@ export default function MapaPainel() {
 
   // DEFINIÇÃO DE PAINEIS
   const TOOL_PANELS = {
-    plantar: PlantarOffcanvas,
-    desenhar: DesenharOffcanvas,
+    plantar: PainelPlantar,
+    desenhar: PainelDesenhar,
     monitorar: PainelMonitorar,
     inspecionar: PainelInspecionar,
     fotografar: PainelFotografar,
@@ -79,8 +80,7 @@ export default function MapaPainel() {
     manejar: (toolState)=>console.log("manejar",toolState)
   }
 
-  console.log(activeTool)
-return (
+  return (
     <div
       style={{
         position: "absolute",
@@ -120,9 +120,9 @@ return (
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>{offcanvasHeader({
             selection,
-            catalogs: {
-              [ENTITY_TYPES.PLANTA]: catalogoPlantas,
-              [ENTITY_TYPES.CANTEIRO]: catalogoCanteiros,
+            caches: {
+              [ENTIDADE.planta.id]: cachePlantas,
+              [ENTIDADE.canteiro.id]: cacheCanteiros,
             },
             primary: false})}
             </Offcanvas.Title>
@@ -135,13 +135,14 @@ return (
             selection={selection}
             primary={selection.primary}
             primaryType={selection.primaryType()}
-            catalogos={{
-              [ENTITY_TYPES.PLANTA]: catalogoPlantas,
-              [ENTITY_TYPES.CANTEIRO]: catalogoCanteiros,
+            caches={{
+              [ENTIDADE.planta.id]: cachePlantas,
+              [ENTIDADE.canteiro.id]: cacheCanteiros,
             }}
             reading={reading}
             onConfirm={TOOL_ONCONFIRM[activeTool]}
             onCancel={() => {resetToolState(); resetTool()}}
+            onClose={() => setShowPainel(false)}
           />
         </Offcanvas.Body>
       </Offcanvas>
@@ -151,9 +152,9 @@ return (
 
 
 
-export function offcanvasHeader ({tipoEntidadeId, selection, catalogs, primary = false}) {
+export function offcanvasHeader ({tipoEntidadeId, selection, caches, primary = false}) {
   if (!selection.primary) return <div><strong>Nenhuma seleção</strong></div>
-  const last = resolvePrimarySelection(selection, catalogs)
+  const last = resolvePrimarySelection(selection, caches)
   if (primary) return (
     <div>
       <strong>{last.nome}</strong>
@@ -164,14 +165,14 @@ export function offcanvasHeader ({tipoEntidadeId, selection, catalogs, primary =
   )
   if (!tipoEntidadeId) tipoEntidadeId = selection.primaryType()
 
-  const list = resolveSelection(selection, tipoEntidadeId, catalogs[tipoEntidadeId])
+  const list = resolveSelection(selection, tipoEntidadeId, caches[tipoEntidadeId])
   const displayArea = list.reduce((acc, sel) => {
       return acc + calcularArea(sel);
     }, 0);
 
   let displayNome = last?.nome ?? `Sem ${tipoEntidadeId}s na seleção`
   if (list.length > 1) displayNome =
-  `${last?.nome} e mais ${list.length - 1} ${tipoEntidadeId}${list.length > 2 ? "s" : ""}`
+  `${last?.nome} e mais ${list.length - 1} ${pluralizar(list.length-1,tipoEntidadeId)}`
 
   return ( <div>
       <strong>{displayNome}</strong>

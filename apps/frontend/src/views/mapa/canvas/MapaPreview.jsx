@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { useMapaEngine } from "../MapaEngine";
-import { getMouseInMapSpace } from "../../../utils/coordinatesUtils";
+import { getMouseInMapSpace, getPreviewPoints } from "../../../utils/coordinatesUtils";
 import { usePointer } from "../../../hooks/usePointer";
 import SVGEntidade from "../../../services/svg/SVGEntidade";
-import { useEffect } from "react";
 
 export default function MapaPreview ({ svgRef, gRef }) {
   const cursor = usePointer(svgRef);
@@ -53,22 +52,4 @@ export default function MapaPreview ({ svgRef, gRef }) {
     )}
     </>
   )
-}
-
-const getPreviewPoints = ({ start, geometria, layout}) => {
-  if (!geometria || !start || !layout) return [];
-
-  const offsetX = layout.espacamentoColuna
-  const offsetY = layout.espacamentoLinha
-  
-  const result = [];
-  for (let l = 0; l < layout.linhas; l++) {
-    for (let c = 0; c < layout.colunas; c++) {
-      result.push({
-        x: start.x + (c * offsetX),
-        y: start.y + (l * offsetY),
-      });
-    }
-  }
-  return result;
 }

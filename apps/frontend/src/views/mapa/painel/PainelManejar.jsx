@@ -1,78 +1,139 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { Button, Form, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import { ISOToReadableString, toDateTimeLocal } from "../../../utils/dateUtils";
-import { monitorarMultiplosCanteiros } from "../../../services/application/canteiro.application";
-import { monitorarMultiplasPlantas } from "../../../services/application/plantas.application";
-import { VARIANT_TYPES } from "micro-agricultor";
-import { useCatalogos } from "../../../hooks/useCatalogos";
+import { ENTIDADE, manejar, VARIANT_TYPES } from "micro-agricultor";
+import { useCache } from "../../../hooks/useCache";
 import { useToast } from "../../../services/toast/toastProvider";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
+import { pluralizar } from "../../../utils/uiUtils";
+import { canteirosService, plantasService } from "../../../services/crudService";
+import { batchService } from "../../../services/batchService";
+import { eventosService, mutacoesService } from "../../../services/historyService";
+import { necessidadesService } from "../../../services/crud/necessidadesService";
+import { useMapaEngine } from "../MapaEngine";
 
-export default function PainelManejar({selection, primaryType, catalogos, onClose }) {
+export default function PainelManejar({selection, caches }) {
   if (!selection) return null;
 
   const { user } = useAuth();
-  const { toastMessage } = useToast
+  const { setShowPainel } = useMapaEngine();
+  const { toastMessage } = useToast();
 
-//  const [primaryType, setTipoEntidadeId] = useState(null);
+  const [primaryType, setPrimaryType] = useState(selection.primaryType());
   const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
-  const [manejoSelecionado, setManejo] = useState({})
-  // TODO: Novos catálogos
-  const { catalogoManejos, reading } = useCatalogos(["manejos"]);
+  const [manejoSelecionado, setManejoSelecionado] = useState({})
 
-//  const [catalogoManejos, setManejos] = useState([]);
-//  const [reading, setReading] = useState(false);
+  const { cacheManejos, reading } = useCache(["manejos"]);
   const [writing, setWriting] = useState(false);
 
-  const list = resolveSelection(selection, primaryType, catalogos[primaryType]);
-  const last = resolvePrimarySelection(selection,catalogos);
+  useEffect(()=>setPrimaryType(selection.primaryType()), [selection]);
+  
 
-  const manejosAplicaveis = (catalogoManejos ?? []).filter(
+  const list = resolveSelection(selection, primaryType, caches[primaryType]);
+  const last = resolvePrimarySelection(selection, caches);
+  const manejosAplicaveis = (cacheManejos?.list ?? []).filter(
     m => m.aplicavel?.[primaryType] === true
   );  
 
-  const aplicarManejo = () => {
+  const preparaManejar = async () => {
     // Recupera o timestamp
     const date = new Date(stringTimestamp);
     const timestamp = date.getTime();
 
-    setWriting(true);
-    try {
-      switch (primaryType) {
-        case "canteiro":
-          monitorarMultiplosCanteiros({ //TODO: USAR FUNCAO GENERICA DE MANIPULACAO DE CANTEIROS
-            canteiros: selection,
-            medidas,
-            user,
-            actionType: ACTION_TYPES.MONITOR,
-            timestamp,
-          })
-          break;
-        case "planta":
-          monitorarMultiplasPlantas({ //TODO: USAR FUNCAO GENERICA DE MANIPULACAO DE CANTEIROS
-            plantas: selection,
-            medidas,
-            user,
-            actionType: ACTION_TYPES.MONITOR,
-            timestamp,
-          })
-          break;
-        default:
-          throw new Error (`Entidade ${primaryType} não é manejável.`)
-      }
+    // Recupera as intervenções
+    // TODO: apenas é possível aplicar o mesmo manejo a todas as entidades
+    // talvez seja o caso de aplicar manejos diferentes de uma mesma classe
+    // (exemplo: regar com intensidades diferentes entidades diferentes)
+    const intervencoes = {};
+    for (const entidade of list) {
+      intervencoes[entidade.id] = manejoSelecionado.id
+    }
+
+    // Recupera o tipoEntidadeId
+    // no monitoramento por característica, tipoEntidadeId é recebido como parâmetro
+    if (!primaryType) {
       toastMessage({
-        body: `Manejo de ${selection.length > 1 ? `${selection.length} ${primaryType}s`: entidade.nome} registrado com sucesso.`,
+        body: "Erro registrando o monitoramento. Tipo de entidade indefinido.",
+        variant: VARIANT_TYPES.RED,
+      })
+      return;
+    }
+
+    if (Object.keys(intervencoes).length === 0) {
+      toastMessage({
+        body: "Selecione ao menos um manejo para aplicar.",
+        variant: VARIANT_TYPES.YELLOW,
+      });
+      return;
+    }
+
+    // Monta o array de entidades
+    // no manejo, as entidades são recebidas pela seleção e é montada a lista
+    if (!list || list.length === 0) {
+      toastMessage({
+        body: "Erro registrando o manejo. Nenhuma entidade selecionada.",
+        variant: VARIANT_TYPES.RED,
+      })
+      return;
+    }
+
+
+
+    setWriting(true);
+    const servicesMap = {
+      [ENTIDADE.canteiro.id]: canteirosService,
+      [ENTIDADE.planta.id]: plantasService,
+    }
+
+    try {
+      await manejar({
+        tipoEntidadeId: primaryType,
+        entidades: list,
+        manejo: manejoSelecionado,
+        intervencoes,
+        timestamp,
+        user,
+        services: {
+          batch: batchService,
+          eventos: eventosService,
+          entidade: servicesMap[primaryType],
+          mutacoes: mutacoesService,
+          necessidades: necessidadesService,
+        }
+      })
+
+      //TODO: verificar todas as tarefas afetadas e se alguma foi concluída.
+      // se sim, concluir:
+      /**
+        concluirTarefa({
+          tarefa,
+          resolucao: {
+            tipoResolucao: RESOLVE_TYPES.MONITOR,
+            dataConclusao: timestamp,
+            agente: {
+              tipo: SOURCE_TYPES.USER,
+              id: user.id,  
+            },
+          },
+          user,
+          tarefasService,
+        })
+      */
+
+      //Limpa seleção
+      setManejoSelecionado({});
+      toastMessage({
+        body: `Registrado o manejo ${manejoSelecionado.nome} em ${list.length} ${pluralizar(list.length,primaryType)}.`,
         variant: VARIANT_TYPES.GREEN,
       });
-      //Limpa seleção
-      setForm({});
+      setShowPainel(false);
     } catch (err) {
       console.error(err)
-      showToast({
-        body: `Erro ao registrar manejo.`,
-        variang: VARIANT_TYPES.RED
+      toastMessage({
+        body: `Erro ao registrar monitoramento.`,
+        variang: VARIANT_TYPES.RED,
       });
     } finally {
       setWriting(false);
@@ -81,23 +142,10 @@ export default function PainelManejar({selection, primaryType, catalogos, onClos
 
   return (
     <>
-{/*     <StandardInput label="Manejar" width="120px">
-      <Form.Select
-        value={primaryType ?? ""}
-        onChange={(e)=>setTipoEntidadeId(e.target.value)}
-      >
-        {renderOptions({
-          list: Object.values(ENTIDADE).filter((a)=>a.monitoravel),
-          placeholder: "Selecione o tipo de entidade",
-          nullOption: true,
-          isOptionDisabled: (a)=>!selection[a.id] || selection[a.id].length === 0
-        })}
-      </Form.Select>
-    </StandardInput>
- */}    <StandardInput label="Manejo" width="120px">
+    <StandardInput label="Manejo" width="120px">
       <Form.Select
         value={manejoSelecionado.id || ""}
-        onChange={(e) => setManejo(catalogoManejos.find((c)=>c.id === e.target.value))/*setForm({...form, caracteristicaId: e.target.value})}*/}
+        onChange={(e) => setManejoSelecionado(cacheManejos?.map?.get(e.target.value))}
       >
         {renderOptions({
           list: manejosAplicaveis,
@@ -117,14 +165,14 @@ export default function PainelManejar({selection, primaryType, catalogos, onClos
         <strong>Resumo do manejo</strong>
         <div>Data/Hora: {ISOToReadableString(stringTimestamp)}</div>
         <div>Manejo: {manejoSelecionado.nome || "-"}</div>
-        <div>Alvo{last ? list.length > 1 ? `s: ${list.length} ${primaryType}s` : `: ${last?.nome}` : ": -"}</div>
+        <div>{pluralizar(list.length, "Alvo")}: {last ? list.length > 1 ? `${list.length} ${primaryType}s` : `${last?.nome}` : ": -"}</div>
         <div>Descrição: {manejoSelecionado.descricao || "-"}</div>
       </div>
       <div className="d-grid gap-2">
         <Button
           variant="success"
           disabled={!manejoSelecionado || list.length === 0}
-          onClick={aplicarManejo}
+          onClick={preparaManejar}
         >
           {list.length === 0 ? "Selecione entidades para manejar"
           : writing ? "Aplicando manejo..."

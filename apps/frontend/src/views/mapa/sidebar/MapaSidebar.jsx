@@ -9,9 +9,20 @@ export default function MapaSidebar() {
     setTool,
     resetTool,
     setMapDrag,
+    setMapDragActive,
     setMapPreviewActive,
     setShowPainel,
   } = useMapaEngine();
+
+  // TODO: KNOWN BUGS e APRIMORAMENTOS
+  // 1. Se o mouseUp ocorrer fora do SVG, não processa a seleção.
+  // isso atrapalha a seleção de itens que estejam na borda do mapa.
+  // 2. A ação de seleção nem sempre está disponível, mas deveria.
+  // 3. Move e Resize deveria ser apenas no caso da entidade primaria selecionada.
+  // 4. Preview poderia indicar graficamente se está ou não sobre uma entidade que
+  // permite a ação (ex: plantar só pode acontecer em um canteiro).
+  // 5. Tipar as ferramentas para simplificar os handlers nas entidade.
+  // 6. Heatmap/inspeção não está programada e tem uns artefatos espalhados.
 
   const tools = [
     {id: "selecionar",
@@ -38,9 +49,9 @@ export default function MapaSidebar() {
       icon: "🌱",
       text: "Plantar",
       onClick: activeTool === "plantar" ? resetTool : ()=>{
-        //setmapdragactive(false)
+        setMapDragActive(false);
         setTool("plantar");
-        //setMapPreview no painel
+        //setMapPreview pelo painel
         setShowPainel(true);
       }
     },
@@ -48,9 +59,9 @@ export default function MapaSidebar() {
       icon: "📐",
       text: "Desenhar (canteiros e outras entidades)",
       onClick: activeTool === "desenhar" ? resetTool : ()=>{
+        //setMapDrag pelo painel
         setMapPreviewActive(false);
         setTool("desenhar");
-        //setmapdrag no painel
         setShowPainel(true);
       }
     },
@@ -59,8 +70,8 @@ export default function MapaSidebar() {
       icon: "🖐️",
       text: "Mover",
       onClick: activeTool === "mover" ? resetTool : () => {
+        //setMapDrag pelo canva
         setMapPreviewActive(false);
-        //setmapdrag no canva
         setTool("mover")
         setShowPainel(true);
       },
@@ -70,18 +81,18 @@ export default function MapaSidebar() {
       icon: "📷",
       text: "Fotografar entidade",
       onClick: activeTool === "fotografar" ? () => setShowPainel(false) : () => {
-        //setmapdragactive(false)
+        setMapDragActive(false);
         setMapPreviewActive(false);
         setTool("fotografar");
         setShowPainel(true);
       },
-    },    
+    },
     {
       id: "monitorar",
       icon: "🔬",
       text: "Monitorar características",
       onClick: activeTool === "monitorar" ? resetTool : () => {
-        //setmapdragactive(false)
+        setMapDragActive(false);
         setMapPreviewActive(false);
         setTool("monitorar");
         setShowPainel(true);
@@ -92,7 +103,7 @@ export default function MapaSidebar() {
       icon: "🗺",
       text: "Inspecionar características",
       onClick: activeTool ===  "inspecionar" ? resetTool : () => {
-        //setmapdragactive(false)
+        setMapDragActive(false);
         setMapPreviewActive(false);
         setTool("inspecionar");
         setShowPainel(true);
@@ -103,7 +114,7 @@ export default function MapaSidebar() {
       icon: "🪏",
       text: "Manejar",
       onClick: activeTool ===  "manejar" ? resetTool : () => {
-        //setmapdragactive(false)
+        setMapDragActive(false);
         setMapPreviewActive(false);
         setTool("manejar");
         setShowPainel(true);

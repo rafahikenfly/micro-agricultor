@@ -12,14 +12,14 @@ export function CanteiroLocalizacaoTab ({form, setForm, hortas, loading}) {
           <Form.Select
             value={form.hortaId}
             onChange={e => handleSelectIdNome(e, {
-              list: hortas,
+              list: hortas?.list ?? [],
               setForm: setForm,
               fieldId: "hortaId",
               nomeKey: "hortaNome",
             })}
           >
             {renderOptions({
-              list: hortas,
+              list: hortas?.list ?? [],
               loading: loading,
               placeholder: "Selecione a horta do canteiro",
             })}

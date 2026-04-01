@@ -136,17 +136,17 @@ export function createCRUDService(adapter, config) {
         deletedBy: {uid: user.uid, nome: user.nome},
       });
     },
-
-    // BATCH
     getCreateRef(id = null) {
       const col = getCollection();
       return id ? col.doc(id) : col.doc();
     },
-    batchCreate (data, user, batch) {
+
+    // BATCH
+    batchCreate (data, user, batch, docRef = null) {
       if (!batch) throw new Error("batch é obrigatório em batchCreate");
 
       const col = getCollection();
-      const docRef = col.doc();
+      if (!docRef) docRef = col.doc();
 
       batch.set(docRef, {
         ...data,
@@ -207,6 +207,9 @@ export function createCRUDService(adapter, config) {
         ...docSnap.data(),
       };
     },
+
+    //TODO: esse getRefById poderia ser todo substituido pelo getCreateRef(id)
+    // Aí o getCreateRef deveria ser renomeado para getRef
     getRefById (id) {
       if (!id) throw new Error("id é obrigatório em getRefById");
 

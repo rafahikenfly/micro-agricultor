@@ -2,18 +2,18 @@ import { useState } from "react";
 import { Form, Modal, Tab, Tabs } from "react-bootstrap";
 import Galeria from "../../../components/Galeria";
 import Historico from "../../../components/Historico";
-import { useCatalogos } from "../../../hooks/useCatalogos";
+import { useCache } from "../../../hooks/useCache";
 import Loading from "../../../components/Loading"
 import { StandardCheckboxGroup } from "../../../utils/formUtils"
 
 export default function InspecaoModal({ show, onSave, onClose, data }) {
-  const { catalogoCaracteristicas, reading } = useCatalogos(["caracteristicas"])
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"])
   // Controle de tab
   const [tab, setTab] = useState("dados");
   // Formulário
   const [form, setForm] = useState({});
 
-  const selectionCaracteristicas = reading ? [] : (catalogoCaracteristicas?.list ?? []).filter(
+  const selectionCaracteristicas = reading ? [] : (cacheCaracteristicas?.list ?? []).filter(
     (c) => form[c.id]?.selecionado
   );
   if (!show) return null;
@@ -39,7 +39,7 @@ export default function InspecaoModal({ show, onSave, onClose, data }) {
           <Tab eventKey="evolucao" title="Evolução">
             <StandardCheckboxGroup label="Características">
               {reading ? <Loading />
-              : (catalogoCaracteristicas?.list ?? []).filter((a)=>a.aplicavel["canteiro"]).map((c)=>
+              : (cacheCaracteristicas?.list ?? []).filter((a)=>a.aplicavel[data.tipoEntidadeId]).map((c)=>
                 <Form.Check
                   key = {c.id}
                   label = {c.nome}

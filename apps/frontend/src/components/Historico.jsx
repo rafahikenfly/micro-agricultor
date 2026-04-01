@@ -2,26 +2,22 @@ import { useEffect, useState } from "react";
 import { Form, Card, Table, Spinner } from "react-bootstrap";
 import ApexCharts from "react-apexcharts";
 import Loading from "./Loading";
-import { useCatalogos } from "../hooks/useCatalogos";
+import { useCache } from "../hooks/useCache";
 
 const Historico = ({ entidades = [], caracteristicas = [] }) => {
-  const {catalogoEventos, catalogoEfeitos, reading } = useCatalogos(["eventos", "efeitos"])
-
-  const efeitosList = catalogoEfeitos?.list ?? [];
+  const {cacheEventos, cacheMutacoes, reading } = useCache(["eventos", "mutacoes"])
 
   // ========== MONTAR SERIES ==========
   const series = [];
 
 for (const caracteristica of caracteristicas) {
   for (const entidade of entidades) {
-      const dados = efeitosList
-        .filter(efeito => efeito.entidadeId === entidade.id && efeito.caracteristicaId === caracteristica.id)
+      const dados = (cacheMutacoes?.list ?? [])
+        .filter(mutacao => mutacao.entidadeId === entidade.id && mutacao.caracteristicaId === caracteristica.id)
         .map(dado => {
-          const c = (dado.confiancaDepois ?? 100)
-          const incerteza =  Math.pow(1 - c/100, 2); //TODO: Mudar isso para um modelo estatístico de verdade
-  
-          const valor = dado.valorDepois;
-  
+          const confianca = (dado.confianca ?? 100)
+          const valor = dado.valor;
+          const incerteza =  Math.pow(1 - confianca/100, 2); //TODO: Mudar isso para um modelo estatístico de verdade
           const lower = Number((valor * (1 - incerteza)).toFixed(2));
           const upper = Number((valor * (1 + incerteza)).toFixed(2));
 
@@ -30,7 +26,7 @@ for (const caracteristica of caracteristicas) {
             valor,
             lower,
             upper,
-            confianca: c,
+            confianca,
           };
         })
         .sort((a, b) => a.x - b.x);
@@ -45,7 +41,6 @@ for (const caracteristica of caracteristicas) {
           x: d.x,
           y: [d.lower, d.upper]
         })),
-//        showInLegend: false,
       });
   
       // --- Linha central (valor) ---
@@ -73,50 +68,38 @@ const options = {
 
   dataLabels: { enabled: false },
 
-//  fill: {
-//    opacity: [0.25, 1]   // área transparente, linha sólida
-//  },
-
-stroke: {
-  curve: "smooth",
-  width: [1, 3]
-},
-fill: {
-  opacity: [0.1, 1]
-},
-states: {
-  hover: {
-    filter: {
-      type: "none"
+  stroke: {
+    curve: "smooth",
+    width: [1, 3]
+  },
+  fill: {
+    opacity: [0.1, 1]
+  },
+  states: {
+    hover: {
+      filter: {
+        type: "none"
+      }
+    },
+    active: {
+      filter: {
+        type: "none"
+      }
     }
   },
-  active: {
-    filter: {
-      type: "none"
-    }
-  }
-},
-//  stroke: {
-//    curve: "smooth",
-//    width: [0, 2]       // área sem stroke, linha destacada
-//  },
-
   xaxis: {
     type: "datetime"
   },
-
   markers: {
     size: series.map(s => s.type === "line" ? 4 : 0),
     hover: {
       sizeOffset: 5
     }
   },
-
   legend: {
     show: true,
     inverseOrder: true,
   },
-
   tooltip: {
     shared: false,
     intersect: true,
@@ -181,8 +164,8 @@ states: {
 
 
   if (reading) return <Loading />;
-  if (!caracteristicas.length) {
-    return <div>Selecione ao menos uma característica</div>;
+  if (!caracteristicas.length || !series.length) {
+    return <div>Sem dados para exibir</div>;
   }
 
   return (

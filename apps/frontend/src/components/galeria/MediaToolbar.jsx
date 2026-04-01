@@ -1,43 +1,40 @@
 import { Form, Row, Col, ButtonGroup, Button } from "react-bootstrap";
 import { useState } from "react";
 
-const TIME_RANGES = [
-  { label: "24h", value: "1d" },
-  { label: "7 dias", value: "7d" },
-  { label: "30 dias", value: "30d" },
-  { label: "Tudo", value: "all" },
-];
+const TIME_RANGES = {
+  DIA: { nome: "24h", value: 86400000 },
+  SEMANA: { nome: "7 dias", value: 86400000 * 7 },
+  MES: { nome: "30 dias", value: 86400000 * 30 },
+  ALL: { nome: "Tudo", value: Date.now() },
+};
+
+const TIPOS = {
+  ANOTADA: { anotada: true, },
+  CAPTURA: { anotada: false, },
+}
 
 export function MediaToolbar({
   onChange,
-  defaultMode = "timeline",
+  options,
 }) {
-  const [opcoes, setFilters] = useState({
-    timeRange: "7d",
-    tipo: "all",
-    busca: "",
-    mode: defaultMode,
-  });
 
-  function update(parcial) {
-    const novasOpcoes = { ...opcoes, ...parcial };
-    setFilters(novasOpcoes);
-    onChange?.(novasOpcoes);
+  function updateOptions(parcial) {
+    const novasOpcoes = { ...options, ...parcial };
+    onChange(novasOpcoes);
   }
 
+  
   return (
     <Row className="align-items-center mb-3 g-2">
       {/* Tempo */}
       <Col xs="auto">
         <Form.Select
           size="sm"
-          value={opcoes.timeRange}
-          onChange={(e) => update({ timeRange: e.target.value })}
+          value={options.timeRange}
+          onChange={(e) => onChange({ timeRange: e.target.value, timeRangeValue: TIME_RANGES[e.target.value].value })}
         >
-          {TIME_RANGES.map((t) => (
-            <option key={t.value} value={t.value}>
-              {t.label}
-            </option>
+          {Object.entries(TIME_RANGES).map(([k,v]) => (
+            <option key={k} value={k}>{v.nome}</option>
           ))}
         </Form.Select>
       </Col>
@@ -46,12 +43,11 @@ export function MediaToolbar({
       <Col xs="auto">
         <Form.Select
           size="sm"
-          value={opcoes.tipo}
-          onChange={(e) => update({ tipo: e.target.value })}
+          value={options.tipo}
+          onChange={(e) => onChange({ tipo: e.target.value, ...TIPOS[e.target.value] })}
         >
-          <option value="all">Todos</option>
-          <option value="captura">Capturas</option>
-          <option value="anotada">Anotadas</option>
+          <option value="CAPTURA">Capturas</option>
+          <option value="ANOTADA">Resultados</option>
         </Form.Select>
       </Col>
 
@@ -59,9 +55,9 @@ export function MediaToolbar({
       <Col>
         <Form.Control
           size="sm"
-          placeholder="Buscar por nome ou descrição..."
-          value={opcoes.busca}
-          onChange={(e) => update({ busca: e.target.value })}
+          placeholder="Buscar por descrição"
+          value={options.busca}
+          onChange={(e) => updateOptions({ busca: e.target.value })}
         />
       </Col>
 
@@ -69,14 +65,14 @@ export function MediaToolbar({
       <Col xs="auto">
         <ButtonGroup size="sm">
           <Button
-            variant={opcoes.mode === "grid" ? "primary" : "outline-secondary"}
-            onClick={() => update({ mode: "grid" })}
+            variant={options.mode === "grid" ? "success" : "outline-success"}
+            onClick={() => updateOptions({ mode: "grid" })}
           >
             Grid
           </Button>
           <Button
-            variant={opcoes.mode === "timeline" ? "primary" : "outline-secondary"}
-            onClick={() => update({ mode: "timeline" })}
+            variant={options.mode === "timeline" ? "success" : "outline-success"}
+            onClick={() => updateOptions({ mode: "timeline" })}
           >
             Timeline
           </Button>

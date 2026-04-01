@@ -1,14 +1,14 @@
 export const EVENTO_TYPES = {
-    RESIZE: "RESIZE",
     CREATE: "CREATE",
-    MONITOR: "MONITOR",
-    HANDLE: "HANDLE",
 }
 
 export const EVENTO = {
-  [EVENTO_TYPES.RESIZE]: {id: EVENTO_TYPES.RESIZE, nome:"Redimensionamento", categoria: "entidade", geraNecessidade: false},
+  EVOLUCAO: {id: "EVOLUCAO", nome: "Evolução Temporal", categoria: "sistema",  geraNecessidade: false},
+  MONITORAMENTO: {id: "MONITORAMENTO", nome:"Monitoramento", categoria: "usuário", geraNecessidade: true},
+  MANEJO: {id: "MANEJO", nome: "Manejo", categoria: "usuário", geraNecessidade: true},
+  MOVIMENTACAO: {id: "MOVIMENTACAO", nome: "Mover", categoria: "usuário", geraNecessidade: false, path: "posicao"},
+  REDIMENSIONAMENTO: {id: "REDIMENSIONAMENTO", nome:"Redimensionamento", categoria: "usuário", geraNecessidade: false},
+  DESENHO: {id: "DESENHO", nome: "Desenho", categoria: "usuário", geraNecessidade: false},
+  IMPLANTACAO: {id: "IMPLANTACAO", nome: "Implantação", categoria: "usuário", geraNecessidade: false},
   [EVENTO_TYPES.CREATE]: {id: EVENTO_TYPES.CREATE, nome: "Criação", categoria: "entidade", geraNecessidade: false},
-  [EVENTO_TYPES.MONITOR]: {id: EVENTO_TYPES.MONITOR, nome:"Monitoramento", categoria: "usuário", geraNecessidade: true},
-  [EVENTO_TYPES.HANDLE]: {id: EVENTO_TYPES.HANDLE, nome: "Manejo", categoria: "usuário", geraNecessidade: true},
-  EVOLUCAO: {id: "EVOLUCAO", nome: "Evolução Temporal", categoria: "sistema",  geraNecessidade: false}  ,
 };

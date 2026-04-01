@@ -19,7 +19,7 @@ export const ENTIDADE = {
     nome: "Planta",
     masculino: false,
     tagVariant: "success",
-    desenhavel: false,
+    desenhavel: true,
     monitoravel: true,
     manejavel: true,
     inspecionavel: true,

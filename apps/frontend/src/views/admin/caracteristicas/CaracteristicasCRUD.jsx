@@ -16,7 +16,6 @@ import { useToast } from "../../../services/toast/toastProvider";
 import CaracteristicaModal from "./CaracteristicaModal";
 
 export default function CaracteristicasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 

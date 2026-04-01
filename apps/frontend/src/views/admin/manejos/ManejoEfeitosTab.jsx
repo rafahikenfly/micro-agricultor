@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions, StandardInput, StandardArrayInput } from "../../../utils/formUtils";
-import { EFEITO_VALOR } from "micro-agricultor";
+import { EFEITO } from "micro-agricultor";
 
 export default function ManejoEfeitosTab({
   formEfeitos,
@@ -69,14 +69,14 @@ export default function ManejoEfeitosTab({
           <Form.Select
             value={formCaracteristicaAfetada.tipoEfeitoValorId}
             onChange={e => handleSelectIdNome(e, {
-              list: Object.values(EFEITO_VALOR),
+              list: Object.values(EFEITO),
               setForm: setFormCaracteristicaAfetada,
               fieldId: "tipoEfeitoValorId",
               fieldNome: "tipoEfeitoValorNome",
             })}
           >
             {renderOptions({
-              list: Object.values(EFEITO_VALOR),
+              list: Object.values(EFEITO),
               loading,
               placeholder: "Selecione o tipo de efeito no valor da característica",
             })}
@@ -93,14 +93,14 @@ export default function ManejoEfeitosTab({
           <Form.Select
             value={formCaracteristicaAfetada.tipoEfeitoConfiancaId}
             onChange={e => handleSelectIdNome(e, {
-              list: Object.values(EFEITO_VALOR),
+              list: Object.values(EFEITO),
               setForm: setFormCaracteristicaAfetada,
               fieldId: "tipoEfeitoConfiancaId",
               fieldNome: "tipoEfeitoConfiancaNome",
             })}
           >
             {renderOptions({
-              list: Object.values(EFEITO_VALOR),
+              list: Object.values(EFEITO),
               loading,
               placeholder: "Selecione o tipo de efeito na confiança do valor da característica",
             })}

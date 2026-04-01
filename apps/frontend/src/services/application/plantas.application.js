@@ -1,8 +1,7 @@
-import { criarEfeitosDoEvento, criarEvento, monitorarPlanta, SOURCE_TYPES } from "micro-agricultor";
+import { criarEfeitosDoEvento, criarEvento, monitorarPlanta, ORIGEM } from "micro-agricultor";
 import { db } from "../../firebase";
 import { plantasService } from "../crud/plantasService";
-import { historicoEfeitosService } from "../history/efeitosService";
-import { eventosService } from "../history/eventosService";
+import { eventosService, mutacoesService } from "../historyService";
 
 //TODO: levar para shared/types
 const tipoEventoMap = {
@@ -38,7 +37,7 @@ export const salvarPlanta = async ({
   const evento = criarEvento({
     tipoEvento: tipoEventoMap[mutation.actionType],
     timestamp: timestamp ?? Date.now(),
-    origem: {id: user.uid, tipo: SOURCE_TYPES.USER},
+    origem: {id: user.uid, tipo: ORIGEM.USER},
     alvos: [id],
     efeitos: [
       { entidadeId: id,
@@ -55,7 +54,7 @@ export const salvarPlanta = async ({
   if (!efeitos.length) return;
 
   const batch = db.batch()
-  for (const efeito of efeitos) { historicoEfeitosService.batchAppend(efeito, user, batch) }
+  for (const efeito of efeitos) { mutacoesService.batchAppend(efeito, user, batch) }
   await batch.commit()
 
 };
@@ -75,7 +74,7 @@ export const monitorarMultiplasPlantas = async ({
   const evento = criarEvento({
     tipoEvento,
     timestamp: timestamp ?? Date.now(),
-    origem: {id: user.uid, tipo: SOURCE_TYPES.USER},
+    origem: {id: user.uid, tipo: ORIGEM.USER},
     alvos: [],
     efeitos: [],
   })
@@ -113,7 +112,7 @@ export const monitorarMultiplasPlantas = async ({
   // gera efeitos históricos
   const efeitos = criarEfeitosDoEvento({evento});
   for (const efeito of efeitos) {
-    historicoEfeitosService.batchAppend(efeito, user, batch);
+    mutacoesService.batchAppend(efeito, user, batch);
     opCount++;
 
   }

@@ -7,51 +7,24 @@ import MidiaDadosTab from "./MidiaDadosTab";
 import { MidiaMetadadosTab } from "./MidiaMetadadosTab";
 import { MidiaContextoTab } from "./MidiaContexto";
 import MidiaPreviewTab from "./MidiaPreviewTab";
-import { catalogosService } from "../../../services/catalogosService";
+import { useCache } from "../../../hooks/useCache";
+
 
 
 export default function MidiaModal({ show, onSave, onClose, data = {}, }) {
+  const { cachePlantas, cacheCanteiros, reading } = useCache([
+    "plantas",
+    "canteiros"
+  ]);
+
   // Controle de tab
   const [tab, setTab] = useState("dados");
   // Formulário
   const [form, setForm] = useState(validarMidia(data))
   // Catalogos
-  const [catalogoPlantas, setCatalogoPlantas] = useState({});
-  const [catalogoCanteiros, setCatalogoCanteiros] = useState({});
-  const [reading, setReading] = useState(false);
-
 
   // Sanitiza data
-  useEffect(() => { setForm(validarMidia(data ?? {})); }, [data]);
-  // Carrega catálogos
-  useEffect(() => {
-    if (!show) return;
-  
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getPlantas(),
-      catalogosService.getCanteiros(),
-    ]).then(([plant, cant]) => {
-      if (!ativo) return;
-      setCatalogoPlantas(plant);
-      setCatalogoCanteiros(cant);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos de mídias:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED,
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
-  }, [show]);
-  
+  useEffect(() => { setForm(validarMidia(data ?? {})); }, [data]);  
 
   if (!show) return null;
   return (
@@ -84,8 +57,8 @@ export default function MidiaModal({ show, onSave, onClose, data = {}, }) {
               <MidiaContextoTab
                 formContexto={form.contexto}
                 setFormContexto={(contexto)=>setForm({...form, contexto})}
-                catalogoCanteiros = {catalogoCanteiros}
-                catalogoPlantas = {catalogoPlantas}
+                catalogoCanteiros = {cacheCanteiros?.list}
+                catalogoPlantas = {cachePlantas?.list}
                 loading = {reading}
               />
             </Tab>

@@ -5,7 +5,6 @@ import { ENTIDADE } from "micro-agricultor";
 import { manejoService } from "../../../services/crud/manejoService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import { NoUser } from "../../../components/common/NoUser";
 import ListaAcoes from "../../../components/common/ListaAcoes";
@@ -14,7 +13,6 @@ import Loading from "../../../components/Loading";
 import ManejoModal from "./ManejoModal";
 
 export default function ManejosCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 

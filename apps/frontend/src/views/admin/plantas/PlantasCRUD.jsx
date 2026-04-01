@@ -1,31 +1,29 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { VARIANT_TYPES } from "micro-agricultor";
 
 import { plantasService } from "../../../services/crud/plantasService";
-import { catalogosService } from "../../../services/catalogosService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import ListaAcoes from "../../../components/common/ListaAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import PlantaModal from "./PlantaModal";
+import { useCache } from "../../../hooks/useCache";
 
 
 export default function PlantasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [plantas, setPlantas] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [estados_planta, setEstados_planta] = useState([]);
-  const [estagios_especie, setEstagios_especie] = useState([]);
-  const [reading, setReading] = useState(false);
+  const { cacheEstadosPlanta, cacheEstagiosEspecie, reading } = useCache([
+    "estadosPlanta",
+    "estagiosEspecie",
+  ]);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -42,33 +40,6 @@ export default function PlantasCRUD() {
     });
 
     return unsub;
-  }, []);
-
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-      catalogosService.getEstados_planta(),
-      catalogosService.getEstagios_especie(),
-    ]).then(([estp, este]) => {
-      if (!ativo) return;
-      setEstados_planta(estp);
-      setEstagios_especie(este)
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos da planta:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */
@@ -101,8 +72,8 @@ export default function PlantasCRUD() {
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: reading ? {} : estados_planta,},
-              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: reading ? {} : estagios_especie,},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: reading ? {} : cacheEstadosPlanta?.list,},
+              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: reading ? {} : cacheEstagiosEspecie?.list,},
               {rotulo: "Apagado", dataKey: "isDeleted", boolean: true},
             ]}
             acoes = {[
