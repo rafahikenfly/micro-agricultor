@@ -4,7 +4,6 @@ import { getImageDimensions } from "../../../utils/blobUtils";
 import { storage } from "../../../firebase";
 import { unixToReadableString } from "../../../utils/dateUtils";
 import { midiasService } from "../../../services/crud/midiasService";
-import { catalogosService } from "../../../services/catalogosService";
 import { resolvePrimarySelection } from "../../../utils/catalogUtils";
 import { useToast } from "../../../services/toast/toastProvider";
 import { useEffect, useState } from "react";

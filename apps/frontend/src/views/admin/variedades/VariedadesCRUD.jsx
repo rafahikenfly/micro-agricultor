@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { VARIANT_TYPES } from "micro-agricultor";
 
 import { variedadesService } from "../../../services/crud/variedadesService";
-import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 

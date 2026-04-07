@@ -1,78 +1,80 @@
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { VARIANT_TYPES } from "micro-agricultor";
+import { useCalendarioEngine } from "../CalendarioEngine";
 
 export default function CalendarioSidebar() {
+  const { modo,
+    showEventos,
+    setShowEventos,
+    showTarefas,
+    setShowTarefas,
+    setModo,
+    voltar,
+    avancar
+  } = useCalendarioEngine();
 
   const tools = [
-/*     {id: "selecionar",
-      icon: "[]",
-      text: "Selecionar",
-      onClick: activeTool === "selecionar" ? resetTool : ()=>{
-        setTool("selecionar");
-        setMapPreviewActive(false);
-        setMapDrag({
-          active: true,
-          geometry: "rect",
-          preview: {
-            fill: "rgba(0, 123, 255, 0.2)",
-            stroke: "rgba(0, 123, 255, 0.9)",
-            strokeWidth: 1,
-            strokeDasharray: "6 4",
-            pointerEvents: "none",
-          },
-        });
-      }
+    {
+      id: "agenda",
+      icon: "📅",
+      text: "Calendário",
+      active: modo === "agenda",
+      onClick: ()=>setModo("agenda"),
     },
     {
-      id: "plantar",
-      icon: "🌱",
-      text: "Plantar",
-      onClick: activeTool === "plantar" ? resetTool : ()=>{
-        //setmapdragactive(false)
-        setTool("plantar");
-        //setMapPreview no painel
-        setShowPainel(true);
-      }
-    },
-    {id: "desenhar",
-      icon: "📐",
-      text: "Desenhar (canteiros e outras entidades)",
-      onClick: activeTool === "desenhar" ? resetTool : ()=>{
-        setMapPreviewActive(false);
-        setTool("desenhar");
-        //setmapdrag no painel
-        setShowPainel(true);
-      }
+      id: "showTarefas",
+      icon: "T",
+      text: "Mostrar tarefas",
+      active: showTarefas,
+      onClick: ()=>{setShowTarefas(!showTarefas)},
     },
     {
-      id: "mover",
-      icon: "🖐️",
-      text: "Mover",
-      onClick: activeTool === "mover" ? resetTool : () => {
-        setMapPreviewActive(false);
-        //setmapdrag no canva
-        setTool("mover")
-      },
+      id: "showEventos",
+      icon: "E",
+      text: "Mostrar eventos",
+      active: showEventos,
+      onClick: ()=>{setShowEventos(!showEventos)},
     },
     {
-      id: "fotografar",
-      icon: "📷",
-      text: "Fotografar entidade",
-      onClick: activeTool === "fotografar" ? resetTool : () => {
-        //setmapdragactive(false)
-        setMapPreviewActive(false);
-        setTool("fotografar")
-      },
-    },    
+      id: "prev",
+      icon: "⬅",
+      text: "Anterior",
+      onClick: voltar,
+    },
     {
-      id: "monitor",
-      icon: "🔬",
-      text: "Monitorar características",
-      onClick: activeTool === "monitorar" ? resetTool : () => {
-        setMapPreviewActive(false);
-        setTool("monitorar")
-      },
-    }, */
+      id: "today",
+      icon: "📍",
+      text: "Hoje",
+      onClick:  ()=>{},
+    },
+    {
+      id: "next",
+      icon: "➡",
+      text: "Próximo",
+      onClick: avancar,
+    },
+        {
+      id: "dia",
+      icon: "1",
+      text: "Dia",
+      active: modo === "dia",
+      onClick: ()=>setModo("dia"),
+    },
+    {
+      id: "semana",
+      icon: "7",
+      text: "Semana",
+      active: modo === "semana",
+      onClick: ()=>setModo("semana"),
+    },
+    {
+      id: "mes",
+      icon: "30",
+      text: "Mês",
+      active: modo === "mes",
+      onClick: ()=>setModo("mes"),
+    },
+
   ];
 
   return (
@@ -87,7 +89,7 @@ export default function CalendarioSidebar() {
             overlay={<Tooltip>{tool.text}</Tooltip>}
         >
             <Button
-            variant={activeTool === tool.id ? VARIANT_TYPES.GREEN : VARIANT_TYPES.WHITE}
+            variant={tool.active ? VARIANT_TYPES.GREEN : VARIANT_TYPES.WHITE}
             className="mb-2 d-flex align-items-center justify-content-center"
             style={{
                 width: "40px",

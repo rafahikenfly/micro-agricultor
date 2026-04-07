@@ -1,4 +1,6 @@
-export function gerarGradeMes(inicioMes) {
+import { adicionarDias, inicioDoDia } from "../../../utils/dateUtils";
+
+export function gerarMes(inicioMes) {
   const ano = inicioMes.getFullYear();
   const mes = inicioMes.getMonth();
 
@@ -50,7 +52,7 @@ export function gerarDia(inicio) {
   return dia;
 }
 
-export function gerarBlocosDia(dia) {
+export function gerarHorarios(dia) {
   const blocos = [];
 
   for (let h = 0; h < 24; h += 6) {
@@ -66,23 +68,15 @@ export function gerarBlocosDia(dia) {
   return blocos;
 }
 
-export function gerarListaDias(inicio, fim) {
-  function startOfDay(unix) {
-    const d = new Date(unix);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
-  }
-  
-  function addDays(unix, days) {
-    return unix + days * 24 * 60 * 60 * 1000;
-  }
+export function gerarDias(inicio, fim) {
+
   
   const lista = [];
-  let cursor = startOfDay(inicio);
+  let cursor = inicioDoDia(inicio);
 
   while (cursor <= fim) {
     lista.push(cursor);
-    cursor = addDays(cursor, 1);
+    cursor = adicionarDias(cursor, 1);
   }
 
   return lista;

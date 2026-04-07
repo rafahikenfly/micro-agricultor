@@ -69,7 +69,6 @@ export function createHistoryService(adapter, config) {
       return col.doc(id);
     },
     get(filters = [], orderBy = null) {
-      console.log("b",filters)
       let query = getCollection();
 
       filters.forEach(f => {

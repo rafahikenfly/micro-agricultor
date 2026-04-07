@@ -1,40 +1,60 @@
 // efeitos/dailyMaintenance.scheduler.js
 
 import cron from "node-cron";
-import { dailyEffect } from "./dailyEffect.js";
+import { dailyEvolution } from "./dailyEvolution.js";
 import { currentStateInspector } from "./currentStateInspector.js";
 import { mediaStateInspector } from "./mediaStateInspector.js";
 import { runJob } from "../pipeline/runJob.js";
 import { log } from "node:console";
 
 
-const maintenanceTasks = [
-    { name: "currentStateInspect", fn: currentStateInspector },
-    { name: "mediaStateInspect",  fn: mediaStateInspector },
-    // { name: "outraManutencao", fn: outraFuncao },
+const dailyTasks = [
+  { name: "mediaStateInspect",  fn: mediaStateInspector },
 ];
+
+const hourlyTasks = [
+  { name: "currentStateInspect", fn: currentStateInspector },
+  { name: "mediaStateInspect", fn: mediaStateInspector },
+];
+
+async function runTasks(tasks, label) {
+  const results = await Promise.allSettled(
+    tasks.map(task => runJob(task.name))
+  );
+
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      log(`ERROR - [${label}] Erro em ${tasks[index].name}:`, result.reason);
+    }
+  });
+}
 
 export function dailyMaintenance() {
   log("[CRON] dailyMaintenance agendado para 03:00");
 
-  cron.schedule("0 3 * * *", async () => {
+  cron.schedule("15 3 * * *", async () => {
     log("[dailyMaintenance] Iniciando manutenção diária...");
 
     try {
-      await dailyEffect();
+      await dailyEvolution();
     } catch (err) {
-      log("ERROR - [dailyMaintenance] Erro em timeEffect:", err);
+      log("ERROR - [dailyMaintenance] Erro em dailyEvolution:", err);
     }
 
-    const results = await Promise.allSettled([
-      runJob("currentStateInspector"),
-      runJob("mediaStateInspector"),
-    ]);
+    await runTasks(dailyTasks, "dailyMaintenance");
 
-    results.forEach((result, index) => {
-      if (result.status === "rejected") {
-        log(`ERROR - [dailyMaintenance] Erro na função ${maintenanceTasks[index].name}:`, result.reason);
-      }
-    });
+    log("[dailyyMaintenance] Finalizado");
+  });
+}
+
+export function hourlyMaintenance() {
+  log("[CRON] hourlyMaintenance agendado para cada hora");
+
+  cron.schedule("0 * * * *", async () => {
+    log("[hourlyMaintenance] Iniciando manutenção horária...");
+
+    await runTasks(hourlyTasks, "hourlyMaintenance");
+
+    log("[hourlyMaintenance] Finalizado");
   });
 }

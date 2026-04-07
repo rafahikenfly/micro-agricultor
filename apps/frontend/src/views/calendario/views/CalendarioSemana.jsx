@@ -1,37 +1,28 @@
 import { useMemo } from "react";
 import { useCalendarioEngine } from "../CalendarioEngine";
-import CalendarioEvento from "../ui/CalendarioEvento";
-import CalendarioTarefa from "../ui/CalendarioTarefa";
-import { mesmaData } from "../utils/mesmaData";
-import { gerarSemana } from "../utils/geradorDias";
+import CalendarioEvento from "../canvas/CalendarioEvento";
+import CalendarioTarefa from "../canvas/CalendarioTarefa";
+import { mesmaData } from "../../../utils/dateUtils";
+import { gerarSemana } from "./gerador";
 
-export default function CalendarioGridSemana({
+export default function CalendarioSemana({
   eventos = [],
   tarefas = [],
   necessidades = [],
 }) {
-  const { intervalo, } =
-    useCalendarioEngine();
+  const { inicio } = useCalendarioEngine();
 
   const dias = useMemo(() => {
-    if (!intervalo.inicio) return [];
-    return gerarSemana(intervalo.inicio);
-  }, [intervalo]);
+    if (!inicio) return [];
+    return gerarSemana(inicio);
+  }, [inicio]);
 
   return (
     <div className="cal-semana-grid">
       {dias.map((dia, index) => {
-
-        const eventosDia = eventos.filter(e =>
-          mesmaData(e.timestamp, dia)
-        );
-
-        const tarefasDia = tarefas.filter(t =>
-          mesmaData(t.planejamento.vencimento, dia)
-        );
-
-        const isHoje =
-          mesmaData(new Date(), dia);
+        const eventosDia = eventos.filter(e => mesmaData(e.timestamp, dia) );
+        const tarefasDia = tarefas.filter(t => mesmaData(t.planejamento.vencimento, dia) );
+        const isHoje = mesmaData(new Date(), dia);
 
         return (
           <div

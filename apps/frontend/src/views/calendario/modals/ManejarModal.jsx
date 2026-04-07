@@ -2,27 +2,30 @@ import { useEffect, useState } from "react"
 import { Button, Form, Modal } from "react-bootstrap"
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import { toDateTimeLocal } from "../../../utils/dateUtils";
-import { RESOLVE_TYPES } from "@shared/types/RESOLVE_TYPES";
-import { SOURCE_TYPES } from "@shared/types/SOURCE_TYPES";
-import { VARIANT_TYPES } from "@shared/types/VARIANT_TYPES";
-import { canteirosService } from "../../../services/crud/canteirosService";
-import { plantasService } from "../../../services/crud/plantasService";
-import { ENTITY_TYPES } from "@shared/types/ENTITY_TYPES";
+
 import { useToast } from "../../../services/toast/toastProvider";
-import { processarManejo } from "@shared/aplication/manejo";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCalendarioEngine } from "../CalendarioEngine";
-import { necessidadesService } from "../../../services/crud/necessidadesService";
-import { historicoEfeitosService } from "../../../services/history/efeitosService";
-import { eventosService } from "../../../services/history/eventosService";
-import { concluirTarefa } from "@shared/aplication/tarefas.application";
-import { tarefasService } from "../../../services/crud/tarefasService";
+import { eventosService, mutacoesService } from "../../../services/historyService";
+import { canteirosService, plantasService, necessidadesService } from "../../../services/crudService";
 
-export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, canteiros, plantas, loading}) => {
+import { concluirTarefa, ENTIDADE } from "micro-agricultor";
+import { tarefasService } from "../../../services/crudService";
+import { useCache } from "../../../hooks/useCache";
+
+const processarManejo = () => {console.warn("UNDER REVIEW")};
+
+export const ManejarModal = ({show, data, onClose }) => {
   if (!show) return null
 
   const { toastMessage } = useToast();
   const { user } = useAuth();
+  const { cacheCaracteristicas, cacheManejos, cacheCanteiros, cachePlantas, reading } = useCache([
+    "caracteristicas",
+    "manejos",
+    "canteiros",
+    "plantas",
+  ])
   const engine = useCalendarioEngine();
   
 
@@ -37,28 +40,28 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
   // Constroi os dados do formulário
   useEffect(()=>{
     const formData = {}
-    for (const entidadeId of (tarefa.contexto.entidadesId ?? [])) {
+    for (const entidadeId of (data.contexto.entidadesId ?? [])) {
       formData[entidadeId] = {
         manejar: false,
       }
       //TODO: criar as entradas conforme manejo.entradas
     }
     setForm(formData)
-  },[tarefa])
+  },[data])
 
   useEffect(()=>{
     const caracteristicaManejada = 
-      caracteristicas.find((c)=>c.id === tarefa?.contexto?.caracteristicaId)
+      cacheCaracteristicas?.map.get(data?.contexto?.caracteristicaId)
     setCaracteristica(caracteristicaManejada)
-  }, [tarefa])
+  }, [data])
 
   const catalogMap = {
-    [ENTITY_TYPES.CANTEIRO]: canteiros,
-    [ENTITY_TYPES.PLANTA]: plantas,
+    [ENTIDADE.canteiro.id]: cacheCanteiros?.list,
+    [ENTIDADE.planta.id]: cachePlantas?.list,
   }
   const servicesMap = {
-    [ENTITY_TYPES.CANTEIRO]: canteirosService,
-    [ENTITY_TYPES.PLANTA]: plantasService,
+    [ENTIDADE.canteiro.id]: canteirosService,
+    [ENTIDADE.planta.id]: plantasService,
   }
 
 
@@ -93,7 +96,7 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
 
 
     // Recupera o tipoEntidadeID
-    const tipoEntidadeId = tarefa.contexto.tipoEntidadeId
+    const tipoEntidadeId = data.contexto.tipoEntidadeId
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o manejo",
@@ -117,14 +120,14 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
         manejo: manejoSelecionado,
         services: {
           eventos: eventosService,
-          entidade: servicesMap[tarefa.contexto.tipoEntidadeId],
-          historicoEfeitos: historicoEfeitosService,
+          entidade: servicesMap[data.contexto.tipoEntidadeId],
+          historicoEfeitos: mutacoesService,
           necessidades: necessidadesService,
         }
       })
       //Conclui a tarefa
       concluirTarefa({
-        tarefa,
+        tarefa: data,
         resolucao: {
           tipoResolucao: RESOLVE_TYPES.HANDLED,
           dataConclusao: timestamp,
@@ -138,7 +141,7 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
       })
       //Fecha modal
         toastMessage({
-          body: `Manejo de ${entidades.length > 1 ? `${entidades.length} ${tarefa.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
+          body: `Manejo de ${entidades.length > 1 ? `${entidades.length} ${data.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
           variant: VARIANT_TYPES.GREEN,
         });
       } catch (err) {
@@ -154,7 +157,7 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
   }
 
   const manejoDesativado = (manejo) => {
-    return !manejo.efeitos?.some(item => item.caracteristicaId === tarefa?.contexto?.caracteristicaId) ?? false
+    return !manejo.efeitos?.some(item => item.caracteristicaId === data?.contexto?.caracteristicaId) ?? false
   }
 
   //TODO: NA MUDANÇA DO PARAMETRO, MUDAR TAMBÉM O ATUALIZAR
@@ -176,20 +179,20 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
         <StandardInput label="Manejo" width="120px">
           <Form.Select
             value={manejoSelecionado.id || ""}
-            onChange={(e) => setManejo(manejos.find((c)=>c.id === e.target.value))}
+            onChange={(e) => setManejo(cacheManejos?.map.get(e.target.value))}
           >
             {renderOptions({
-              list: manejos,
-              loading: loading,
+              list: cacheManejos?.list,
+              loading: reading,
               placeholder: "Selecione o manejo",
               isOptionDisabled: manejoDesativado,
             })}
           </Form.Select>
         </StandardInput>
-        {manejoSelecionado.id && tarefa?.contexto?.entidadesId?.map((entidadeId, i) => (
+        {manejoSelecionado.id && data?.contexto?.entidadesId?.map((entidadeId, i) => (
         <StandardCard
           key={entidadeId}
-          header={catalogMap[tarefa.contexto.tipoEntidadeId].find((ent) => ent.id === entidadeId).nome ?? entidadeId}
+          header={catalogMap[data.contexto.tipoEntidadeId].find((ent) => ent.id === entidadeId).nome ?? entidadeId}
           headerRight={
               <Form.Check
                 type="switch"
@@ -200,7 +203,6 @@ export const ManejarModal = ({show, tarefa, onClose, caracteristicas, manejos, c
               />
             }
             >
-            {!manejoSelecionado.temEntradas && <>Nenhuma entrada para {manejoSelecionado.nome}</>}
             {manejoSelecionado.entradas?.map((entrada,idx)=> (
               <StandardInput
                 key={`entrada-${idx}`}

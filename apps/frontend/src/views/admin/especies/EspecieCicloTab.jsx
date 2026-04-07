@@ -2,14 +2,18 @@ import { useState } from "react";
 import { Form, Button } from "react-bootstrap";
 import ListaAcoes from "../../../components/common/ListaAcoes";
 import { handleSelectIdNome, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
 
 //TODO: USAR STANDARDINPUT
 export default function EspecieCicloTab({
   ciclo = [],
   setCiclo,
-  estagios = [],
-  loading,
 }) {
+
+  const { cacheEstagiosEspecie, reading } = useCache([
+    "estagiosEspecie",
+  ]);
+
   const [estagio, setEstagio] = useState({});
   const [plantavel, setPlantavel] = useState("");
   const [colhivel, setColhivel] = useState("");
@@ -57,8 +61,7 @@ export default function EspecieCicloTab({
   };
 
   const duplicarEstagio = (data, idx) => {
-    console.log(data)
-    setEstagio(estagios.find(e => e.id === data.estagioId));
+    setEstagio(cacheEstagiosEspecie?.map.get(data.estagioId));
     setPlantavel(data.plantavel);
     setInstrucoes(data.instrucoes);
   }
@@ -70,15 +73,15 @@ export default function EspecieCicloTab({
         <Form.Select
           value={estagio.id ?? ""}
           onChange={e => handleSelectIdNome(e,{
-            list: estagios,
+            list: cacheEstagiosEspecie?.list,
             setForm: setEstagio,
             fieldId: "id",
             fieldNome: "nome",
           })}
         >
         {renderOptions({
-          list: estagios,
-          loading: loading,
+          list: cacheEstagiosEspecie?.list,
+          loading: reading,
           placeholder: "Selecione o estágio",
           nullOption: true,
         })}

@@ -5,26 +5,23 @@ const CalendarioContexto = createContext(null);
 export const ACOES_CALENDARIO = {
   SET_MODO: "SET_MODO",
   SET_INICIO: "SET_INICIO",
+  SETSHOW_MODAL: "SETSHOW_MODAL",
+  SETSHOW_EVENTOS: "SETSHOW_EVENTOS",
+  SETSHOW_TAREFAS: "SETSHOW_TAREFAS",
+  
   SET_TAMANHO: "SET_TAMANHO",
   SET_FILTROS: "SET_FILTROS",
   SELECT_ITEM: "SELECT_ITEM",
   CLEAR_SELECTION: "CLEAR_SELECTION",
-  SETSHOW_MODALMANEJAR: "SETSHOW_MODALMANEJAR",
-  SETSHOW_MODALMONITORAR: "SETSHOW_MODALMONITORAR",
-  SETSHOW_MODALTAREFA: "SETSHOW_MODALTAREFA",
-  SETSHOW_EVENTOS: "SETSHOW_EVENTOS",
-  SETSHOW_TAREFAS: "SETSHOW_TAREFAS",
-  SET_MODALDATA: "SET_MODALDATA",
-  RESET_MODALDATA: "RESET_MODALDATA",
 };
 
 const estadoInicialCalendario = {
-  modo: "calendario", // "agenda" | "calendario"
+  modo: "mes", // "agenda" | "dia" | "semana" | "mes"
+  inicio: new Date(),
 
   intervalo: {
-    inicio: new Date(),
     fim: new Date(),
-    tamanho: "semana", // "dia" | "semana" | "mes"
+    tamanho: "semana", // 
   },
 
   hortasSelecionadas: ["4NbaiMkpR9CRIizDdfQ9"],
@@ -35,11 +32,9 @@ const estadoInicialCalendario = {
 //  },
 
   show: {
-    modalMonitorar: false,
-    modalManejar: false,
-    modalTarefa: false,
-    eventos: false,
-    tarefas: true,
+    modal: false,
+    eventos: true,
+    tarefas: false,
   },
   modalData: null,
 
@@ -48,30 +43,41 @@ const estadoInicialCalendario = {
 
 function reducerCalendario(state, action) {
   switch (action.type) {
-
     case ACOES_CALENDARIO.SET_MODO:
       return {
         ...state,
         modo: action.payload,
       };
-
     case ACOES_CALENDARIO.SET_INICIO:
       return {
         ...state,
-        intervalo: {
-          ...state.intervalo,
-          inicio: action.payload
-        },
+        inicio: action.payload
       };
-
-    case ACOES_CALENDARIO.SET_TAMANHO:
+    case ACOES_CALENDARIO.SETSHOW_EVENTOS:
       return {
         ...state,
-        intervalo: {
-          ...state.intervalo,
-          tamanho: action.payload
-        },
+        show: {
+          ...state.show,
+          eventos: action.payload,
+        }
       };
+    case ACOES_CALENDARIO.SETSHOW_TAREFAS:
+      return {
+        ...state,
+        show: {
+          ...state.show,
+          tarefas: action.payload,
+        }
+      };
+    case ACOES_CALENDARIO.SETSHOW_MODAL:
+      return {
+        ...state,
+        show: {
+          ...state.show,
+          modal: action.payload,
+        }
+      };
+
 
 
     case ACOES_CALENDARIO.SET_HORTAS:
@@ -101,57 +107,6 @@ function reducerCalendario(state, action) {
         itemSelecionado: null,
       };
 
-    case ACOES_CALENDARIO.SETSHOW_MODALMONITORAR:
-      return {
-        ...state,
-        show: {
-          ...state.show,
-          modalMonitorar: action.payload,
-        }
-      };
-    case ACOES_CALENDARIO.SETSHOW_MODALMANEJAR:
-      return {
-        ...state,
-        show: {
-          ...state.show,
-          modalManejar: action.payload,
-        }
-      };
-    case ACOES_CALENDARIO.SETSHOW_MODALTAREFA:
-      return {
-        ...state,
-        show: {
-          ...state.show,
-          modalTarefa: action.payload,
-        }
-      };
-    case ACOES_CALENDARIO.SETSHOW_EVENTOS:
-      return {
-        ...state,
-        show: {
-          ...state.show,
-          eventos: action.payload,
-        }
-      };
-    case ACOES_CALENDARIO.SETSHOW_TAREFAS:
-      return {
-        ...state,
-        show: {
-          ...state.show,
-          tarefas: action.payload,
-        }
-      };
-    case ACOES_CALENDARIO.SET_MODALDATA:
-      return {
-        ...state,
-        modalData: action.payload,
-      };
-    case ACOES_CALENDARIO.RESET_MODALDATA:
-      return {
-        ...state,
-        modalData: null,
-      };
-    
       
     default:
       console.error(`ReducerCalendario: ação ${action.type} não tratada`);

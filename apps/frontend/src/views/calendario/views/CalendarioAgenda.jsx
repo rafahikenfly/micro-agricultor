@@ -1,36 +1,25 @@
 import { useMemo } from "react";
 import { useCalendarioEngine } from "../CalendarioEngine";
-import { unixToReadableString } from "../../../utils/dateUtils";
-import { gerarListaDias, } from "../utils/geradorDias";
-import CalendarioTarefa from "../ui/CalendarioTarefa";
-import { mesmaData } from "../utils/mesmaData";
-import { JOBSTATE_TYPES } from "@shared/types/JOBRUN_STATE";
-import CalendarioEvento from "../ui/CalendarioEvento";
-
-function startOfDay(unix) {
-  const d = new Date(unix);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
+import { inicioDoDia, unixToReadableString } from "../../../utils/dateUtils";
+import CalendarioTarefa from "../canvas/CalendarioTarefa";
+import CalendarioEvento from "../canvas/CalendarioEvento";
+import { ESTADO_TAREFA } from "micro-agricultor";
 
 export default function CalendarioAgenda({eventos, tarefas, necessidades}) {
-  const engine = useCalendarioEngine();
+  const { inicio } = useCalendarioEngine();
 
-  const { inicio, tamanho } = engine.intervalo;
-  const fimMap = {
-    dia: 1,
-    semana: 7,
-    mes: 30
-  }
+  let tamanho = 10;
+  const fim = new Date(inicio);
+  fim.setDate(inicio.getDate() + tamanho)
 
   const listaDias = useMemo(() => {
-    return gerarListaDias(inicio,inicio + fimMap[tamanho])
-  }, [inicio, tamanho]);
+    return gerarListaDias(inicio, fim)
+  }, [inicio]);
 
-  const tarefasAtrasadas = useMemo(() => {
+  const tarefasAnteriores = useMemo(() => {
     return tarefas
       .filter(t =>
-        t.estado !== JOBSTATE_TYPES.DONE &&
+        t.estado !== ESTADO_TAREFA.FEITO.id &&
         t.planejamento?.vencimento < inicio
       )
       .sort((a, b) =>
@@ -57,8 +46,8 @@ export default function CalendarioAgenda({eventos, tarefas, necessidades}) {
         item.timestamp;                     //evento, timestamp
 
         
-    if (mesmaData(dataRef, inicio) && dataRef <= inicio + fimMap[tamanho]) {
-        const dia = startOfDay(dataRef);
+    if (dataRef >= inicio && dataRef <= fim) {
+        const dia = inicioDoDia(dataRef);
         if (!agenda[dia]) agenda[dia] = [];
         agenda[dia].push(item);
       }
@@ -80,18 +69,11 @@ export default function CalendarioAgenda({eventos, tarefas, necessidades}) {
   return (
     <div className="cal-agenda">
 
-      {tarefasAtrasadas.length > 0 && (
+      {tarefasAnteriores.length > 0 && (
         <div className="cal-dia-bloco atrasadas">
           <div className="cal-dia-header">
-            Atrasadas
+            {tarefasAnteriores.length} Tarefas anteriores
           </div>
-          {tarefasAtrasadas.map(tarefa => (
-            <CalendarioTarefa
-              key={`atrasada-${tarefa.id}`}
-              tarefa={tarefa}
-              necessidades={necessidades.filter((n)=>n.vinculo?.id === tarefa.id)}
-            />
-          ))}
         </div>
       )}
 
@@ -100,28 +82,22 @@ export default function CalendarioAgenda({eventos, tarefas, necessidades}) {
           <div className="cal-dia-header">
             {unixToReadableString(dia)}
           </div>
+            {(agendaDoDia[dia] || []).map(item => {
+              const isTarefa = !!item.estado;
 
-          {(agendaDoDia[dia] || []).length === 0 && (
-            <div className="cal-dia-vazio">
-              Nenhum item
-            </div>
-          )}
-          {(agendaDoDia[dia] || []).map(item => {
-            const isTarefa = !!item.estado;
-
-            return isTarefa ? (
-              <CalendarioTarefa
-                key={`tarefa-${item.id}`}
-                tarefa={item}
-                necessidades={necessidades.filter((n)=>n.vinculo?.id === item.id)}
-              />
-            ) : (
-              <CalendarioEvento
-                key={`evento-${item.id}`}
-                evento={item}
-              />
-            );
-          })}
+              return isTarefa ? (
+                <CalendarioTarefa
+                  key={`tarefa-${item.id}`}
+                  tarefa={item}
+                  necessidades={necessidades.filter((n)=>n.vinculo?.id === item.id)}
+                />
+              ) : (
+                <CalendarioEvento
+                  key={`evento-${item.id}`}
+                  evento={item}
+                />
+              );
+            })}
         </div>
       ))}
 

@@ -90,6 +90,7 @@ export default function MapaPainel() {
         display: "flex",
         flexDirection: "column",
         alignItems: "flex-end",
+        overflowY: "scroll",
         zIndex: 1000,
       }}
     >

@@ -1,8 +1,14 @@
 import { Form } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions, StandardInput } from "../../../utils/formUtils";
 import BaseTab from "../../../components/common/BaseTab";
+import { useCache } from "../../../hooks/useCache";
 
 export default function EspecieDadosTab({ form, setForm, categorias_especie = [], loading}) {
+
+  const { cacheCategoriasEspecie, reading } = useCache([
+    "categoriasEspecie",
+  ]);
+  
   return (
     <BaseTab
     form = {form}
@@ -23,15 +29,15 @@ export default function EspecieDadosTab({ form, setForm, categorias_especie = []
           value={form.categoriaId}
           onChange={e =>
             handleSelectIdNome(e, {
-              list: categorias_especie,
+              list: cacheCategoriasEspecie?.list,
               setForm,
               fieldId: "categoriaId",
               fieldNome: "categoriaNome",
             })}
         >
           {renderOptions({
-            list: categorias_especie,
-            loading,
+            list: cacheCategoriasEspecie?.list,
+            loading: reading,
             placeholder: "Selecione a categoria",
           })}
         </Form.Select>

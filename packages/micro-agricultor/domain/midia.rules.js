@@ -5,7 +5,7 @@ import { mergeComValidacao } from "./rulesUtils.js";
 const midiaPadrao = {
   nome: "",                           //string
   descricao: "",                      //string
-  estado: ESTADO_TAREFA.PENDING.id,   //ESTADO_TAREFA[].id
+  estado: ESTADO_TAREFA.PENDENTE.id,   //ESTADO_TAREFA[].id
   ultimoRunId: "",
   tipoMediaId: MIDIA.CAPTURA.id,      //MEDIA_TYPES.id
   mimeType: MIME_TYPES.JPEG.nome,          //MIME_TYPES.mime
@@ -20,7 +20,6 @@ const midiaPadrao = {
   },
   contexto: {
     tipoEntidadeId: "",     //ENTITY_TYPES.id
-    tipoEntidadeNome: "",   //ENTITY_TYPES.nome
     entidadeId: "",         //string
     hortaId: "",            //string
     timestamp: Date.now(),  //epoch

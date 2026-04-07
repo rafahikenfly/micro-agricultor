@@ -53,7 +53,7 @@ export default function Router() {
           <Route path="/calendario" element={<AppCalendario />}>
             <Route index element={<CalendarioVazio />} />
           </Route>
-          <Route path="/calendario/:usuarioId" element={<AppCalendario />}>
+          <Route path="/calendario/:hortaId" element={<AppCalendario />}>
             <Route index element={<CalendarioCanvas />} />
           </Route>
         </Route>

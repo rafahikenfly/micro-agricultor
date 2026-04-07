@@ -1,5 +1,4 @@
 import { criarMutacao } from "../domain/mutacao.rules.js";
-import { EVENTO } from "../types/EVENTO.js";
 
 /**
  * Processa uma entidade utilizando um batch, passando uma função.

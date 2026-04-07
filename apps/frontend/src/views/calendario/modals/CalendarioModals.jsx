@@ -1,20 +1,16 @@
-import { VARIANT_TYPES } from "micro-agricultor";
+import { EVENTO, VARIANT_TYPES } from "micro-agricultor";
 import { useAuth } from "../../../services/auth/authContext";
 import { useToast } from "../../../services/toast/toastProvider";
-import { storage } from "../../../firebase";
+import { ManejarModal } from "./ManejarModal";
+import { useCalendarioEngine } from "../CalendarioEngine";
+import { MonitorarModal } from "./MonitorarModal";
 
-export default function CalendarioModals() {
+export default function MapaModals() {
   const { user } = useAuth();
   const { toastMessage } = useToast();
+  const { showModal, setShowModal } = useCalendarioEngine();
 
-  if (true) return null;
-
-  //TODO: ESSA FUNCAO CHEIRA A APPLICATION
-  async function salvarImagemStorage(blob, path) {
-    const ref = storage.ref(path);
-    await ref.put(blob);
-    return ref.getDownloadURL();
-  }
+  if (!showModal) return null;
 
   const salvar = async (data, crudService, ENTIDADE) => {
     try {
@@ -44,11 +40,25 @@ export default function CalendarioModals() {
   }
 
 
-  switch (showModal.tipoEntidadeId) {
-
-    
-
+  switch (showModal.tipo) {
+    case EVENTO.MANEJO.id:
+      return (
+        <ManejarModal
+          show={true}
+          data={showModal.data}
+          onClose={() => setShowModal(null)}
+        />
+      );
+    case EVENTO.MONITORAMENTO.id:
+      return (
+        <MonitorarModal
+          show={true}
+          data={showModal.data}
+          onClose={() => setShowModal(null)}
+        />
+      );
     default:
+      console.warn(`showModal.tipo ${showModal.tipo} sem modal associado`)
       return null;
   }
 }

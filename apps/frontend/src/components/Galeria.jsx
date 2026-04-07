@@ -3,6 +3,7 @@ import { useCache } from "../hooks/useCache";
 import { MediaGrid } from "./galeria/MediaGrid";
 import { MidiaTimeline } from "./galeria/MediaTimeline";
 import { MediaToolbar } from "./galeria/MediaToolbar";
+import { MediaPreview } from "./galeria/MediaPreview";
 import Loading from "./Loading";
 
 export default function Galeria({ entidadeId }) {
@@ -22,7 +23,7 @@ export default function Galeria({ entidadeId }) {
     .filter((a)=>a.contexto.entidadeId === entidadeId)
     .filter((a)=>a.contexto.timestamp > Date.now() - options.timeRangeValue)
     .filter((a)=>a.metadados.anotada === options.anotada)
-    .filter((a)=>options.busca === "" || a.descricao.includes(options.busca))
+    .filter((a)=>!options.busca || a.descricao.toLowerCase().includes(options.busca.toLowerCase()))
 
   if (reading) return <Loading />;
   return (
@@ -32,17 +33,15 @@ export default function Galeria({ entidadeId }) {
         options={options}
       />
 
-      {options === "grid" ? (
+      {selected ?
+        <MediaPreview
+          media={selected}
+          onClose={()=>setSelected(null)}
+        />
+      : options === "grid" ? (
         <MediaGrid midias={midias} onSelect={setSelected} />
       ) : (
         <MidiaTimeline midias={midias} onSelect={setSelected} />
-      )}
-
-      {selected && (
-        <MediaPreview
-          media={selected}
-          onClose={() => setSelected(null)}
-        />
       )}
     </div>
   );

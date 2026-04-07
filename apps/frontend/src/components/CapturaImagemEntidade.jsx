@@ -7,6 +7,7 @@ import { VARIANT_TYPES } from "micro-agricultor";
 export default function CapturaImagemEntidade({
   onCancel,
   onCapture,
+
   entidade,
   ativa = true,
 }) {
@@ -108,7 +109,6 @@ export default function CapturaImagemEntidade({
     setPreviewUrl(null);
     setBlob(null);
 
-    onCancel();
   };
   function refazer() {
     setPreviewUrl(null);

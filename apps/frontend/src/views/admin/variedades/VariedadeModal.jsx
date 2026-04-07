@@ -15,7 +15,11 @@ import VariedadeCicloAccordion from "./VariedadeCicloAccordion";
 import { useCache } from "../../../hooks/useCache";
 
 export default function VariedadeModal({ show, onSave, onClose, data }) {
-  const { cacheManejos, cacheEspecies, cacheCaracteristicas, reading } = useCache(["manejos", "especies", "caracteristicas"]);
+  const { cacheManejos, cacheEspecies, cacheCaracteristicas, reading } = useCache([
+    "manejos",
+    "especies",
+    "caracteristicas"
+  ]);
   // Controle de tab
   const [tab, setTab] = useState("dados");
   // Formulário
@@ -52,7 +56,7 @@ export default function VariedadeModal({ show, onSave, onClose, data }) {
                 <VariedadeDadosTab
                   form={form}
                   setForm={setForm}
-                  especies={cacheEspecies.list}
+                  especies={cacheEspecies?.list}
                   loading={reading}
                 />
             </Tab>
@@ -66,8 +70,8 @@ export default function VariedadeModal({ show, onSave, onClose, data }) {
               <VariedadeCicloAccordion
                 formCiclo={form.ciclo}
                 setFormCiclo={(ciclo) => setForm({...form, ciclo})}
-                caracteristicas={cacheCaracteristicas.list}
-                manejos={cacheManejos.list}
+                caracteristicas={cacheCaracteristicas?.list}
+                manejos={cacheManejos?.list}
                 loading={reading}
               />
             </Tab>

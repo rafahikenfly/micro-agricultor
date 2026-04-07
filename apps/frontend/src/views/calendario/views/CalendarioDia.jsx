@@ -1,27 +1,26 @@
 import { useMemo } from "react";
 import { useCalendarioEngine } from "../CalendarioEngine";
-import { gerarDia, gerarBlocosDia } from "../utils/geradorDias";
-import { mesmaData } from "../utils/mesmaData";
-import CalendarioTarefa from "../ui/CalendarioTarefa";
-import CalendarioEvento from "../ui/CalendarioEvento";
+import { gerarDia, gerarHorarios } from "./gerador";
+import { mesmaData } from "../../../utils/dateUtils";
+import CalendarioTarefa from "../canvas/CalendarioTarefa";
+import CalendarioEvento from "../canvas/CalendarioEvento";
 
-export default function CalendarioGridDia({
+export default function CalendarioDia({
   eventos = [],
   tarefas = [],
   necessidades = [],
 }) {
-  const { intervalo } = useCalendarioEngine();
+  const { inicio } = useCalendarioEngine();
 
   const dias = useMemo(() => {
-    if (!intervalo.inicio) return [];
-    return [gerarDia(intervalo.inicio)];
-  }, [intervalo]);
+    if (!inicio) return [];
+    return [gerarDia(inicio)];
+  }, [inicio]);
 
   return (
     <div className="cal-dia-grid">
       {dias.map((dia, index) => {
-        const blocos = gerarBlocosDia(dia);
-
+        const blocos = gerarHorarios(dia);
         const isHoje = mesmaData(new Date(), dia);
 
         return (

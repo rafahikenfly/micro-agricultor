@@ -6,31 +6,19 @@ export function useCalendarioEngine() {
 
   // ================= VISUALIZAÇÃO ================= //
 
-  const setModoAgenda = () => {
+  const setModo = (modo) => {
     dispatch({
       type: ACOES_CALENDARIO.SET_MODO,
-      payload: "agenda",
+      payload: modo,
     });
   };
+  const setShowModal = (modalConfig) => {
+    dispatch({
+      type: ACOES_CALENDARIO.SETSHOW_MODAL,
+      payload: modalConfig,
+    });
+  }
 
-  const setShowModalMonitorar = (show) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SETSHOW_MODALMONITORAR,
-      payload: show,
-    });
-  }
-  const setShowModalManejar = (show) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SETSHOW_MODALMANEJAR,
-      payload: show,
-    });
-  }
-  const setShowModalTarefa = (show) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SETSHOW_MODALTAREFA,
-      payload: show,
-    });
-  }
   const setShowEventos = (show) => {
     dispatch({
       type: ACOES_CALENDARIO.SETSHOW_EVENTOS,
@@ -43,40 +31,7 @@ export function useCalendarioEngine() {
       payload: show,
     });
   }
-  const setModalData = (data) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SET_MODALDATA,
-      payload: data,
-    });
-  }
-  const resetModalData = () => {
-    dispatch({
-      type: ACOES_CALENDARIO.RESET_MODALDATA,
-    });
-  }
 
-  const setModoMes = () => {
-    dispatch({
-      type: ACOES_CALENDARIO.SET_MODO,
-      payload: "mes",
-    });
-  };
-
-  const toggleModo = () => {
-    dispatch({
-      type: ACOES_CALENDARIO.SET_MODO,
-      payload: state.modo === "agenda" ? "calendario" : "agenda",
-    });
-  };
-
-  // ================= INTERVALO ================= //
-
-  const setIntervalo = (inicio) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SET_INICIO,
-      payload: { inicio },
-    });
-  };
 
   const irParaHoje = () => {
     const hoje = new Date();
@@ -87,15 +42,12 @@ export function useCalendarioEngine() {
       payload: inicio,
     });
   };
-
-  const proximo = () => {
-    if (!state.intervalo?.inicio) return;
-    
-    const { inicio, tamanho } = state.intervalo;
+  const avancar = () => {
+    if (!inicio) return;
     const base = new Date(inicio);
     let novoInicio;
     
-    switch (tamanho) {
+    switch (modo) {
       case "mes":
         novoInicio = new Date(
           inicio.getFullYear(),
@@ -110,6 +62,7 @@ export function useCalendarioEngine() {
         break;
 
       case "dia":
+      case "agenda":
         novoInicio = new Date(base);
         novoInicio.setDate(base.getDate() + 1);
         break;
@@ -123,14 +76,12 @@ export function useCalendarioEngine() {
       payload: novoInicio,
     });
   };
-  const anterior = () => {
-    if (!state.intervalo?.inicio) return;
-
-    const { inicio, tamanho } = state.intervalo;
+  const voltar = () => {   
+    if (!inicio) return;
     const base = new Date(inicio);
     let novoInicio;
-
-    switch (tamanho) {
+    
+    switch (modo) {
       case "mes":
         novoInicio = new Date(
           base.getFullYear(),
@@ -142,9 +93,11 @@ export function useCalendarioEngine() {
       case "semana":
         novoInicio = new Date(base);
         novoInicio.setDate(base.getDate() - 7);
+        console.log(inicio,base,novoInicio)
         break;
 
       case "dia":
+      case "agenda":
         novoInicio = new Date(base);
         novoInicio.setDate(base.getDate() - 1);
         break;
@@ -156,12 +109,6 @@ export function useCalendarioEngine() {
     dispatch({
       type: ACOES_CALENDARIO.SET_INICIO,
       payload: novoInicio,
-    });
-  }
-  const tamanho = (tamanho) => {
-    dispatch({
-      type: ACOES_CALENDARIO.SET_TAMANHO,
-      payload: tamanho,
     });
   }
 
@@ -192,52 +139,34 @@ export function useCalendarioEngine() {
   // ================= SELECTORS ================= //
 
   const modo = state.modo;
+  const inicio = state.inicio;
+  const showEventos = state.show.eventos
+  const showTarefas = state.show.tarefas
+  const showModal = state.show.modal
+
+
   const filtros = state.filtros;
   const intervalo = state.intervalo;
   const itemSelecionado = state.itemSelecionado;
 
-  const isAgenda = modo === "agenda";
-  const isMes = modo === "calendario" && intervalo.tamanho === "mes";
-  const isSemana = modo === "calendario" && intervalo.tamanho === "semana";
-  const isDia = modo === "calendario" && intervalo.tamanho === "dia";
-
-  const showModalMonitorar = state.show.modalMonitorar
-  const showModalManejar = state.show.modalManejar
-  const showModalTarefa = state.show.modalTarefa
-  const showEventos = state.show.eventos
-  const showTarefas = state.show.tarefas
     // ================= API ================= //
 
   return {
-    /* raw */
-    state,
-
     /* visualização */
-    setModoAgenda,
-    setModoMes,
-    setShowModalMonitorar,
-    setShowModalManejar,
-    setShowModalTarefa,
+    setModo,
+    modo,
+    avancar,
+    voltar,
+    inicio,
     setShowEventos,
     setShowTarefas,
-    toggleModo,
-    isAgenda,
-    isMes,
-    isSemana,
-    isDia,
-    showModalMonitorar,
-    showModalManejar,
-    showModalTarefa,
     showTarefas,
     showEventos,
     
-    /* intervalo */
-    setIntervalo,
+    setShowModal,
+    showModal,
+
     irParaHoje,
-    proximo,
-    tamanho,
-    anterior,
-    intervalo,
 
 
     /* filtros */
@@ -246,8 +175,6 @@ export function useCalendarioEngine() {
 
     /* seleção */
     selecionarItem,
-    setModalData,
-    resetModalData,
     limparSelecao,
     itemSelecionado,
   };

@@ -1,10 +1,13 @@
 import { useState } from "react";
 import { Form, Modal, Tab, Tabs } from "react-bootstrap";
-import Galeria from "../../../components/Galeria";
-import Historico from "../../../components/Historico";
 import { useCache } from "../../../hooks/useCache";
-import Loading from "../../../components/Loading"
 import { StandardCheckboxGroup } from "../../../utils/formUtils"
+
+import Loading from "../../../components/Loading"
+import Galeria from "../../../components/Galeria";
+import Evolucao from "../../../components/Evolucao";
+import Tarefas from "../../../components/Tarefas";
+import Eventos from "../../../components/Eventos";
 
 export default function InspecaoModal({ show, onSave, onClose, data }) {
   const { cacheCaracteristicas, reading } = useCache(["caracteristicas"])
@@ -31,10 +34,16 @@ export default function InspecaoModal({ show, onSave, onClose, data }) {
           className="mb-3"
         >
           <Tab eventKey="tarefas" title="Tarefas">
-            NECESSIDADES/TAREFAS
+            <Tarefas
+              entidadeId={data.id}
+              tipoEntidadeId={data.tipoEntidadeId}
+            />
           </Tab>
           <Tab eventKey="historico" title="Histórico">
-            HISTORICO/EVENTOS
+            <Eventos
+              entidadeId={data.id}
+              tipoEntidadeId={data.tipoEntidadeId}
+            />
           </Tab>
           <Tab eventKey="evolucao" title="Evolução">
             <StandardCheckboxGroup label="Características">
@@ -50,7 +59,7 @@ export default function InspecaoModal({ show, onSave, onClose, data }) {
               }
             </StandardCheckboxGroup>
 
-            <Historico
+            <Evolucao
               entidades={[data]}
               caracteristicas={selectionCaracteristicas}
             />

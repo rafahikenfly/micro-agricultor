@@ -12,7 +12,7 @@ import { catalogosService } from "../../services/catalogosService";
 import CalendarioGridSemana from "./views/CalendarioGridSemana";
 import CalendarioGridMes from "./views/CalendarioGridMes";
 
-import CalendarioToolbar from "./ui/CalendarioToolbar";
+import CalendarioToolbar from "./legacy/CalendarioToolbar";
 
 import { NoUser } from "../../components/common/NoUser";
 

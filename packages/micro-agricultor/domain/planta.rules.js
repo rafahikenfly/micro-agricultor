@@ -1,4 +1,4 @@
-import { REASON_TYPES, ENTITY_TYPES, EVENTO_TYPES } from "../types/index.js";
+import { REASON_TYPES, EVENTO_TYPES, ENTIDADE, EVENTO, RECORRENCIA } from "../types/index.js";
 import { evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade, } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -223,11 +223,11 @@ export function mudarVariedade(planta, novaVariedade) {
 // REGRAS DE INFORMAÇÃO DE PLANTA
 // =====
 // ** UNDER REVIEW **
-export const getCaracteristicasRelevantesPlanta = ({planta, catalogoVariedades}) => {
+export const getCaracteristicasRelevantesPlanta = ({planta, mapaVariedades}) => {
   const caracteristicasSet = new Set();
 
   // para cada planta
-  const variedade = catalogoVariedades.find((v) => v.id === planta.variedadeId);
+  const variedade = mapaVariedades.get(planta.variedadeId);
   if (!variedade || !Array.isArray(variedade.ciclo)) return;
 
   // para cada fase do ciclo da variedade
@@ -273,8 +273,8 @@ export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
     // Valor Desconhecido
     if (!caracteristica) {
       pendencias.push({
-        tipoEntidadeId: ENTITY_TYPES.PLANTA,
-        alvos: [planta.id],
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
         caracteristicaId,
         motivo: REASON_TYPES.NO_VALUE,
       });
@@ -284,95 +284,157 @@ export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
     // Valor Não-Confiável
     if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 50) {
       pendencias.push({
-        tipoEntidadeId: ENTITY_TYPES.PLANTA,
-        alvos: [planta.id],
-        caracteristicaId: caracteristicaId,
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
+        caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confiancaAtual: caracteristica.confianca ?? null
+        confianca: caracteristica.confianca ?? null
       });
     }
   });
 
   return pendencias;
 }
-// ** UNDER REVIEW **
+
+/**
+ * Avalia uma planta e gera necessidades de monitoramento com base em pendências identificadas.
+ * A função também pode, opcionalmente, atualizar um mapa de tarefas compartilhado (via `contexto.mapaTarefas`),
+ * agregando tarefas por `caracteristicaId`.
+ *
+ * ⚠️ Efeitos colaterais:
+ * - Atualiza `mapaNecessidades` (Map) com novas necessidades para evitar duplicações no mesmo ciclo.
+ * - Pode mutar `contexto.mapaTarefas` caso fornecido.
+ *
+ * @param {Object} params
+ * @param {Object} params.planta - Entidade planta a ser avaliada.
+ * @param {string} params.planta.id - Identificador da planta.
+ * @param {string} params.planta.nome - Nome da planta.
+ * @param {number} params.timestamp - Timestamp atual (usado para planejamento da tarefa).
+ * @param {Object} [params.contexto] - Contexto opcional para agregação de tarefas.
+ * @param {Object.<string, Object>} [params.contexto.mapaTarefas] 
+ *   Mapa de tarefas indexado por `caracteristicaId`. ⚠️ Será mutado caso fornecido.
+ * @param {Map<string, Object>} params.mapaNecessidades 
+ *   Mapa de necessidades já existentes (key = necessidadeId).
+ *   Usado para evitar recriação de necessidades já ativas.
+ *   ⚠️ Será mutado com novas necessidades durante a execução.
+ * @param {Map<string, Object>} params.mapaVariedades 
+ *   Mapa de variedades (catálogo), usado para determinar características relevantes da planta.
+ * @param {Map<string, Object>} params.mapaCaracteristicas 
+ *   Mapa de características, utilizado para enriquecer dados de tarefas (nome/descrição).
+ * @returns {Array<Object>} necessidades
+ *   Lista de necessidades geradas (não persistidas), no formato:
+ *   @property {boolean} ativo - Indica que a necessidade está ativa.
+ *   @property {string} entidadeId - ID da planta.
+ *   @property {string} caracteristicaId - ID da característica associada.
+ *   @property {string} tipoEventoId - Tipo de evento (ex: MONITOR).
+ *   @property {Object} estadoAtual - Estado atual observado.
+ *   @property {string} motivo - Motivo da necessidade.
+ *
+ * @example
+ * const necessidades = getNecessidadesPlanta({
+ *   planta,
+ *   timestamp: Date.now(),
+ *   contexto: { mapaTarefas },
+ *   mapaNecessidades,
+ *   mapaVariedades,
+ *   mapaCaracteristicas
+ * });
+ *
+ * @example
+ * // Uso sem geração de tarefas (somente necessidades)
+ * const necessidades = getNecessidadesPlanta({
+ *   planta,
+ *   timestamp,
+ *   mapaNecessidades,
+ *   mapaVariedades,
+ *   mapaCaracteristicas
+ * });
+ */
 export const getNecessidadesPlanta = ({
   planta,
   timestamp,
-  mapaTarefas,
+  contexto, // {mapaTarefas}
   mapaNecessidades,
-  catalogoVariedades,
-  caracteristicasMap}) => {
+  mapaVariedades,
+  mapaCaracteristicas}) => {
   const entidadeId = planta.id
-  
-  // =====
-  // Monitoramento
-  // =====
-  const tipoEventoId = EVENTO_TYPES.MONITOR
+  const entidadeNome = planta.nome
   
   // Obtem as pendências (necessidades candidatas)
-  const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, catalogoVariedades})
+  const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, mapaVariedades})
   const pendencias = getPendenciasPlanta({planta, arrCaracteristicaIds});
   console.log(`${pendencias.length} pendências para ${planta.id}`);
   const necessidades = [];
   
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
-  // É uma situação muito parecida com o registro do monitoramento, que tem uma regra compartilhada.
-  // provavelmente isso aqui vai acabar indo para monitoramento.rules
-  // Verifica cada pendência se já está ativa
+  // Verifica cada pendência, para saber se a necessidade já está ativa
+  // As pendências com necessidade ativa não geram tarefas
   for (const pendencia of pendencias) {
     const caracteristicaId = pendencia.caracteristicaId
-    const necessidadeId = getNecessidadeKey({entidadeId, caracteristicaId, tipoEventoId})
-    if (!mapaNecessidades?.[necessidadeId]?.ativo) {
-      // recupera a característica para construir o nome e descrição
-      const caracteristica = caracteristicasMap.get(caracteristicaId);
-      
-      // Monta contexto da tarefa
-      const contexto = {
-        tipoEventoId,
-        tipoEntidadeId: pendencia.tipoEntidadeId,
-        caracteristicaId: pendencia.caracteristicaId,
-        entidadesId: [entidadeId],
-      }
+    const necessidadeId = getNecessidadeKey({
+      entidadeId,
+      caracteristicaId,
+      tipoEventoId: pendencia.tipoEventoId
+    });
+    const ativa = mapaNecessidades.get(necessidadeId)?.ativo;
+    if (ativa) continue;
 
-      // Atualiza o mapa de tarefas
-      if (!mapaTarefas[caracteristicaId]) {
-        const dados = {
-          nome: `Monitorar ${caracteristica.nome}`,
-          descricao: `${caracteristica.descricao} Plantas: ${planta.nome}`
+    // Se houver contexto, atualiza o mapa de tarefas do contexto
+    // Se o contexto já tiver tarefa para a característica, adiciona a entidade
+    // se não tiver tarefa para a caractertística, cria a tarefa
+    if (contexto?.mapaTarefas) {
+      const tarefa = contexto.mapaTarefas[caracteristicaId];
+      if (tarefa) {
+        if (!tarefa.contexto.entidadesId.includes(entidadeId)) {
+          tarefa.descricao += `, ${entidadeNome}`;
+          tarefa.contexto.entidadesId.push(entidadeId);
         }
-        mapaTarefas[caracteristicaId] = criarTarefa({
-          contexto,
+      }
+      else {
+        // Monta contexto da tarefa
+        const caracteristica = mapaCaracteristicas.get(caracteristicaId);
+        const contextoTarefa = {
+          tipoEventoId: pendencia.tipoEventoId,
+          tipoEntidadeId: pendencia.tipoEntidadeId,
+          caracteristicaId: pendencia.caracteristicaId,
+          entidadesId: [entidadeId],
+        };
+        // Monta dados da tarefa
+        let acao = ""
+        if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
+        if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
+        const dados = {
+          nome: `${acao} ${caracteristica.nome}`,
+          descricao: `${caracteristica.descricao} Plantas: ${entidadeNome}`
+        }
+        contexto.mapaTarefas[caracteristicaId] = criarTarefa({
+          contexto: contextoTarefa,
           planejamento: {
-            recorrencia: RECURRING_TYPES.NONE,
+            recorrencia: RECORRENCIA.NENHUMA.id,
             vencimento: timestamp,
             prioridade: 1
           },
           dados,
         })
       }
-      else {
-        mapaTarefas[caracteristicaId].descricao += `, ${planta.nome}`
-        mapaTarefas[caracteristicaId].contexto.entidadesId.push(entidadeId)
-      }
-
-      // Monta a necessidade //TODO criarNecessidade em necessidades.rules
-      const necessidadeDesvinculada = {
-        ativo: true,  
-        entidadeId,
-        caracteristicaId,
-        tipoEventoId,
-        estadoAtual: pendencia.estadoAtual ?? {},
-        motivo: pendencia.motivo,
-      }
-
-      //Armazena no returnArr
-      necessidades.push(necessidadeDesvinculada)
-
-      //Atualiza localmente
-      mapaNecessidades[necessidadeId] = necessidadeDesvinculada;
-
     }
-  }
+
+    // Monta a necessidade //TODO criarNecessidade em necessidades.rules
+    const necessidadeDesvinculada = {
+      ativo: true,  
+      entidadeId,
+      caracteristicaId,
+      tipoEventoId: pendencia.tipoEventoId,
+      estadoAtual: pendencia.estadoAtual ?? {},
+      motivo: pendencia.motivo,
+    }
+
+    //Armazena no returnArr
+    necessidades.push(necessidadeDesvinculada)
+
+    //Atualiza o mapa local para evitar duplicação
+    mapaNecessidades.set(necessidadeId, necessidadeDesvinculada);
+  };
+
   return necessidades
 }

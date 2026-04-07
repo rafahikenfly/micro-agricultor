@@ -3,9 +3,9 @@ import { log } from "../core/logger/index.js";
 import { db } from "../infra/firebase.js";
 import { cacheService, plantasService, canteirosService, eventosService, mutacoesService } from "../services/index.js";
 
-export async function dailyEffect() {
+export async function dailyEvolution() {
     console.log("Iniciando cálculo de efeitos do tempo de todo o banco de dados...")
-    const user = { uid: "dailyEffect", nome: ORIGEM.BACKEND.id };
+    const user = { uid: "dailyEvolution", nome: ORIGEM.BACKEND.id };
 
     //TODO: usar o application evoluir!
     //Recupera as plantas e faz a evolução delas,
@@ -24,7 +24,7 @@ export async function dailyEffect() {
     const evento = criarEvento({
       tipoEvento: EVENTO.EVOLUCAO,
       timestamp,
-      origem: {id: "dailyEffect", tipo: ORIGEM.BACKEND.id},
+      origem: {id: "dailyEvolution", tipo: ORIGEM.BACKEND.id},
       entidadesKey: [],
     })
     const entidadesKeySet = new Set();
@@ -130,4 +130,4 @@ export async function dailyEffect() {
     return;
 }
 
-dailyEffect();
+dailyEvolution();

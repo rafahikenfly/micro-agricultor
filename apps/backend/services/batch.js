@@ -1,6 +1,6 @@
-import { createBatchFactory } from "micro-agricultor";
-import { db } from "../infra/firebase";
+import { createBatchService } from "micro-agricultor";
+import { db } from "../infra/firebase.js";
 
-export const batchService = createBatchFactory({
+export const batchService = createBatchService({
   createNativeBatch: () => db.batch()
 });

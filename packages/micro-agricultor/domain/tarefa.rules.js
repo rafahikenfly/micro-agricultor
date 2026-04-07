@@ -4,7 +4,7 @@
 // Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
 // Cada tarefa tem um planejamento e uma resolução, além de estado.
 
-import { ESTADO_TAREFA, RECURRING_TYPES } from "../types/index.js";
+import { ESTADO_TAREFA, RECORRENCIA } from "../types/index.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 
 const aparenciaPadrao = {
@@ -21,7 +21,7 @@ const tarefaPadrao = {
   nome: "Nova Tarefa",
   descrição: "",
   aparencia: aparenciaPadrao,
-  estado: ESTADO_TAREFA.PENDING.id,     // default seguro
+  estado: ESTADO_TAREFA.PENDENTE.id,     // default seguro
 
   //contexto
   contexto: {
@@ -36,7 +36,7 @@ const tarefaPadrao = {
   planejamento: {
     prioridade: 0,
     vencimento: 0,
-    recorrencia: RECURRING_TYPES.NONE,  // default seguro
+    recorrencia: RECORRENCIA.NENHUMA.id,  // default seguro
   },
 
   //resolucao
@@ -68,10 +68,10 @@ export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => {
 
 export const resolverTarefa = ({tarefa, resolucao}) => {
   switch (tarefa.planejamento.recorrencia) {
-    case RECURRING_TYPES.NONE:
+    case RECORRENCIA.NONE:
       const tarefaConcluida = {
         ...tarefa,
-        estado: JOBSTATE_TYPES.DONE,
+        estado: ESTADO_TAREFA.FEITO.id,
         resolucao,
       }
 

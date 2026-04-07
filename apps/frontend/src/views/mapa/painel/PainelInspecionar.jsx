@@ -2,7 +2,7 @@ import { useState } from "react";
 import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { Button, Form } from "react-bootstrap";
 //import { offcanvasTabHeader } from "../legacy/OffcanvasPattern"
-import Historico from "../../../components/Historico";
+import Evolucao from "../../../components/Evolucao";
 import { useCache } from "../../../hooks/useCache";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
 import { useMapaEngine } from "../MapaEngine";
@@ -70,7 +70,7 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
           Desativar Inspeção no Mapa
         </Button>
         {primaryType && <>
-        <Historico
+        <Evolucao
           entidades = {list}
           caracteristicas = {[caracteristica] ?? []}
         />
@@ -78,11 +78,11 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
           variant={VARIANT_TYPES.LIGHTBLUE}
           disabled={!primaryType}
           onClick={()=>setShowModal({
-            tipoEntidadeId: "inspecionar",
+            tipo: "inspecionar",
             data: {...last, tipoEntidadeId: primaryType}
           })}
         >
-          {`Mais detalhes de ${last.nome}`}
+          {`Mais detalhes de ${last?.nome}`}
         </Button> </>}
       </div>
     </>

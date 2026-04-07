@@ -1,5 +1,5 @@
 import { Form, } from "react-bootstrap";
-import { RECURRING } from "micro-agricultor";
+import { RECORRENCIA } from "micro-agricultor";
 
 import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { toDateTimeLocal } from "../../../utils/dateUtils";
@@ -28,7 +28,7 @@ export default function TarefaPlanejamentoTab({ formPlanejamento, setFormPlaneja
           onChange={(e)=> setFormPlanejamento({ ...formPlanejamento, recorrencia: e.target.value})}
         >
           {renderOptions({
-            list: Object.values(RECURRING),
+            list: Object.values(RECORRENCIA),
             placeholder: "Selecione a frequência",
           })}
         </Form.Select>

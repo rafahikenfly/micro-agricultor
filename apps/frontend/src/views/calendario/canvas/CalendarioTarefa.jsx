@@ -1,25 +1,25 @@
-import { JOBSTATE_TYPES } from "@shared/types/JOBRUN_STATE";
+
+import { ESTADO_TAREFA } from "micro-agricultor";
 import { useAuth } from "../../../services/auth/authContext";
 import { unixToReadableString } from "../../../utils/dateUtils";
 import { useCalendarioEngine } from "../CalendarioEngine";
 import { createCalendarioTarefaHandler } from "../handlers/CalendarioTarefa.handler";
-import { EVENTO_TYPES } from "@shared/types/EVENTO_TYPES";
 
 export default function CalendarioTarefa({ tarefa, necessidades}) {
   const user = useAuth();
   const engine = useCalendarioEngine();
-  const handlers = createCalendarioTarefaHandler(engine, tarefa, user)
+  const handlers = createCalendarioTarefaHandler(engine, tarefa)
 
   //TODO: isSelected vai para a engine
   const isSelected =
     engine.itemSelecionado?.id === tarefa.id &&
     engine.itemSelecionado?.type === "tarefa";
-  const isDone = tarefa.estado === JOBSTATE_TYPES.DONE
+  const isDone = tarefa.estado === ESTADO_TAREFA.FEITO.id
 
   const style = {
     color: tarefa.aparencia?.borda,
-//    backgroundColor: tarefa.aparencia?.fundo,
-//    borderLeft: `${tarefa.aparencia?.espessura}px solid ${tarefa.aparencia?.borda || "#000"}`,
+    backgroundColor: tarefa.aparencia?.fundo,
+    borderLeft: `${tarefa.aparencia?.espessura}px solid ${tarefa.aparencia?.borda || "#000"}`,
   };
 
   const total = necessidades.length;

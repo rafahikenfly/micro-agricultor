@@ -18,3 +18,21 @@ export const caracteristicasService = createCRUDService (firebaseAdapter, {
   softDelete: true,
   useArchive: true,
 });
+
+export const tarefasService = createCRUDService(firebaseAdapter, {
+  collection: "tarefas",
+  softDelete: true,
+  useArchive: true,
+});
+
+export const necessidadesService = createCRUDService(firebaseAdapter, {
+  collection: "necessidades",
+  softDelete: true,
+  useArchive: true,
+})
+
+export const variedadesService = createCRUDService(firebaseAdapter, {
+  collection: "variedades",
+  softDelete: true,
+  useArchive: true,
+})

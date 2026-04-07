@@ -1,28 +1,29 @@
 import { useEffect, useState } from "react"
 import { Button, Form, Modal } from "react-bootstrap"
 import { StandardCard, StandardInput } from "../../../utils/formUtils"
-import { processarMonitoramento } from "@shared/aplication/monitoramento"
-import { eventosService } from "../../../services/history/eventosService"
-import { historicoEfeitosService } from "../../../services/history/efeitosService"
-import { ENTITY_TYPES } from "@shared/types/ENTITY_TYPES"
-import { canteirosService } from "../../../services/crud/canteirosService"
-import { plantasService } from "../../../services/crud/plantasService"
-import { VARIANT_TYPES } from "@shared/types/VARIANT_TYPES"
+import { eventosService, mutacoesService } from "../../../services/historyService"
+import { canteirosService, plantasService, necessidadesService, tarefasService } from "../../../services/crudService"
 import { useCalendarioEngine } from "../CalendarioEngine"
 import { useToast } from "../../../services/toast/toastProvider"
 import { useAuth } from "../../../services/auth/authContext"
-import { concluirTarefa } from "@shared/aplication/tarefas.application"
-import { tarefasService } from "../../../services/crud/tarefasService"
-import { RESOLVE_TYPES } from "@shared/types/RESOLVE_TYPES"
-import { SOURCE_TYPES } from "@shared/types/SOURCE_TYPES"
 import { toDateTimeLocal } from "../../../utils/dateUtils"
-import { necessidadesService } from "../../../services/crud/necessidadesService"
+import {  } from "../../../services/crud/necessidadesService"
+import { ENTIDADE } from "micro-agricultor"
+import { useCache } from "../../../hooks/useCache"
 
-export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiros, plantas, loading}) => {
+const processarManejo = () => {console.warn("UNDER REVIEW")};
+
+export const MonitorarModal = ({show, data, onClose}) => {
   if (!show) return null
 
   const { toastMessage } = useToast();
   const { user } = useAuth();
+    const { cacheCaracteristicas, cacheCanteiros, cachePlantas, reading } = useCache([
+      "caracteristicas",
+      "canteiros",
+      "plantas",
+    ])
+  
   const engine = useCalendarioEngine();
 
   const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
@@ -34,26 +35,26 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
   // Constroi os dados do formulário
   useEffect(()=>{
     const formData = {}
-    for (const entidadeId of (tarefa.contexto.entidadesId ?? [])) {
+    for (const entidadeId of (data.contexto.entidadesId ?? [])) {
       formData[entidadeId] = {
-        [tarefa.contexto.caracteristicaId]: {
+        [data.contexto.caracteristicaId]: {
           valor: 0,
           confianca: 100,
         }
       }
     }
     setForm(formData)
-  },[tarefa])
+  },[data])
 
   useEffect(()=>{
     const caracteristicaMonitorada = 
-      caracteristicas.find((c)=>c.id === tarefa?.contexto?.caracteristicaId)
+      cacheCaracteristicas?.map.get(data?.contexto?.caracteristicaId)
     setCaracteristica(caracteristicaMonitorada)
-  }, [tarefa])  
+  }, [data])  
 
-  const catalogMap = {
-    [ENTITY_TYPES.CANTEIRO]: canteiros,
-    [ENTITY_TYPES.PLANTA]: plantas,
+  const entityMap = {
+    [ENTIDADE.canteiro.id]: cacheCanteiros?.map,
+    [ENTIDADE.planta.id]: cachePlantas?.map,
   }
 
   const monitorar = async (evt) => {    
@@ -95,7 +96,7 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
 
 
     // Recupera o tipoEntidadeID
-    const tipoEntidadeId = tarefa.contexto.tipoEntidadeId
+    const tipoEntidadeId = data.contexto.tipoEntidadeId
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o monitoramento",
@@ -105,13 +106,13 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
     }
 
     // Monta o array de entidades
-    const entidades = catalogMap[tipoEntidadeId].filter(d => medidas?.[d.id]);
+    const entidades = entityMap[tipoEntidadeId].filter(d => medidas?.[d.id]);
 
     // Processa os monitoramentos com user, tipoEntidadeId, entidades, medidas e timestamp
     setWriting(true);
     const servicesMap = {
-      [ENTITY_TYPES.CANTEIRO]: canteirosService,
-      [ENTITY_TYPES.PLANTA]: plantasService,
+      [ENTIDADE.canteiro.id]: canteirosService,
+      [ENTIDADE.planta.id]: plantasService,
     }
     try {
       await processarMonitoramento({
@@ -122,14 +123,14 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
         entidades,
         services: {
           eventos: eventosService,
-          entidade: servicesMap[tarefa.contexto.tipoEntidadeId],
-          historicoEfeitos: historicoEfeitosService,
+          entidade: servicesMap[data.contexto.tipoEntidadeId],
+          historicoEfeitos: mutacoesService,
           necessidades: necessidadesService,
         }
       })
       //Conclui a tarefa
       concluirTarefa({
-        tarefa,
+        tarefa: data,
         resolucao: {
           tipoResolucao: RESOLVE_TYPES.MONITOR,
           dataConclusao: timestamp,
@@ -140,7 +141,7 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
       })
       //Fecha modal
         toastMessage({
-          body: `Monitoramento de ${entidades.length > 1 ? `${entidades.length} ${tarefa.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
+          body: `Monitoramento de ${entidades.length > 1 ? `${entidades.length} ${data.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
           variant: VARIANT_TYPES.GREEN,
         });
       } catch (err) {
@@ -155,12 +156,13 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
       }
   }
 
-  //TODO: NA MUDANÇA DA MEDIDA, MUDAR TAMBÉM O ATUALIZAR
+  const tipoEntidadeId = data?.contexto?.tipoEntidadeId ?? null
+  console.log("a",tipoEntidadeId)
   return (
     <Modal show={show} onHide={onClose}>
       <Form onSubmit={(evt)=>monitorar(evt)}>
       <Modal.Header closeButton>
-        <Modal.Title>Monitorar {caracteristica.nome}</Modal.Title>
+        <Modal.Title>Monitorar {caracteristica?.nome}</Modal.Title>
       </Modal.Header>
 
       <Modal.Body>
@@ -172,36 +174,36 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
           />
         </StandardInput>
 
-        {tarefa?.contexto?.entidadesId?.map((entidadeId, i) => (
-        <StandardCard
-          key={entidadeId}
-          header={catalogMap[tarefa.contexto.tipoEntidadeId].find((ent) => ent.id===entidadeId).nome ?? entidadeId}
-          headerRight={
-              <Form.Check
-                type="switch"
-                label="Atualizar"
-                className="mb-0"
-                checked={!!form[entidadeId]?.[caracteristica.id]?.monitorar}
-                onChange={(e) => setForm({...form, [entidadeId]:
-                  {...form[entidadeId], [caracteristica.id]: {
-                    ...(form[entidadeId]?.[caracteristica.id] ?? {}),
-                    monitorar: e.target.checked
-                  }}}
-                )}
-              />
-          }
-        >
+        {data?.contexto?.entidadesId?.map((entidadeId, i) => (
+          <StandardCard
+            key={entidadeId}
+            header={tipoEntidadeId && entityMap?.[tipoEntidadeId] instanceof Map ? (entityMap?.[tipoEntidadeId]).get(entidadeId).nome : "-"}
+            headerRight={
+                <Form.Check
+                  type="switch"
+                  label="Atualizar"
+                  className="mb-0"
+                  checked={!!form[entidadeId]?.[caracteristica?.id]?.monitorar}
+                  onChange={(e) => setForm({...form, [entidadeId]:
+                    {...form[entidadeId], [caracteristica?.id]: {
+                      ...(form[entidadeId]?.[caracteristica?.id] ?? {}),
+                      monitorar: e.target.checked
+                    }}}
+                  )}
+                />
+            }
+          >
           <StandardInput
             label="Valor"
             unidadeWidth="80px"
-            unidade={loading ? "Carregando..."
-            : caracteristica.unidade ?? "Valor"}
+            unidade={reading ? "Carregando..."
+            : caracteristica?.unidade ?? "Valor"}
           >
             <Form.Control
               type="number"
-              min={caracteristica.min ?? 0}
-              max={caracteristica.max ?? 1024}
-              value={form[entidadeId]?.[caracteristica.id]?.valor ?? ""}
+              min={caracteristica?.min ?? 0}
+              max={caracteristica?.max ?? 1024}
+              value={form[entidadeId]?.[caracteristica?.id]?.valor ?? ""}
               onChange={(e) => setForm({...form, [entidadeId]:
                 {...form[entidadeId], [caracteristica.id]: {
                   ...(form[entidadeId]?.[caracteristica.id] ?? {}),
@@ -219,7 +221,7 @@ export const MonitorarModal = ({show, tarefa, onClose, caracteristicas, canteiro
               type="number"
               min="0"
               max="100"
-              value={form[entidadeId]?.[caracteristica.id]?.confianca ?? ""}
+              value={form[entidadeId]?.[caracteristica?.id]?.confianca ?? ""}
               onChange={(e) => setForm({...form, [entidadeId]:
                 {...form[entidadeId], [caracteristica.id]: {
                   ...(form[entidadeId]?.[caracteristica.id] ?? {}),

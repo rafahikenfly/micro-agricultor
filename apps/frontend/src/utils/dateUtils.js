@@ -35,6 +35,7 @@ export const ISOToReadableString = (ISOString) => {
 }
 
 export const unixToReadableString = (unixMs) => {
+  if (!unixMs) return null;
   const date = new Date(unixMs);
 
   const weekday = new Intl.DateTimeFormat("pt-BR", {
@@ -88,7 +89,7 @@ export function groupByDay(list = []) {
   const groups = {};
 
   for (const item of list) {
-    const date = new Date(item.contexto?.timestamp);
+    const date = new Date(item.contexto?.timestamp || item.timestamp || item.planejamento.vencimento);
 
     // chave estável (boa pra ordenar)
     const key = date.toISOString().slice(0, 10); // YYYY-MM-DD
@@ -111,7 +112,26 @@ export function groupByDay(list = []) {
       label: value.label,
       items: value.items.sort(
         (a, b) =>
-          b.contexto.timestamp - a.contexto.timestamp // ordenar dentro do dia
+          (b.contexto?.timestamp || b.timestamp || b.planejamento.vencimento) - (a.contexto?.timestamp || a.timestamp || a.planejamento.vencimento) // ordenar dentro do dia
       ),
     }));
+}
+
+export function inicioDoDia(unix) {
+  const d = new Date(unix);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
+
+export function mesmaData(a, b) {
+  const da = new Date(a);
+  return (
+    da.getFullYear() === b.getFullYear() &&
+    da.getMonth() === b.getMonth() &&
+    da.getDate() === b.getDate()
+  );
+}
+
+export function adicionarDias(unix, days) {
+  return unix + days * 24 * 60 * 60 * 1000;
 }

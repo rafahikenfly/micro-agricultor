@@ -62,7 +62,13 @@ export const estadosPlantaService = createCRUDService (firebaseAdapter, {
 });
 
 export const estagiosEspecieService = createCRUDService (firebaseAdapter, {
-  collection: "estagios_especie",
+  collection: "estagios_planta", //TODO: ARRUMAR CHAVE DO DATABASE
+  softDelete: true,
+  useArchive: true,
+});
+
+export const tarefasService = createCRUDService (firebaseAdapter, {
+  collection: "tarefas",
   softDelete: true,
   useArchive: true,
 });
@@ -74,7 +80,13 @@ export const usuariosService = createCRUDService (firebaseAdapter, {
 });
 
 export const categoriasEspecieService = createCRUDService (firebaseAdapter, {
-  collection: "categorias_especies",
+  collection: "categorias_especies", //TODO: ARRUMAR CHAVE DO DATABASE
+  softDelete: true,
+  useArchive: true,
+});
+
+export const necessidadesService = createCRUDService (firebaseAdapter, {
+  collection: "necessidades",
   softDelete: true,
   useArchive: true,
 });

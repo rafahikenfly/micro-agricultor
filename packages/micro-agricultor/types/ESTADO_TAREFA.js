@@ -1,13 +1,6 @@
-export const ESTADO_TAREFA_TYPES = {
-    PENDING: "PENDING",
-    PROCESSING: "PROCESSING",
-    ERROR: "ERROR",
-    DONE: "DONE",
-}
-
 export const ESTADO_TAREFA = {
-    [ESTADO_TAREFA_TYPES.PENDING]: {id: ESTADO_TAREFA_TYPES.PENDING, nome: "Pendente"},
-    [ESTADO_TAREFA_TYPES.PROCESSING]: {id: ESTADO_TAREFA_TYPES.PROCESSING, nome: "Processando"},
-    [ESTADO_TAREFA_TYPES.ERROR]: {id: ESTADO_TAREFA_TYPES.ERROR, nome: "Erro"},
-    [ESTADO_TAREFA_TYPES.DONE]: {id: ESTADO_TAREFA_TYPES.DONE, nome: "Feito"},
+    PENDENTE: {id: "PENDENTE", nome: "Pendente"},
+    PROCESSANDO: {id: "PROCESSANDO", nome: "Processando"},
+    ERRO: {id: "ERRO", nome: "Erro"},
+    FEITO: {id: "FEITO", nome: "Feito"},
 }

@@ -73,14 +73,6 @@ export const catalogosService = {
     return cache.cvModelos.filter(item => item[filter.field] === filter.value);    
   },
 
-  async getTarefas(filter = null) {
-    if (!cache.tarefas) {
-      cache.tarefas = await oldFetchCollection("tarefas");
-    }
-    if (!filter) return cache.tarefas;
-    return cache.tarefas.filter(item => item[filter.field] === filter.value);    
-  },
-
   clearCache(key) {
     if (!key) {
       cache = {};

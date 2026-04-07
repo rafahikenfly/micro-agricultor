@@ -1,7 +1,8 @@
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
-import { EVENTO_TYPES } from "../types/EVENTO.js";
+import { ENTIDADE } from "../types/ENTITY_TYPES.js";
+import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { REASON_TYPES } from "../types/REASON_TYPES.js";
-import { desenharEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
+import { RECORRENCIA } from "../types/RECORRENCIA.js";
+import { manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -125,13 +126,13 @@ export function redimensionarCanteiro({entidade, dimensao, posicao}) {
 // REGRAS DE INFORMAÇÃO DE CANTEIRO
 // =====
 // ** UNDER REVIEW **
-export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedades}) => {
+export const getCaracteristicasRelevantesCanteiro = ({plantas, mapaVariedades}) => {
   //const caracteristicasSet = new Set();
   const caracteristicasRelevantes = {};
 
   // para cada planta
   plantas.forEach(planta => {
-    const variedade = catalogoVariedades.find((v) => v.id === planta.variedadeId);
+    const variedade = mapaVariedades.get(planta.variedadeId);
     if (!variedade || !Array.isArray(variedade.ciclo)) return;
 
     // para cada fase do ciclo da variedade
@@ -193,19 +194,18 @@ export const getCaracteristicasRelevantesCanteiro = ({plantas, catalogoVariedade
  * @returns [ {tipoEntidadeId, alvos, caracteristicaId, motivo} ]
  */
 // ** UNDER REVIEW **
-export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
+export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
   const pendencias = [];
 
   const estadoAtual = canteiro?.estadoAtual || {};
-
-  Object.entries(caracteristicasMap).forEach(([caracteristicaId, faixaIdeal]) => {
+  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
     const caracteristica = estadoAtual[caracteristicaId];
 
     // Valor Desconhecido
     if (!caracteristica || typeof caracteristica.valor !== "number") {
       pendencias.push({
-        tipoEventoId: EVENTO_TYPES.MONITOR,
-        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.NO_VALUE
       });
@@ -215,11 +215,11 @@ export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
     // Valor Não-Confiável
     if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 30) { //TODO: vir de alguma configuracao
       pendencias.push({
-        tipoEventoId: EVENTO_TYPES.MONITOR,
-        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
-        caracteristicaId: caracteristicaId,
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.canteiro.id,
+        caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confiancaAtual: caracteristica.confianca ?? null
+        confianca: caracteristica.confianca
       });
       return;
     }
@@ -227,11 +227,11 @@ export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
     // Valor Abaixo do ideal
     if (caracteristica.valor < faixaIdeal.min) {
       pendencias.push({
-        tipoEventoId: EVENTO_TYPES.HANDLE,
-        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
-        caracteristicaId: caracteristicaId,
+        tipoEventoId: EVENTO.MANEJO.id,
+        tipoEntidadeId: ENTIDADE.canteiro.id,
+        caracteristicaId,
         motivo: REASON_TYPES.LOWER_BOUND,
-        confiancaAtual: caracteristica.confianca ?? null
+        valor: caracteristica.valor
       });
       return;
     }
@@ -239,91 +239,108 @@ export function getPendenciasCanteiro({canteiro, caracteristicasMap}) {
     // Valor Acima do ideal
     if (caracteristica.valor > faixaIdeal.max) {
       pendencias.push({
-        tipoEventoId: EVENTO_TYPES.HANDLE,
-        tipoEntidadeId: ENTITY_TYPES.CANTEIRO,
-        caracteristicaId: caracteristicaId,
+        tipoEventoId: EVENTO.MANEJO.id,
+        tipoEntidadeId: ENTIDADE.canteiro.id,
+        caracteristicaId,
         motivo: REASON_TYPES.UPPER_BOUND,
-        confiancaAtual: caracteristica.confianca ?? null
+        valor: caracteristica.valor
       });
       return;
     }
   });
+  
 
   return pendencias;
 }
 // ** UNDER REVIEW **
-export const getNecessidadesCanteiro = ({canteiro, plantas, timestamp, mapaTarefas, mapaNecessidades, catalogoVariedades, caracteristicasMap}) => {
+export const getNecessidadesCanteiro = ({
+  canteiro,
+  plantas,
+  timestamp,
+  contexto, // {mapaTarefas}
+  mapaNecessidades,
+  mapaVariedades,
+  mapaCaracteristicas }) => {
   const entidadeId = canteiro.id
+  const entidadeNome = canteiro.nome
   
   // Obtem as pendências (necessidades candidatas)
   const plantasArr = plantas.filter((p)=> p.canteiroId === entidadeId)
-  const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, catalogoVariedades})
-  
-  // TODO: AGORA TENHO UM PROBLEMA AQUI. NEM TODAS AS PENDENCIAS AQUI SÃO DE MONITORAMENTO
-  // DEVO FILTRAR POR LOW_CONFIDENCE E POR NO_VALUE? OU DEVO DEIXAR NO CADASTRO DO MOTIVO O
-  // TIPO DE EVENTO ASSOCIADO?
-  const pendencias = getPendenciasCanteiro({canteiro, arrCaracteristicaIds});
+  const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, mapaVariedades})
+  const pendencias = getPendenciasCanteiro({canteiro, mapaCaracteristicas: arrCaracteristicaIds});
   console.log(`${pendencias.length} pendências para ${entidadeId}`);
-
   const necessidades = [];
-  
-  // Verifica cada pendência se já está ativa
+
+  // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
+  // Verifica cada pendência, para saber se a necessidade já está ativa
+  // As pendências com necessidade ativa não geram tarefas
   for (const pendencia of pendencias) {
     const caracteristicaId = pendencia.caracteristicaId
-    const necessidadeId = getNecessidadeKey({entidadeId, caracteristicaId, tipoEventoId: pendencia.tipoEventoId})
-    if (!mapaNecessidades?.[necessidadeId]?.ativo) {
-      // Se não está ativa, monta contexto
-      const caracteristica = caracteristicasMap.get(caracteristicaId);
-      const contexto = {
-        // por que o motivo da pendência não veio pra cá? aí é ...pendencia
-        tipoEventoId: pendencia.tipoEventoId,
-        tipoEntidadeId: pendencia.tipoEntidadeId,
-        caracteristicaId: pendencia.caracteristicaId,
-        entidadesId: [entidadeId],
-      }
+    const necessidadeId = getNecessidadeKey({
+      entidadeId,
+      caracteristicaId,
+      tipoEventoId: pendencia.tipoEventoId
+    });
+    const ativa = mapaNecessidades.get(necessidadeId)?.ativo;
+    if (ativa) continue;
 
-      // salva no objeto de novas tarefas uma nova tarefa (se não existe a característica já)
-      // ou só adiciona o entidadeId e o nome.
-      let acao = ""
-      if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
-      if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
-      if (!mapaTarefas[caracteristicaId]) {
+    // Se houver contexto, atualiza o mapa de tarefas do contexto
+    // Se o contexto já tiver tarefa para a característica, adiciona a entidade
+    // se não tiver tarefa para a caractertística, cria a tarefa
+    if (contexto?.mapaTarefas) {
+      const tarefa = contexto.mapaTarefas[caracteristicaId];
+      if (tarefa) {
+        if (!tarefa.contexto.entidadesId.includes(entidadeId)) {
+          tarefa.descricao += `, ${entidadeNome}`;
+          tarefa.contexto.entidadesId.push(entidadeId);
+        }
+      }
+      else {
+        // Monta contexto da tarefa
+        const caracteristica = mapaCaracteristicas.get(caracteristicaId);
+        const contextoTarefa = {
+         // TODO: por que o motivo da pendência não veio pra cá?
+          tipoEventoId: pendencia.tipoEventoId,
+          tipoEntidadeId: pendencia.tipoEntidadeId,
+          caracteristicaId: pendencia.caracteristicaId,
+          entidadesId: [entidadeId],
+        };
+        // Monta dados da tarefa
+        let acao = ""
+        if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
+        if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
         const dados = {
           nome: `${acao} ${caracteristica.nome}`,
-          descricao: `${caracteristica.descricao} Canteiros: ${canteiro.nome}`
+          descricao: `${caracteristica.descricao} Canteiros: ${entidadeNome}`
         }
-        mapaTarefas[caracteristicaId] = criarTarefa({
-          contexto,
+        contexto.mapaTarefas[caracteristicaId] = criarTarefa({
+          contexto: contextoTarefa,
           planejamento: {
-            recorrencia: RECURRING_TYPES.NONE,
+            recorrencia: RECORRENCIA.NENHUMA.id,
             vencimento: timestamp,
             prioridade: 1
           },
           dados,
         })
       }
-      else {
-        mapaTarefas[caracteristicaId].descricao += `, ${canteiro.nome}`
-        mapaTarefas[caracteristicaId].contexto.entidadesId.push(entidadeId)
-      }
-
-      // Monta a necessidade //TODO criarNecessidade em necessidades.rules
-      const necessidadeDesvinculada = {
-        ativo: true,  
-        entidadeId,
-        caracteristicaId,
-        tipoEventoId: pendencia.tipoEventoId,
-        estadoAtual: pendencia.estadoAtual ?? {},
-        motivo: pendencia.motivo,
-      }
-
-      //Armazena no returnArr
-      necessidades.push(necessidadeDesvinculada)
-
-      //Atualiza localmente
-      mapaNecessidades[necessidadeId] = necessidadeDesvinculada;
-
     }
-  }
+
+    // Monta a necessidade //TODO criarNecessidade em necessidades.rules
+    const necessidadeDesvinculada = {
+      ativo: true,  
+      entidadeId,
+      caracteristicaId,
+      tipoEventoId: pendencia.tipoEventoId,
+      estadoAtual: pendencia.estadoAtual ?? {},
+      motivo: pendencia.motivo,
+    }
+
+    //Armazena no returnArr
+    necessidades.push(necessidadeDesvinculada)
+
+    //Atualiza o mapa local para evitar duplicação
+    mapaNecessidades.set(necessidadeId, necessidadeDesvinculada);
+  };
+
   return necessidades
 }

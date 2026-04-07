@@ -1,4 +1,4 @@
-import { EVENTO_TYPES } from "@shared/types/EVENTO_TYPES"
+import { EVENTO, EVENTO_TYPES } from "micro-agricultor"
 import { useToast } from "../../../services/toast/toastProvider";
 
 export function createCalendarioTarefaHandler(engine, tarefa) {
@@ -9,15 +9,20 @@ export function createCalendarioTarefaHandler(engine, tarefa) {
       engine.selecionarItem({ id: tarefa.id, type: "tarefa" })
     },
     onDoubleClick(e) {
-      engine.setModalData(tarefa);
-      engine.setShowModalTarefa(true);
+      engine.setShowModal({
+        tipo: tarefa.contexto.tipoEventoId,
+        data: tarefa,
+      });
     },
     onExecutar(e) {
-      if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.MONITOR) {
-        engine.setModalData(tarefa)
+      if (tarefa.contexto.tipoEventoId === EVENTO.MONITORAMENTO.id) {
+        engine.setModalData({
+          tipo: tarefa.contexto.tipoEventoId,
+          data:tarefa
+        })
         engine.setShowModalMonitorar(true)
       }
-      if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.HANDLE) {
+      if (tarefa.contexto.tipoEventoId === EVENTO.MANEJO.id) {
         engine.setModalData(tarefa)
         engine.setShowModalManejar(true)
       }

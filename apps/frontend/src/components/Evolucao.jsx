@@ -4,7 +4,7 @@ import ApexCharts from "react-apexcharts";
 import Loading from "./Loading";
 import { useCache } from "../hooks/useCache";
 
-const Historico = ({ entidades = [], caracteristicas = [] }) => {
+const Evolucao = ({ entidades = [], caracteristicas = [] }) => {
   const {cacheEventos, cacheMutacoes, reading } = useCache(["eventos", "mutacoes"])
 
   // ========== MONTAR SERIES ==========
@@ -183,4 +183,4 @@ const options = {
   );
 };
 
-export default Historico;
+export default Evolucao;
