@@ -18,16 +18,16 @@ import mqtt from "mqtt";
  */
 /** @type {mensagemMqtt} */
 const payload = {
-  ver: 1,
-  deviceId: "sensor-123",
+  v: 1,
+  id: "sensor-123",
   msgId: 42,
   uptime: 12345678,
   ts: 1710000000,
   rssi: -70,
-  leituras: [
-    { idx: 0, val: 67 },
-    { idx: 1, val: 22.5 },
-    { idx: 2, val: 1 }
+  vals: [
+    { i: 0, v: 67 },
+    { i: 1, v: 22.5 },
+    { i: 2, v: 1 }
   ]
 };
 
