@@ -7,7 +7,7 @@ import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
 
 import { NoUser } from "../../../components/common/NoUser";
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 
 import ManejoModal from "./ManejoModal";
@@ -60,7 +60,7 @@ export default function ManejosCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {manejos}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

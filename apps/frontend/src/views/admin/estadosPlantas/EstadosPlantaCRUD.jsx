@@ -7,7 +7,7 @@ import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useToast } from "../../../services/toast/toastProvider";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -62,7 +62,7 @@ export default function EstadosPlantaCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {estados_planta}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

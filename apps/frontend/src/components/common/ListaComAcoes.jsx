@@ -6,14 +6,22 @@ import {
     Card
   } from "react-bootstrap";
   
-function ListaAcoes ({colunas, sort, dados, acoes,}) {
+function ListaComAcoes ({colunas, sort, dados, acoes,}) {
   /**
    * Renderiza uma lista a partir de um array de dados, com campos configuráveis e ações.
    * - Um campo marcado como boolean renderiza um badge conforme o valor sim/não.
    * - Um campo marcado como contar renderiza a contagem de uma coleção no campo de valor.
    * - Um campo com tagVariantList renderiza um badge com a cor definida na prop tagVariant.
    * - Um campo marcado como toogle (passando uma propriedade condicionante), renderiza um botão condicionado.
-   * @param colunas array de objetos do tipo: {rotulo: String, dataKey: String, rotulo?: String, boolean?: Boolean, toggle: string, tagVariantList: array}
+   * @param colunas array de objetos do tipo: {
+   *  rotulo: String,     rótulo da coluna
+   *  dataKey: String,    nome da chave de cada objeto do array que compõe a coluna
+   *  render?: function,  Função opcional, que recebe o dado como argumento, com o que deve ser renderizado.
+   *  boolean?: Boolean,    //TODO: Padronizar no render
+   *  toggle: string,       //TODO: Padronizar no render
+   *  tagVariantList: array //TODO: Padronizar no render
+   * }
+   * @param sort Boolean usar ou não o sort da lista
    * @param dados array com os dados a serem representados na lista
    * @param acoes array de objetos do tipo: {rotulo: String, funcao: function, variant?: String, toggle?: String, rotuloFalse?: String, funcaoFalse: function, variantFalse: String }
    */
@@ -46,15 +54,15 @@ function ListaAcoes ({colunas, sort, dados, acoes,}) {
 
 
   if (!Array.isArray(colunas)) {
-    console.error("ListaCRUD: colunas não é um array", colunas);
+    console.error("ListaComacoes: colunas não é um array", colunas);
     return null;
   }
   if (!Array.isArray(dados)) {
-    console.error("ListaCRUD: dados não é um array", dados);
+    console.error("ListaComacoes: dados não é um array", dados);
     return null;
   }
   if (!Array.isArray(acoes)) {
-    console.error("ListaCRUD: acoes não é um array", acoes);
+    console.error("ListaComacoes: acoes não é um array", acoes);
     return null;
   }
 
@@ -80,7 +88,7 @@ function ListaAcoes ({colunas, sort, dados, acoes,}) {
                 {colunas.map(col => (
                   <th key={col.dataKey} style={{ width: col.width }} onClick={() => sort ? handleOrdenar(col.dataKey) : null}
                   >
-                    {col.rotulo || col.dataKey}
+                    {col.rotulo || "-"}
                     {ordem.orderKey === col.dataKey && (
                       <span className="ms-1">
                         {ordem.direcao === "asc" ? "▲" : "▼"}
@@ -88,7 +96,7 @@ function ListaAcoes ({colunas, sort, dados, acoes,}) {
                     )}
                   </th>
                 ))}
-                <th>Ações</th>
+                <th> </th>
               </tr>
             </thead>
             <tbody>
@@ -126,6 +134,11 @@ function ListaAcoes ({colunas, sort, dados, acoes,}) {
                           </td>
                         )
                       }
+                      if(col.render) return (
+                        <td key = {`${col.dataKey}-${col_idx}`}>
+                          {col.render(dado[col.dataKey])}
+                        </td>
+                      )
                       return(
                         <td key = {col_idx}>{dado[col.dataKey]}</td>
                       )
@@ -166,4 +179,4 @@ function ListaAcoes ({colunas, sort, dados, acoes,}) {
     )
   }
 
-  export default ListaAcoes;
+  export default ListaComAcoes;

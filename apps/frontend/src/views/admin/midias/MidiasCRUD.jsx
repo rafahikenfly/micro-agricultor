@@ -3,7 +3,7 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { VARIANT_TYPES } from "micro-agricultor";
 
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -63,7 +63,7 @@ export default function MidiasCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {midias}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

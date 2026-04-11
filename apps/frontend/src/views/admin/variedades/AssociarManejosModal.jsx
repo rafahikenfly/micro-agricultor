@@ -3,7 +3,7 @@ import { Modal, Button, Form, InputGroup } from "react-bootstrap";
 
 import { renderOptions, handleSelectIdNome } from "../../../utils/formUtils";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 
 export default function AssociarManejosModal({
   show,
@@ -69,7 +69,7 @@ const excluirManejo = (dataManejo, idxManejo) => {
         </Form.Group>
 
         {/* Lista de ações */}
-        <ListaAcoes
+        <ListaComAcoes
           dados={form?.manejos || []}
           colunas={[
             { rotulo: "Manejo", dataKey: "manejoNome" },

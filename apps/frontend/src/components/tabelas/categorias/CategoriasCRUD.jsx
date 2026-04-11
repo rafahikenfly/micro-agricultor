@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { categoriasEspecieService } from "../../../services/crud/categoriasService";
 import CategoriaModal from "./CategoriaModal";
-import ListaAcoes from "../../common/ListaAcoes";
+import ListaComAcoes from "../../common/ListaComAcoes";
 import Loading from "../../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
@@ -70,7 +70,7 @@ export default function CategoriasCRUD() {
 
       <Row>
         <Col>
-          <ListaAcoes
+          <ListaComAcoes
             dados = {categorias}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

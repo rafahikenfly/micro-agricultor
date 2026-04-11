@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { estagiosPlantaService } from "../../../services/crud/estagiosPlantaService";
 import EstagiosEspecieModal from "./EstagiosEspecieModal";
-import ListaAcoes from "../../common/ListaAcoes";
+import ListaComAcoes from "../../common/ListaComAcoes";
 import Loading from "../../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
@@ -72,7 +72,7 @@ export default function EstagiosEspecieCRUD() {
 
       <Row>
         <Col>
-          <ListaAcoes
+          <ListaComAcoes
             dados = {estagios_especie}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

@@ -23,6 +23,7 @@ import { MapaVazio } from "../views/mapa/canvas/MapaVazio";
 import AppCalendario from "../views/AppCalendario";
 import { CalendarioVazio } from "../views/calendario/canvas/CalendarioVazio";
 import CalendarioCanvas from "../views/calendario/canvas/CalendarioCanvas";
+import DispositivosCRUD from "../views/admin/dispositivos/DispositivosCRUD";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -38,6 +39,7 @@ export default function Router() {
             <Route path="especies" element={<EspeciesCRUD />} />
             <Route path="variedades" element={<VariedadesCRUD />} />
             <Route path="manejos" element={<ManejosCRUD />} />
+            <Route path="dispositivos" element={<DispositivosCRUD />} />
             <Route path="caracteristicas" element={<CaracteristicasCRUD />} />
             <Route path="estados-canteiro" element={<EstadosCanteiroCRUD />} />
             <Route path="estados-planta" element={<EstadosPlantaCRUD />} />

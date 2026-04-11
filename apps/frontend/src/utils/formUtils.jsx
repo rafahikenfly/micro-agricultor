@@ -1,7 +1,7 @@
 import { Button, Card, Form, InputGroup, Row, Stack } from "react-bootstrap";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import { catalogosService } from "../services/catalogosService";
-import ListaAcoes from "../components/common/ListaAcoes";
+import ListaComAcoes from "../components/common/ListaComAcoes";
 import Loading from "../components/Loading";
 
 export const handleSelectIdNome = (e, {
@@ -176,6 +176,56 @@ export const StandardBadgeGroup = ({children}) => {
     </Stack>
   )
 }
+/**
+ * Componente padrão para manipulação de arrays em formulários.
+ * 
+ * Permite adicionar, remover e reordenar itens, além de exibir os dados
+ * em uma lista com ações customizáveis.
+ *
+ * @component
+ * 
+ * @param {Object} props - Propriedades do componente
+ * @param {Array<any>} props.form - Array de dados atual do formulário
+ * @param {Array<any>} [props.map] - Array alternativo para exibição (caso necessário mapear os dados)
+ * @param {string} [props.header="Novo item do array"] - Texto do cabeçalho do card
+ * @param {string} [props.headerButton="Adicionar"] - Texto do botão de adicionar
+ * @param {string} [props.headerVariant="success"] - Variante do botão (ex: success, primary, etc.)
+ * @param {any} props.headerData - Objeto padrão a ser adicionado ao array ao clicar em "Adicionar"
+ * @param {boolean} [props.headerDisabled] - Define se o botão de adicionar está desabilitado
+ * @param {Array<Object>} [props.colunas=[]] - Configuração das colunas da lista
+ * @param {Array<Object>} [props.acoes=[]] - Ações adicionais da lista
+ * @param {Function} props.setForm - Função para atualizar o estado do formulário
+ * @param {React.ReactNode} [props.children] - Conteúdo adicional exibido dentro do card
+ * 
+ * @returns {JSX.Element} Componente renderizado
+ * 
+ * @example
+ * <StandardArrayInput
+ *   form={items}
+ *   setForm={setItems}
+ *   headerData={{ nome: "", valor: 0 }}
+ *   colunas={[{ label: "Nome", field: "nome" }]}
+ * />
+ * 
+ * @description
+ * Ações padrão incluídas automaticamente:
+ * - ▲ Move o item para cima
+ * - ▼ Move o item para baixo
+ * - Excluir remove o item do array
+ * 
+ * @warning
+ * A função `remove` modifica diretamente o array original usando `splice`,
+ * o que pode causar problemas de imutabilidade no React. Idealmente, use uma cópia:
+ * 
+ * ```javascript
+ * const novoArray = form.filter((_, i) => i !== idx);
+ * setForm(novoArray);
+ * ```
+ * 
+ * @note
+ * A função `moveDown` contém uma possível inconsistência ao usar `efeitos.length`.
+ * O correto provavelmente seria `form.length`.
+ */
 export const StandardArrayInput = ({
   form,
   map,
@@ -229,7 +279,7 @@ export const StandardArrayInput = ({
           {headerButton}
         </Button>
       </StandardCard>
-      <ListaAcoes
+      <ListaComAcoes
         dados={map ?? form}
         sort={false}
         colunas={colunas}
@@ -266,7 +316,7 @@ export const StandardObjectInput = ({object, header, colunas = [], acoes = [], n
             Atualizar
           </Button>
       </InputGroup>
-      <ListaAcoes
+      <ListaComAcoes
         dados={Object.values(object)}
         colunas={colunas}
         acoes={[...acoes,

@@ -13,7 +13,7 @@ import ManejoEntradasTab from "./ManejoEntradas";
 export default function ManejoModal({ show, onSave, onClose, data = {}}) {
   // Controle de tab
   const [tab, setTab] = useState("dados");
-    const { cacheEstadosPlanta, cacheEstadosCanteiro, cacheCaracteristicas, reading } = useCache([
+  const { cacheEstadosPlanta, cacheEstadosCanteiro, cacheCaracteristicas, reading } = useCache([
     "estadosPlanta",
     "estadosCanteiro",
     "caracteristicas"

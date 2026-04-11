@@ -9,12 +9,12 @@ export const VARIANT_TYPES = {
     BLACK: "dark",
 }
 export const VARIANTE = {
-    [VARIANT_TYPES.DARKBLUE]: { id: "primary", nome: "Azul", tagVariant: "primary"},
-    [VARIANT_TYPES.GREY]: { id: "secondary", nome: "Cinza", tagVariant: "secondary"},
-    [VARIANT_TYPES.GREEN]: { id: "success", nome: "Verde", tagVariant: "success"},
-    [VARIANT_TYPES.RED]: { id: "danger", nome: "Vermelho", tagVariant: "danger"},
-    [VARIANT_TYPES.YELLOW]: { id: "warning", nome: "Amarelo", tagVariant: "warning"},
-    [VARIANT_TYPES.LIGHTBLUE]: { id: "info", nome: "Azul claro", tagVariant: "info"},
-    [VARIANT_TYPES.WHITE]: { id: "light", nome: "Branco", tagVariant: "light"},
-    [VARIANT_TYPES.BLACK]: { id: "dark", nome: "Preto", tagVariant: "dark"},
+    DARKBLUE: { id: "primary", nome: "Azul", tagVariant: "primary"},
+    GREY: { id: "secondary", nome: "Cinza", tagVariant: "secondary"},
+    GREEN: { id: "success", nome: "Verde", tagVariant: "success"},
+    RED: { id: "danger", nome: "Vermelho", tagVariant: "danger"},
+    YELLOW: { id: "warning", nome: "Amarelo", tagVariant: "warning"},
+    LIGHTBLUE: { id: "info", nome: "Azul claro", tagVariant: "info"},
+    WHITE: { id: "light", nome: "Branco", tagVariant: "light"},
+    BLACK: { id: "dark", nome: "Preto", tagVariant: "dark"},
 }

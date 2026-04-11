@@ -5,7 +5,7 @@ import { plantasService } from "../../../services/crud/plantasService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -67,7 +67,7 @@ export default function PlantasCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {plantas}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

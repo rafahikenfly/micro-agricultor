@@ -27,6 +27,7 @@ const caracteristicaPadrao = {
     longevidade: 10,
     resolucao: 100,
     aplicavel: {},
+    cumulatividade: 0,
 };
 
 export const validarEstado = (dataObj = {}) => {

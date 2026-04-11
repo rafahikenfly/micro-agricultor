@@ -90,3 +90,9 @@ export const necessidadesService = createCRUDService (firebaseAdapter, {
   softDelete: true,
   useArchive: true,
 });
+
+export const dispositivosService = createCRUDService (firebaseAdapter, {
+  collection: "dispositivos",
+  softDelete: true,
+  useArchive: true,
+});

@@ -5,7 +5,7 @@ import { variedadesService } from "../../../services/crud/variedadesService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -62,7 +62,7 @@ export default function VariedadesCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {variedades}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

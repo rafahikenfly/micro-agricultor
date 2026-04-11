@@ -1,27 +1,22 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { canteirosService } from "../../../services/crud/canteirosService";
+import { dispositivosService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { useCache } from "../../../hooks/useCache";
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
-import CanteiroModal from "./CanteiroModal";
+import DispositivoModal from "./DispositivoModal";
 
 
-export default function CanteirosCRUD() {
+export default function DispositivosCRUD() {
   const { user } = useAuth();
-  const { cacheEstadosCanteiro, reading } = useCache([
-    "estadosCanteiro"
-  ]);
-
   if (!user) return <NoUser />
 
-  const [canteiros, setCanteiros] = useState([]);
+  const [dispositivos, setDispositivos] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
@@ -33,8 +28,8 @@ export default function CanteirosCRUD() {
   useEffect(() => {
     setLoading(true);
 
-    const unsub = canteirosService.subscribe((data) => {
-      setCanteiros(data);
+    const unsub = dispositivosService.subscribe((data) => {
+      setDispositivos(data);
       setLoading(false); // só desliga quando os dados chegam
     });
 
@@ -43,9 +38,9 @@ export default function CanteirosCRUD() {
 
   /* ================= CRUD ================= */
   const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
-    crudService: canteirosService,
-    nomeEntidade: "canteiro",
-    masculino: true, // "o canteiro"
+    crudService: dispositivosService,
+    nomeEntidade: "dispositivo",
+    masculino: true, // "o dispositivo"
     user,
     editando,
     registroParaExcluir,
@@ -58,7 +53,7 @@ export default function CanteirosCRUD() {
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button variant="outline-success" onClick={criar}>+ Novo canteiro</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo Dispositivo</Button>
         </Col>
       </Row>
 
@@ -66,29 +61,28 @@ export default function CanteirosCRUD() {
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
-            dados = {canteiros}
+            dados = {dispositivos}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: cacheEstadosCanteiro?.map ?? {},},
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true},
+              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
               {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
                 funcao: desarquivar,
-                funcaoFalse: arquivar,
                 variant: "secondary",
+                rotuloFalse: "Arquivar",
+                funcaoFalse: arquivar,
+                variantFalse: "dark"
               },
             ]}
           />
         </Col>
       </Row>
 
-      <CanteiroModal
+      <DispositivoModal
         key={editando?.id ?? `novo`}
         show={showModal}
         onClose={() => {
