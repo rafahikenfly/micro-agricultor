@@ -71,7 +71,8 @@ void checkWifi() {
     Serial.println(WiFi.localIP());
 
     client.disconnect();   // força reset MQTT
-    wifiClient.stop();     // mata socket TCP
+    delay(50);
+//    wifiClient.stop();     // mata socket TCP
   
     ledBlue();
   } else {
@@ -100,22 +101,27 @@ void setup_wifi() {
 }
 
 void setup_tcp() {
-  ledYellow();
-  Serial.println("Testando TCP...");
-  
+  Serial.println("Testando TCP real...");
+
   if (wifiClient.connect(config.mqtt_server, config.mqtt_port)) {
-    Serial.println("TCP conectado!");
-    delay(500);
-    ledBlue();
+    Serial.println("TCP abriu");
+
+    wifiClient.print("TESTE\r\n"); // força tráfego real
+    delay(100);
+
+    if (wifiClient.connected()) {
+      Serial.println("TCP válido");
+    } else {
+      Serial.println("TCP falso positivo");
+    }
+
     wifiClient.stop();
   } else {
     Serial.println("TCP falhou");
-    iniciarBlink(ledYellow, 2000, 200);
   }
-  
+
   client.setServer(config.mqtt_server, config.mqtt_port);
-  client.setKeepAlive(120);
-  client.setSocketTimeout(10);
+  client.setBufferSize(256);
 }
 
 int lerAnalogico(int pino) {
@@ -277,16 +283,21 @@ void loop() {
       WiFi.RSSI()
     );
 
-    if (!ensureMQTT()) return;
+    if (!client.connected()) {
+      Serial.println("MQTT caiu antes do publish");
+      return;
+    }
     
     if (client.publish("micro-agricultor/flowerBox", payload)) {
       Serial.print("MQTT ok: ");
       iniciarBlink(ledGreen, 2000, 200);
     } else {
-      Serial.print("MQTT falhou: ");
-      Serial.println(client.state());
-      Serial.print("MQTT connected? ");
-      Serial.println(client.connected());
+      Serial.print("state=");
+      Serial.print(client.state());
+      Serial.print(" connected=");
+      Serial.print(client.connected());
+      Serial.print("MQTT server=");
+      Serial.println(config.mqtt_server);
       iniciarBlink(ledYellow, 2000, 200);
     }
 

@@ -1,9 +1,9 @@
 import { currentStateInspector } from "../scheduler/currentStateInspector.js";
-import { dailyEffect } from "../scheduler/dailyEvolution.js";
+import { dailyEvolution } from "../scheduler/dailyEvolution.js";
 import { mediaStateInspector } from "../scheduler/mediaStateInspector.js";
 
 export const jobRegistry = {
-  dailyEffect,
+  dailyEvolution,
   currentStateInspector,
   mediaStateInspector,
 };

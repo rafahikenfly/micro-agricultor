@@ -11,6 +11,7 @@ void saveConfig() {
   EEPROM.put(0, config);
   Serial.println("Config salva no EEPROM");
 }
+
 String readLine() {
 
   while (!Serial.available()) {

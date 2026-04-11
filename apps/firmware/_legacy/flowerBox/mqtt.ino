@@ -61,10 +61,15 @@ bool ensureMQTT() {
 
   Serial.print("MQTT conectando...");
 
-  String clientId = "flowerBox_" + String(random(10000));
+  const char* clientId = "flowerBox";
 
-  if (client.connect(clientId.c_str())) {
-    Serial.println("OK");
+  if (client.connect(clientId)) {
+    delay(200);
+    if (!client.connected()) {
+      Serial.println("Conectou e caiu (Arduino clássico)");
+      return false;
+    }
+
     return true;
   } else {
     Serial.print("falhou, state=");

@@ -26,6 +26,7 @@ const caracteristicaPadrao = {
     unidade: "",
     longevidade: 10,
     resolucao: 100,
+    cumulatividade: 0,
     aplicavel: {},
 };
 
