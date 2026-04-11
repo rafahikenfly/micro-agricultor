@@ -159,6 +159,19 @@ export default function CaracteristicaModal({ show, onSave, onClose, data = {}, 
               />
               </StandardInput>
               </StandardCard>
+              <StandardCard header="Sensoriamento">
+                <StandardInput
+                  label="Cumulatividade de dados"
+                  unidade="minutos"
+                  info="Tempo de acumulação da informação de sensores."
+                >
+                  <Form.Control
+                    type="number"
+                    value={form.cumulatividade/60000}
+                    onChange={e => setForm({...form, cumulatividade: Number(e.target.value)*60000})}
+                  />
+                </StandardInput>
+              </StandardCard>
             </Tab>
             <Tab eventKey="configuracoes" title="Outras configurações">
               <StandardInput label="Resolução">
