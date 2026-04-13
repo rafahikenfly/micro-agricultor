@@ -12,7 +12,7 @@ export function startMQTT() {
     log("MQTT conectado");
 
     // Subscribe nos tópicos
-    client.subscribe("micro-agricultor/#", (err) => {
+    client.subscribe("dispositivos/#", (err) => {
       if (err) {
         log("Erro ao se inscrever nos tópicos MQTT", err);
       } else {

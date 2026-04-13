@@ -1,4 +1,4 @@
-import { mergeComValidacao } from "./rulesUtils";
+import { mergeComValidacao } from "./rulesUtils.js";
 
 const dispositivoPadrao = {
     nome: "Novo Dispositivo",
