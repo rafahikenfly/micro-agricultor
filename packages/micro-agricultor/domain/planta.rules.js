@@ -363,7 +363,6 @@ export const getNecessidadesPlanta = ({
   // Obtem as pendências (necessidades candidatas)
   const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, mapaVariedades})
   const pendencias = getPendenciasPlanta({planta, arrCaracteristicaIds});
-  console.log(`${pendencias.length} pendências para ${planta.id}`);
   const necessidades = [];
   
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro

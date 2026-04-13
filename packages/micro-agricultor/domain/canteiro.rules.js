@@ -268,7 +268,6 @@ export const getNecessidadesCanteiro = ({
   const plantasArr = plantas.filter((p)=> p.canteiroId === entidadeId)
   const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, mapaVariedades})
   const pendencias = getPendenciasCanteiro({canteiro, mapaCaracteristicas: arrCaracteristicaIds});
-  console.log(`${pendencias.length} pendências para ${entidadeId}`);
   const necessidades = [];
 
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
