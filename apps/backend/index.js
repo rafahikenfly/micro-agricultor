@@ -8,7 +8,7 @@ startMQTT();
 
 // Scheduler
 log("Iniciando tarefas agendadas...");
-dailyMaintenance(); //TODO: lock para evitar duplicação
+dailyMaintenance();
 hourlyMaintenance();
 
 log("Backend online 🚀");
