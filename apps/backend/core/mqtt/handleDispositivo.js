@@ -116,6 +116,7 @@ export async function handleDispositivo(topic, message) {
         }
       });
     }
+    log(`[handleDispositivo]: Mensagem processada.`);
   } catch (err) {
     log(`[handleDispositivo]: Erro processando o payload ${message.toString()}: `, err);
     return;

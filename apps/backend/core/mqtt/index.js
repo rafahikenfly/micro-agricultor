@@ -23,7 +23,7 @@ export function startMQTT() {
   });
 
   client.on("message", (topic, message) => {
-    console.log(`Recebida mensagem ${message.toString()} em ${topic}`)
+    log(`Recebida mensagem ${message.toString()} em ${topic}`)
     handleMessage(topic, message);
   });
 
