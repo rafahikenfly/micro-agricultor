@@ -2,19 +2,16 @@
 
 import cron from "node-cron";
 import { dailyEvolution } from "./dailyEvolution.js";
-import { currentStateInspector } from "./currentStateInspector.js";
-import { mediaStateInspector } from "./mediaStateInspector.js";
 import { runJob } from "../pipeline/runJob.js";
 import { log } from "node:console";
 
 
 const dailyTasks = [
-  { name: "mediaStateInspect",  fn: mediaStateInspector },
+  { name: "mediaStateInspect", },
 ];
 
 const hourlyTasks = [
-  { name: "currentStateInspect", fn: currentStateInspector },
-  { name: "mediaStateInspect", fn: mediaStateInspector },
+  { name: "currentStateInspector" },
 ];
 
 async function runTasks(tasks, label) {

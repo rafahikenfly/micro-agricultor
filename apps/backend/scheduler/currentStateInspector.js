@@ -1,8 +1,9 @@
 import { getNecessidadeKey, getNecessidadesCanteiro, getNecessidadesPlanta, ORIGEM } from "micro-agricultor";
 import { batchService, tarefasService, necessidadesService, cacheService } from "../services/index.js";
+import { log } from "../core/logger/index.js";
 
 export async function currentStateInspector() {
-  console.log("Iniciando inspeção de estados atuais...");
+  log("[currentStateInspector]: Iniciando inspeção de estados atuais...");
   const user = { uid: "currentStateInspector", nome: ORIGEM.BACKEND.id };
   const timestamp = Date.now();
 
