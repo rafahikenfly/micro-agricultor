@@ -42,9 +42,12 @@ export const getNecessidadeKey = ({ entidadeId, caracteristicaId, tipoEventoId }
 }
 
 export function atenderNecessidade({necessidade, agente, timestamp}) {
-  if (!necessidade) return null;
-  if (!necessidade.ativo) return null;
-
+  if (!necessidade) throw new Error ("atenderNecessidade: necessidade obrigatório para atender");
+  if (!agente) throw new Error ("atenderNecessidade: agente obrigatório para atender");
+  if (!timestamp) throw new Error ("atenderNecessidade: timestamp obrigatório para atender");
+  
+  if (!necessidade.ativo) return necessidade;
+  
   return {
     ...necessidade,
     ativo: false,

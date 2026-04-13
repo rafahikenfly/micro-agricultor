@@ -1,5 +1,6 @@
 import mqtt from "mqtt";
 import { log } from "../logger/index.js";
+import { handleDispositivo } from "./handleDispositivo.js";
 
 const BROKER_URL = "mqtt://localhost:1883"; // ou teu broker
 
@@ -16,18 +17,14 @@ export function startMQTT() {
       if (err) {
         log("Erro ao se inscrever nos tópicos MQTT", err);
       } else {
-        log("Inscrito nos tópicos MQTT");
+        log("Inscrito no tópico MQTT dispositivos/#");
       }
     });
   });
 
   client.on("message", (topic, message) => {
-    const msg = message.toString();
-
-    log(`MQTT mensagem recebida: ${topic} -> ${msg}`);
-
-    // TODO: roteamento por tópico
-    handleMessage(topic, msg);
+    console.log(`Recebida mensagem ${message.toString()} em ${topic}`)
+    handleMessage(topic, message);
   });
 
   client.on("error", (err) => {
@@ -40,8 +37,9 @@ export function startMQTT() {
 }
 
 function handleMessage(topic, message) {
-  if (topic === "micro-agricultor/irrigacao") {
-    log("Comando de irrigação recebido 💧");
-    // aqui você conecta com sua lógica
+  if (topic.startsWith("dispositivos/")) {
+    handleDispositivo(topic, message);
+    return;
   }
+  log(`MQTT ${message} no tópico ${topic} ignorada`)
 }

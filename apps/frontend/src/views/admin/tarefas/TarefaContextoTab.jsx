@@ -2,8 +2,11 @@ import { Form } from "react-bootstrap";
 import { REASON, } from "micro-agricultor";
 
 import { handleSelectIdNome, renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
 
-export default function TarefaContextoTab({ formContexto, setFormContexto, catalogoCaracteristicas, loading }) {
+export default function TarefaContextoTab({ formContexto, setFormContexto }) {
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
+
   return (
     <>
       <StandardCard header="Entidades">
@@ -22,15 +25,15 @@ export default function TarefaContextoTab({ formContexto, setFormContexto, catal
           <Form.Select
             value={formContexto.caracteristicaId}
             onChange={(e)=>handleSelectIdNome(e,{
-                list: catalogoCaracteristicas.list,
+                list: cacheCaracteristicas?.list,
                 setForm: setFormContexto,
                 fieldId: "caracteristicaId",
                 fieldNome: "caracteristicaNome",
             })}
           >
             {renderOptions({
-                list: catalogoCaracteristicas.list, //TODO: FILTER POR CARACTERISTICA APLICAVEL
-                loading,
+                list: cacheCaracteristicas?.list, //TODO: FILTER POR CARACTERISTICA APLICAVEL
+                loading: reading,
                 placeholder: "Selecione a característica"
             })}
           </Form.Select>

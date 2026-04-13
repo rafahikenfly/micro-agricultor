@@ -3,9 +3,6 @@ import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
 import { validarVariedade } from "micro-agricultor";
 
-import { catalogosService } from "../../../services/catalogosService";
-import { useToast } from "../../../services/toast/toastProvider";
-
 import { handleSaveForm } from "../../../utils/formUtils";
 
 import AparenciaTab from "../../../components/common/AparenciaTab";

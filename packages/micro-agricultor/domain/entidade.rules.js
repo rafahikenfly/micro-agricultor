@@ -1,5 +1,5 @@
 import { EFEITO, } from "../types/index.js";
-import { clamp } from "./rulesUtils.js";
+import { calcularConfiancaPorTempoTotal, clamp, estimarDiasDaInformacao } from "./rulesUtils.js";
 
 /**
  * Regra de evolução das características das entidades, aplicando obsolescência
@@ -107,7 +107,7 @@ export function evoluirEntidade({entidade, mapaCaracteristicas, eventoId, timest
   // Atualiza características alteradas
   entidadeEvoluida.estadoAtual = {...entidadeEvoluida.estadoAtual, ...after}
 
-  return {entidadeEvoluida, before, after};
+  return {entidadeEvoluida, before, after, operacao: "UPDATE"};
 }
 
 /**
@@ -150,7 +150,7 @@ export function monitorarEntidade({entidade, medidas, eventoId, timestamp}) {
   });
   // Atualiza características alteradas
   entidadeMonitorada.estadoAtual = {...entidadeMonitorada.estadoAtual, ...after}
-  return {entidade: entidadeMonitorada, before, after};
+  return {entidade: entidadeMonitorada, before, after, operacao: "UPDATE"};
 }
 
 /**
@@ -256,7 +256,7 @@ export const manejarEntidade = ({entidade, manejo, eventoId, timestamp}) => {
     }
 }
 
-  return { entidade: entidadeManejada, before, after }
+  return { entidade: entidadeManejada, before, after, operacao: "UPDATE" }
 }
 
 /**
@@ -300,7 +300,7 @@ export function movimentarEntidade ({entidade, posicao}) {
   }
 
   entidadeMovimentada.posicao = {...posicao}
-  return { entidade: entidadeMovimentada, before, after }
+  return { entidade: entidadeMovimentada, before, after, operacao: "UPDATE" }
 }
 
 /**

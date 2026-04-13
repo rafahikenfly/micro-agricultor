@@ -16,7 +16,6 @@ const variedadePadrao = {
     z: 0,
   },
   especieId: "",
-  especieNome: "",
   nome: "Nova variedade",
   descricao: "",
 };
@@ -41,7 +40,6 @@ export const alteraEspecieDaVariedade = ({ especie, variedade }) => {
   return {
     ...variedade,
     especieId: especie.id,
-    especieNome: especie.nome,
     ciclo: cicloVariedade,
     // cópias diretas da espécie
     aparencia: especie.aparencia ?? aparenciaPadrao,

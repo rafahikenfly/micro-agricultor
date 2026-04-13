@@ -3,12 +3,11 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
+    "start:bg": "nohup node index.js > backend.log 2>&1 &",
     "stop:bg": "pkill -f index.js",
-    "start:bg": "nohup node /home/cyberlavrador2/micro-agricultor/apps/backend/index.js > /home/cyberlavrador2/micro-agricultor/apps/backend/backend.log 2>&1 &",
-    "backendlog": "tail -f /home/cyberlavrador2/scripts/backend.log",
-    "updaterlog": "tail -f /home/cyberlavrador2/scripts/updater.log",
-    "test:dailyEvolution": "node scheduler/dailyEvolution.js",
-    "test:currentStateInspector": "node scheduler/currentStateInspector.js"
+    "backendlog": "tail -f backend.log",
+    "sensoreslog": "tail -f sensores.log",
+    "updaterlog": "tail -f updater.log"
   },
   "dependencies": {
     "firebase": "^8.10.1",

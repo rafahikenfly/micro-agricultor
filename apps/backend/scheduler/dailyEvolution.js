@@ -1,10 +1,10 @@
 import { criarEvento, aplicarRegraPorBatch, ENTIDADE, EVENTO, ORIGEM, evoluirEntidade } from "micro-agricultor";
 import { log } from "../core/logger/index.js";
 import { db } from "../infra/firebase.js";
-import { cacheService, plantasService, canteirosService, eventosService, mutacoesService } from "../services/index.js";
+import { cacheService, plantasService, canteirosService, eventosService, mutacoesService, batchService } from "../services/index.js";
 
 export async function dailyEvolution() {
-    console.log("Iniciando cálculo de efeitos do tempo de todo o banco de dados...")
+    console.log("Iniciando evolução de características de todo o banco de dados...")
     const user = { uid: "dailyEvolution", nome: ORIGEM.BACKEND.id };
 
     //TODO: usar o application evoluir!
@@ -32,16 +32,17 @@ export async function dailyEvolution() {
     let commitEvento = false;
 
     //Monta o batch
-    let batch = db.batch(); //TODO: criar no service uma função
-    let opCount = 0;
-    async function commitIfNeeded (batch, opCount, force = false) {
-      if (opCount > 450 || force) {
-        await batch.commit();
-        log(`${opCount} operações do batch salvas`);
-        return { batch: db.batch(), opCount: 0 };
-      }
-      return { batch, opCount };      
-    }
+    let batch = batchService.create();
+//    let batch = db.batch(); //TODO: criar no service uma função
+//    let opCount = 0;
+//    async function commitIfNeeded (batch, opCount, force = false) {
+//      if (opCount > 450 || force) {
+//        await batch.commit();
+//        log(`${opCount} operações do batch salvas`);
+//        return { batch: db.batch(), opCount: 0 };
+//      }
+//      return { batch, opCount };      
+//    }
 
     // =========
     // Primeiro, evolui as caracteristicas das plantas
@@ -52,7 +53,8 @@ export async function dailyEvolution() {
     ]);
     log(`${plantas.length} plantas para processar`);
     for (const planta of plantas) {
-      ({ batch, opCount } = await commitIfNeeded(batch, opCount));
+//      ({ batch, opCount } = await commitIfNeeded(batch, opCount));
+      await batch.commitIfNeeded();
 
       const results = aplicarRegraPorBatch({
         tipoEntidadeId: ENTIDADE.planta.id,
@@ -73,7 +75,7 @@ export async function dailyEvolution() {
       }
       // Com mutações
       log(`${planta.nome} (${planta.id}) com ${Object.keys(results.after).length} mutações`);
-      opCount += (results.opCount || 0);
+//      opCount += (results.opCount || 0);
       entidadesKeySet.add(`planta:${planta.id}`);
       commitEvento = true;
     }
@@ -87,8 +89,9 @@ export async function dailyEvolution() {
     ]);
     log(`${canteiros.length} canteiros para processar`);
     for (const canteiro of canteiros) {
-      ({ batch, opCount } = await commitIfNeeded(batch, opCount));
-    
+//      ({ batch, opCount } = await commitIfNeeded(batch, opCount));
+      await batch.commitIfNeeded();
+
       const results = aplicarRegraPorBatch({
         tipoEntidadeId: ENTIDADE.canteiro.id,
         entidade: canteiro,
@@ -108,7 +111,7 @@ export async function dailyEvolution() {
       }
       // Com mutações
       log(`${canteiro.nome} (${canteiro.id}) com ${Object.keys(results.after).length} mutações`);
-      opCount += (results.opCount || 0);
+//      opCount += (results.opCount || 0);
       entidadesKeySet.add(`canteiro:${canteiro.id}`);
       commitEvento = true;
     }
@@ -118,16 +121,16 @@ export async function dailyEvolution() {
     // =========
     if (commitEvento) {
       evento.entidadesKey = Array.from(entidadesKeySet);
-      eventosService.batchUpsert(eventoRef, evento, user, batch);
-      opCount++;
+      batch.add((b)=>eventosService.batchUpsert(eventoRef, evento, user, b));
+//      eventosService.batchUpsert(eventoRef, evento, user, batch);
+//      opCount++;
     }
 
-    if (opCount > 0) {
-      ({ batch, opCount } = await commitIfNeeded(batch, opCount, true));
-    }
+    await batch.commit();
+//    if (opCount > 0) {
+//      ({ batch, opCount } = await commitIfNeeded(batch, opCount, true));
+//    }
 
-    console.log("Cálculo de efeitos do tempo concluído.")
+    console.log("Evolução de características concluída.")
     return;
 }
-
-dailyEvolution();

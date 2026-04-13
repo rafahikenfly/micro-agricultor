@@ -4,6 +4,7 @@ import * as crud from "./crud.js";
 const cache = createCacheService();
 
 export const cacheService = {
+  clearCache: cache.clearCache,
   getPlantas: async () =>
     await cache.get(
       "plantas",
@@ -34,6 +35,11 @@ export const cacheService = {
       "necessidades",
       crud.necessidadesService,
       [{ field: "isDeleted", op: "==", value: false }],
+    ),
+  getDispositivos: async () =>
+    await cache.get(
+      "dispositivos",
+      crud.dispositivosService,
+      [{ field: "isDeleted", op: "==", value: false }],
     )
-
 };

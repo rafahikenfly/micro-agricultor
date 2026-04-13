@@ -2,7 +2,7 @@ import { ENTIDADE } from "../types/ENTITY_TYPES.js";
 import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { REASON_TYPES } from "../types/REASON_TYPES.js";
 import { RECORRENCIA } from "../types/RECORRENCIA.js";
-import { manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
+import { evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";

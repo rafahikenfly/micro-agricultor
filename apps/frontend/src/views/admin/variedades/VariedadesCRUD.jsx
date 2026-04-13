@@ -10,11 +10,14 @@ import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import VariedadeModal from "./VariedadeModal";
+import { useCache } from "../../../hooks/useCache";
 
 
 export default function VariedadesCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
+  const { cacheEspecies, reading } = useCache(["especies"]);
+  
 
   const [variedades, setVariedades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,9 +68,8 @@ export default function VariedadesCRUD() {
           <ListaComAcoes
             dados = {variedades}
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Espécie", dataKey: "especieNome", },
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
+              {rotulo: "Nome", dataKey: "nome" },
+              {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId).nome },
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

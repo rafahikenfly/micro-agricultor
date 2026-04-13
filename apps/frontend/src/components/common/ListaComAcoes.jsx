@@ -136,7 +136,7 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
                       }
                       if(col.render) return (
                         <td key = {`${col.dataKey}-${col_idx}`}>
-                          {col.render(dado[col.dataKey])}
+                          {col.render(dado)}
                         </td>
                       )
                       return(

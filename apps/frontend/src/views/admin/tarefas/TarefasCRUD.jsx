@@ -21,8 +21,6 @@ export default function TarefasCRUD() {
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [reading, setReading] = useState(false);
-
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
@@ -38,31 +36,6 @@ export default function TarefasCRUD() {
     });
 
     return unsub;
-  }, []);
-
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-//      catalogosService.getEstagios_especie(),
-    ]).then(([este, ]) => {
-      if (!ativo) return;
-//      setEstagios_especie(este);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos da tarefa:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */

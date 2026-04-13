@@ -120,7 +120,9 @@ export async function monitorar({
     // ======
     // Atualiza a necessidade de monitoramento de cada característica da entidade
     // TODO: para melhorar a performance, é possível recuperar até 10 ids com a mesma consulta usando o getByEntidadesArray do mesmo service. Tem que ver as implicações no resto da função.
-    const necessidades = await services.necessidades.getByEntidade(entidade.id);
+    const necessidades = await services.necessidades.get([
+      { field: "entidadeId", op: "==", value: entidade.id }
+    ]);
     const necessidadesMap = Object.fromEntries(
       necessidades.map(n => [n.id, n])
     );
@@ -138,7 +140,7 @@ export async function monitorar({
       // Atualiza a necessidade
       const necessidadeAtualizada = atenderNecessidade({
         necessidade,
-        agente: {uid: user.uid, tipo: ORIGEM.USER.id},
+        agente: {uid: user.uid, tipo: ORIGEM.USER.id}, //TODO: nem sempre o monitoramento vem do usuário!
         timestamp
       });
 

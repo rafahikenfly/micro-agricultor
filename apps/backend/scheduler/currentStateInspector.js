@@ -101,5 +101,3 @@ export async function currentStateInspector() {
   await batch.commit();
   console.log(`Inspeção de estados atuais (plantas e canteiros) concluída.`);
 }
-
-currentStateInspector();
