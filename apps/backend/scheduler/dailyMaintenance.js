@@ -3,7 +3,7 @@
 import cron from "node-cron";
 import { dailyEvolution } from "./dailyEvolution.js";
 import { runJob } from "../pipeline/runJob.js";
-import { log } from "node:console";
+import { log } from "../core/logger/index.js";
 
 
 const dailyTasks = [
@@ -40,7 +40,7 @@ export function dailyMaintenance() {
 
     await runTasks(dailyTasks, "dailyMaintenance");
 
-    log("[dailyyMaintenance] Finalizado");
+    log("[dailyMaintenance] Finalizado");
   });
 }
 
