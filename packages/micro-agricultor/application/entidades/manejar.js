@@ -53,7 +53,7 @@ export async function manejar({
     throw new Error(`Nenhuma regra de manejo para tipo ${tipoEntidadeId}`);
   }
 
-  console.log(`Iniciando manejo ${manejo.nome} de ${entidades.length} ${tipoEntidadeId}s...`);
+  console.log(`Manejando ${manejo.nome} de ${entidades.length} ${tipoEntidadeId}(s)...`);
   if (!user) user = { uid: "manejar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();
 

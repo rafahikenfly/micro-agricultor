@@ -124,6 +124,7 @@ export async function handleDispositivo(topic, message) {
             valorAcumulado = null;
         }
         if (!valorAcumulado) return;
+            log(`[handleDispositivo]: Acumulador acumulou ${valorAcumulado}.`);
 
         const necessidadeKey = getNecessidadeKey({
           entidadeId,

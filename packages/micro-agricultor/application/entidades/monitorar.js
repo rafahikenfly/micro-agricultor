@@ -59,7 +59,7 @@ export async function monitorar({
   if (!regra) {
     throw new Error(`Nenhuma regra de monitoramento para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Iniciando monitoramento de ${entidades.length} ${tipoEntidadeId}s...`);
+  console.log(`Monitorando de ${entidades.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "monitorar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();

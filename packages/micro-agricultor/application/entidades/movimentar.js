@@ -59,7 +59,7 @@ export async function movimentar({
   if (!regra) {
     throw new Error(`Nenhuma regra de movimentação para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Movimentando ${entidades.length} entidades...`);
+  console.log(`Movimentando ${entidades.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "movimentar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();

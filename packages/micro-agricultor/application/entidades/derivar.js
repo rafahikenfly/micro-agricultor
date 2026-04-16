@@ -48,16 +48,16 @@ export async function derivar({
   // Validações
   // ======
   if (!posicoes.length) {
-    throw new Error("Nenhuma posição para implantação.");
+    throw new Error("Nenhuma posição para derivação.");
   }
   if (!tipoEntidadeId) {
     throw new Error("Tipo de entidade não informado.");
   }
   const regra = mapTipoEntidadeRegra[tipoEntidadeId];
   if (!regra) {
-    throw new Error(`Nenhuma regra de implantação para tipo ${tipoEntidadeId}`);
+    throw new Error(`Nenhuma regra de derivação para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Implantando ${posicoes.length} ${tipoEntidadeId}(s)...`);
+  console.log(`Derivando ${posicoes.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "implantar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();

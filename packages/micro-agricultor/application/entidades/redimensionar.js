@@ -61,7 +61,7 @@ export async function redimensionar({
   if (!regra) {
     throw new Error(`Nenhuma regra de redimensionamento para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Redimensionando ${entidades.length} entidades...`);
+  console.log(`Redimensionando ${entidades.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "dimensionar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();

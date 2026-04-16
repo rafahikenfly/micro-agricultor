@@ -45,7 +45,7 @@ export async function evoluir({
     throw new Error(`Nenhuma regra de evolução para tipo ${tipoEntidadeId}`);
   }
 
-  console.log(`Iniciando evolução de ${entidades.length} ${tipoEntidadeId}s...`);
+  console.log(`Evoluindo ${entidades.length} ${tipoEntidadeId}(s)...`);
   if (!user) user = { uid: "evoluir", nome: ORIGEM.BACKEND.id };
   if (!timestamp) timestamp = Date.now();
 
