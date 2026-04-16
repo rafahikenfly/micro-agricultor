@@ -51,7 +51,6 @@ export async function handleDispositivo(topic, message) {
       }
   
       valores.forEach((valor, index) => {
-log(`[handleDispostivo]: ${valor} ${index}.`);
 
         // prepara a interpretacao, verificando o cadastro do sensor
         // no cache.
@@ -170,12 +169,11 @@ log(`[handleDispostivo]: ${valor} ${index}.`);
   let limparCacheNecessidades = false;
   for (const tipoEntidadeId in entidadesPorTipo) {
     const { entidades, medidas } = entidadesPorTipo[tipoEntidadeId];
-log(`[handleDispostivo]: ${tipoEntidadeId} ${entidades} ${medidas}.`);
 
     if (Object.keys(medidas).length === 0) continue;
     if (!entidadesService(tipoEntidadeId)) continue;
     log(`[handleDispositivo]: Monitorando ${Object.keys(medidas).length} medida(s) de ${tipoEntidadeId}(s) a partir do MQTT`);
-    log(medidas)
+log(JSON.stringify(medidas, null, 2));
 //    await monitorar({
 //      tipoEntidadeId,
 //      entidades: Array.from(entidades.values()),
