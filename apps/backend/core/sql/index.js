@@ -1,4 +1,4 @@
-import { sqlDb } from "../../../infra/index.js";
+import { sqlDb } from "../../infra/index.js";
 
 // ==========================
 // Statements preparados

@@ -1,8 +1,8 @@
 import { ENTIDADE, EVENTO, getNecessidadeKey, monitorar, ORIGEM } from "micro-agricultor";
 import { batchService, cacheService, entidadesService, eventosService, mutacoesService, necessidadesService } from "../../services/index.js";
-import { log, armazenarDado } from "../logger/index.js";
+import { log } from "../logger/index.js";
 import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO.js";
-import { countPorCaracteristicaNoPeriodo, maxPorCaracteristicaNoPeriodo, minPorCaracteristicaNoPeriodo, somaPorCaracteristicaNoPeriodo } from "../logger/sql/index.js";
+import { armazenarMedidaDeCaracteristica, countPorCaracteristicaNoPeriodo, maxPorCaracteristicaNoPeriodo, minPorCaracteristicaNoPeriodo, somaPorCaracteristicaNoPeriodo } from "../sql/index.js";
 
 export async function handleDispositivo(topic, message) {
   const user = { uid: "handleDispositivo", nome: ORIGEM.BACKEND.id };
@@ -77,7 +77,7 @@ export async function handleDispositivo(topic, message) {
           return;
         }
         // armazena os dados
-        armazenarDado({
+        armazenarMedidaDeCaracteristica({
           entidadeId,
           timestamp,
           caracteristicaId,
