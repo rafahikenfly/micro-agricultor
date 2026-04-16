@@ -33,7 +33,7 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
         header="Incluir sensor"
         headerData={form} //TODO
         colunas={[
-          {rotulo: "Entidade", dataKey: "entidadeId", render: (a)=>cachePlantas?.map.get(a.entidadeId)?.nome ?? `id: ${a.entidadeId}`},
+          {rotulo: "Entidade", dataKey: "entidadeId", render: (a)=>cacheCanteiros?.map.get(a.entidadeId)?.nome ?? `id: ${a.entidadeId}`},
           {rotulo: "Tipo", dataKey: "tipoSensorId", render: (a)=>SENSOR[a.tipoSensorId]?.nome ?? `id: ${a.tipoSensorId}`},
           {rotulo: "Caracteristica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? `id: ${a.caracteristicaId}`},
           {rotulo: "Pino", dataKey: "pino",},

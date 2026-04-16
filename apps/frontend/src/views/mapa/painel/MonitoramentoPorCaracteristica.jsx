@@ -2,8 +2,8 @@ import { useState } from "react";
 import { Form, Button, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import Loading from "../../../components/Loading";
-import { ENTIDADE, monitorar, VARIANT_TYPES } from "micro-agricultor";
-import { canteirosService, plantasService, necessidadesService, entidadeService } from "../../../services/crudService";
+import { monitorar, VARIANT_TYPES } from "micro-agricultor";
+import { necessidadesService, entidadesService } from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { batchService } from "../../../services/batchService";
 
@@ -104,7 +104,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
         services: {
           batch: batchService,
           eventos: eventosService,
-          entidade: entidadeService[tipoEntidadeId],
+          entidade: entidadesService(tipoEntidadeId),
           mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }

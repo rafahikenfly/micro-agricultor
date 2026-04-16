@@ -7,7 +7,7 @@ import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCalendarioEngine } from "../CalendarioEngine";
 import { eventosService, mutacoesService } from "../../../services/historyService";
-import { necessidadesService, tarefasService, entidadeService } from "../../../services/crudService";
+import { necessidadesService, tarefasService, entidadesService } from "../../../services/crudService";
 
 import { concluirTarefa, ENTIDADE } from "micro-agricultor";
 import { useCache } from "../../../hooks/useCache";
@@ -114,7 +114,7 @@ export const ManejarModal = ({show, data, onClose }) => {
         manejo: manejoSelecionado,
         services: {
           eventos: eventosService,
-          entidade: entidadeService[data.contexto.tipoEntidadeId],
+          entidade: entidadesService(data.contexto.tipoEntidadeId),
           historicoEfeitos: mutacoesService,
           necessidades: necessidadesService,
         }

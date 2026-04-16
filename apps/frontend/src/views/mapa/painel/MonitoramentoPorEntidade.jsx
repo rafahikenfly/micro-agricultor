@@ -8,7 +8,7 @@ import { useCache } from "../../../hooks/useCache";
 
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { batchService } from "../../../services/batchService";
-import { canteirosService, plantasService, necessidadesService, entidadeService } from "../../../services/crudService";
+import { necessidadesService, entidadesService } from "../../../services/crudService";
 
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import Loading from "../../../components/Loading";
@@ -102,7 +102,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
         services: {
           batch: batchService,
           eventos: eventosService,
-          entidade: entidadeService[tipoEntidadeId],
+          entidade: entidadesService(tipoEntidadeId),
           mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }

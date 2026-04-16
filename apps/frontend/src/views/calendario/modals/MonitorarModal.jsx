@@ -2,7 +2,7 @@ import { useEffect, useState } from "react"
 import { Button, Form, Modal } from "react-bootstrap"
 import { StandardCard, StandardInput } from "../../../utils/formUtils"
 import { eventosService, mutacoesService } from "../../../services/historyService"
-import { canteirosService, plantasService, necessidadesService, tarefasService, entidadeService } from "../../../services/crudService"
+import { necessidadesService, tarefasService, entidadesService } from "../../../services/crudService"
 import { useCalendarioEngine } from "../CalendarioEngine"
 import { useToast } from "../../../services/toast/toastProvider"
 import { useAuth } from "../../../services/auth/authContext"
@@ -118,7 +118,7 @@ export const MonitorarModal = ({show, data, onClose}) => {
         entidades,
         services: {
           eventos: eventosService,
-          entidade: entidadeService[data.contexto.tipoEntidadeId],
+          entidade: entidadesService(data.contexto.tipoEntidadeId),
           historicoEfeitos: mutacoesService,
           necessidades: necessidadesService,
         }

@@ -135,7 +135,7 @@ export async function handleDispositivo(topic, message) {
     const { entidades, medidas } = entidadesPorTipo[tipoEntidadeId];
 
     if (Object.keys(medidas).length === 0) continue;
-    if (!entidadesService[tipoEntidadeId]) continue;
+    if (!entidadesService(tipoEntidadeId)) continue;
     log(`[handleDispositivo]: Monitorando ${Object.keys(medidas).length} medida(s) de ${tipoEntidadeId}(s) a partir do MQTT`);
     await monitorar({
       tipoEntidadeId,
@@ -146,7 +146,7 @@ export async function handleDispositivo(topic, message) {
       services: {
         batch: batchService,
         eventos: eventosService,
-        entidade: entidadeServices[tipoEntidadeId],
+        entidade: entidadesServices(tipoEntidadeId),
         mutacoes: mutacoesService,
         necessidades: necessidadesService,
       },

@@ -50,7 +50,7 @@ export const dispositivosService = createCRUDService(firebaseAdapter, {
 })
 
 // ===== DERIVED =====
-export function entidadesService({ tipoEntidadeId }) {
+export function entidadesService( tipoEntidadeId ) {
   switch (tipoEntidadeId) {
     case "canteiro": 
       return canteirosService;

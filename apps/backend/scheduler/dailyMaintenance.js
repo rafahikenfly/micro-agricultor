@@ -52,6 +52,7 @@ export function hourlyMaintenance() {
     cacheService.clearCache("variedades");
     cacheService.clearCache("plantas");
     cacheService.clearCache("canteiros");
+    cacheService.clearCache("dispositivos");
 
     log("[hourlyMaintenance] Iniciando manutenção horária...");
 

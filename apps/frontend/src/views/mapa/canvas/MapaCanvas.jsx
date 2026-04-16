@@ -12,7 +12,7 @@ import { entitiesInBounds, getMouseInMapSpace } from "../../../utils/coordinates
 import { circleFromEntity, rectFromEntity, resizeCircleRadius, resizeRect } from "../../../utils/geometryUtils";
 
 import { batchService } from "../../../services/batchService";
-import { hortasService, canteirosService, plantasService, entidadeService } from "../../../services/crudService";
+import { hortasService, canteirosService, plantasService, entidadesService} from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 
 import { NoUser } from "../../../components/common/NoUser";
@@ -155,7 +155,7 @@ export default function MapaCanvas () {
           services: {
             batch: batchService,
             eventos: eventosService,
-            entidade: entidadeService[drag.tipoEntidadeId],
+            entidade: entidadesService(drag.tipoEntidadeId),
             mutacoes: mutacoesService,
           },
           user,
