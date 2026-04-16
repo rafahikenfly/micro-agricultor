@@ -180,7 +180,7 @@ export async function handleDispositivo(topic, message) {
       services: {
         batch: batchService,
         eventos: eventosService,
-        entidade: entidadesServices(tipoEntidadeId),
+        entidade: entidadesService(tipoEntidadeId),
         mutacoes: mutacoesService,
         necessidades: necessidadesService,
       },
