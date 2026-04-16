@@ -47,7 +47,7 @@ export function aplicarRegraPorBatch({
         if (entidade) {
           if (!results?.after || !Object.keys(results.after).length) {
             //console.warn("aplicarRegraPorBatch: Nenhuma mutação resultante da aplicação de regra.")
-            return null;
+            return {};
           }
     
           // Inclui create das mutações no batch:
