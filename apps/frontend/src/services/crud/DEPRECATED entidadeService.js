@@ -2,7 +2,7 @@
 
 import { canteirosService } from "./canteirosService";
 import { hortaService } from "./hortaService";
-import { plantasService } from "./plantasService";
+import { plantasService } from "./DEPRECATED plantasService";
 
 export function entidadeService({
   tipoEntidadeId

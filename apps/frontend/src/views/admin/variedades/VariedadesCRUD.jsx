@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { variedadesService } from "../../../services/crud/variedadesService";
+import { variedadesService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 
@@ -69,7 +69,7 @@ export default function VariedadesCRUD() {
             dados = {variedades}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome" },
-              {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId).nome },
+              {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId)?.nome ?? "-" },
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

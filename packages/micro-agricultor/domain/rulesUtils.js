@@ -40,3 +40,17 @@ export function calcularConfiancaPorTempoTotal(diasTotais, longevidade) {
 }
 
 export const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+export const adicionarDia = (timestamp, dias = 1) => {
+  return timestamp + (8640000 * dias)
+}
+export const adicionarMes = (timestamp, meses = 1) => {
+  const date = new Date(timestamp);
+  date.setMonth(date.getMonth() + meses);
+  return date.getTime();
+}
+export const adicionarAno = (timestamp, anos = 1) => {
+  const date = new Date(timestamp);
+  date.setFullYear(date.getFullYear() + anos);
+  return date.getTime();
+}

@@ -1,6 +1,6 @@
-import { evoluirPlanta, evoluirCanteiro } from "../domain";
-import { EVENTO, ORIGEM } from "../types";
-import { aplicarRegraPorBatch } from "./batch";
+import { evoluirPlanta, evoluirCanteiro } from "../../domain";
+import { EVENTO, ORIGEM } from "../../types";
+import { aplicarRegraPorBatch } from "../batch";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: evoluirPlanta,

@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
 import { validarVariedade } from "micro-agricultor";
-
 import { handleSaveForm } from "../../../utils/formUtils";
 
 import AparenciaTab from "../../../components/common/AparenciaTab";

@@ -15,6 +15,7 @@ import TarefasCRUD from "../views/admin/tarefas/TarefasCRUD";
 import EstadosCanteiroCRUD from "../views/admin/estadosCanteiros/EstadosCanteiroCRUD";
 import EstadosPlantaCRUD from "../views/admin/estadosPlantas/EstadosPlantaCRUD";
 import MidiasCRUD from "../views/admin/midias/MidiasCRUD";
+import CategoriasCRUD from "../views/admin/categorias/CategoriasCRUD";
 //MAPA
 //TODO: indexar o mapa no url
 import AppMapa from "../views/AppMapa";
@@ -43,6 +44,7 @@ export default function Router() {
             <Route path="caracteristicas" element={<CaracteristicasCRUD />} />
             <Route path="estados-canteiro" element={<EstadosCanteiroCRUD />} />
             <Route path="estados-planta" element={<EstadosPlantaCRUD />} />
+            <Route path="categorias-especies" element={<CategoriasCRUD />} />
             <Route path="tarefas" element={<TarefasCRUD />} />
             <Route path="midia" element={<MidiasCRUD />} />
           </Route>

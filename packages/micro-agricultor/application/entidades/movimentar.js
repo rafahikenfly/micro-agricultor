@@ -1,30 +1,29 @@
-import { ENTIDADE, EVENTO, ORIGEM } from "../types/index.js";
-import { criarEvento } from "../domain/evento.rules.js";
-import { redimensionarPlanta } from "../domain/planta.rules.js";
-import { redimensionarCanteiro } from "../domain/canteiro.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
+import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { desenharPlanta } from "../../domain/planta.rules.js";
+import { movimentarCanteiro } from "../../domain/canteiro.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
-  [ENTIDADE.planta.id]: redimensionarPlanta,
-  [ENTIDADE.canteiro.id]: redimensionarCanteiro,
+  [ENTIDADE.planta.id]: desenharPlanta,
+  [ENTIDADE.canteiro.id]: movimentarCanteiro,
 }
 
 const THRESHOLD = 2; //cm
-function foiRedimensionado(dimensaoAntes, dimensaoDepois) {
-  return (
-    Math.abs(dimensaoDepois.x - dimensaoAntes.x) > THRESHOLD ||
-    Math.abs(dimensaoDepois.y - dimensaoAntes.y) > THRESHOLD
-  );
+function foiMovido(startMap, currentMap) {
+  const dx = currentMap.x - startMap.x;
+  const dy = currentMap.y - startMap.y;
+
+  return Math.abs(dx) > THRESHOLD || Math.abs(dy) > THRESHOLD;
 }
 
 /**
- * Redimensiona múltiplas entidades atualizando sua dimensão.
+ * Movimenta múltiplas entidades atualizando sua posição.
  *
  * @param {Object} args
  * @param {string} args.tipoEntidadeId
  * @param {Array<Object>} args.entidades
- * @param {Array<Object>} args.posicoes
- * @param {Object<string, {x:number,y:number,z?:number}>} args.dimensoes
+ * @param {Object<string, {x:number,y:number,z?:number}>} args.posicoes
  *   {
  *     [entidadeId]: {x, y, z}
  *   }
@@ -38,10 +37,9 @@ function foiRedimensionado(dimensaoAntes, dimensaoDepois) {
  *
  * @returns {Promise<void>}
  */
-export async function redimensionar({
+export async function movimentar({
   tipoEntidadeId,
   entidades,
-  dimensoes,
   posicoes,
   services,
   user,
@@ -52,18 +50,18 @@ export async function redimensionar({
   // Validações
   // ======
   if (!entidades?.length) {
-    throw new Error("Nenhuma entidade para redimensionamento.");
+    throw new Error("Nenhuma entidade para movimentação.");
   }
   if (!tipoEntidadeId) {
     throw new Error("Tipo de entidade não informado.");
   }
   const regra = mapTipoEntidadeRegra[tipoEntidadeId];
   if (!regra) {
-    throw new Error(`Nenhuma regra de redimensionamento para tipo ${tipoEntidadeId}`);
+    throw new Error(`Nenhuma regra de movimentação para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Redimensionando ${entidades.length} entidades...`);
+  console.log(`Movimentando ${entidades.length} entidades...`);
 
-  if (!user) user = { uid: "dimensionar", nome: ORIGEM.FRONTEND.id };
+  if (!user) user = { uid: "movimentar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();
 
   // ======
@@ -73,9 +71,9 @@ export async function redimensionar({
   const eventoId = eventoRef.id;
 
   const evento = criarEvento({
-    tipoEvento: EVENTO.REDIMENSIONAMENTO,
+    tipoEvento: EVENTO.MOVIMENTACAO,
     timestamp,
-    origem: { id: "redimensionar", tipo: ORIGEM.FRONTEND.id },
+    origem: { id: "movimentar", tipo: ORIGEM.FRONTEND.id },
     entidadesKey: [],
   });
   evento.id = eventoId;
@@ -87,19 +85,17 @@ export async function redimensionar({
   for (const entidade of entidades) {
     await batch.commitIfNeeded();
 
-    const dimensaoAntes = entidade.dimensao ?? {x: 0, y: 0, z: 0};
+    const posicaoAntes = entidade.posicao ?? {x: 0, y: 0, z: 0};
 
-    // Monta contexto da regra de dimensao
-    // (argumento dimensoes é um objeto = {[entidade.id]: {x, y, z} )
-    const novaDimensao = dimensoes[entidade.id];
+    // Monta contexto da regra de movimentacao
+    // (argumento posicao é um objeto = {[entidade.id]: {x, y, z} )
     const novaPosicao = posicoes[entidade.id];
-    // Sem nova dimensão ou mudança significativa
-    if (!novaDimensao) continue;
-    if (!foiRedimensionado(dimensaoAntes, novaDimensao)) continue;
+    // Sem nova posição ou sem mudança significativa → ignora
+    if (!novaPosicao) continue;
+    if (!foiMovido(posicaoAntes,novaPosicao)) continue;
 
     const contexto = {
-      dimensao: novaDimensao,
-      posicao: novaPosicao,
+      posicao: novaPosicao
     }
 
     // ======
@@ -124,7 +120,7 @@ export async function redimensionar({
       continue;
     }
     // Resultado com mutações
-    console.log(`${entidade.nome} (${entidade.id}) redimensionado(a).`);
+    console.log(`${entidade.nome} (${entidade.id}) movimentado(a).`);
     entidadesKeySet.add(`${tipoEntidadeId}:${entidade.id}`);
     commitEvento = true;
   }
@@ -138,6 +134,6 @@ export async function redimensionar({
   // Commit final
   await batch.commit();
 
-  console.log("Redimensionamento de entidades concluído.")
+  console.log("Movimentação de entidades concluído.")
   return;
 }

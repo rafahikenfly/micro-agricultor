@@ -6,11 +6,9 @@ import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCache } from "../../../hooks/useCache";
 
-import { canteirosService } from "../../../services/crud/canteirosService";
-import { plantasService } from "../../../services/crud/plantasService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { batchService } from "../../../services/batchService";
-import { necessidadesService } from "../../../services/crud/necessidadesService";
+import { canteirosService, plantasService, necessidadesService, entidadeService } from "../../../services/crudService";
 
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import Loading from "../../../components/Loading";
@@ -94,10 +92,6 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
     //TODO DAQUI PRA BAIXO!
     // Processa os monitoramentos com user, tipoEntidadeId, entidades, medidas e timestamp
     setWriting(true);
-    const servicesMap = {
-      [ENTIDADE.canteiro.id]: canteirosService,
-      [ENTIDADE.planta.id]: plantasService,
-    }
     try {
      await monitorar({
         tipoEntidadeId,
@@ -108,7 +102,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
         services: {
           batch: batchService,
           eventos: eventosService,
-          entidade: servicesMap[tipoEntidadeId],
+          entidade: entidadeService[tipoEntidadeId],
           mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }

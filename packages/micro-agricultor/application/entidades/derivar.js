@@ -1,7 +1,7 @@
-import { ENTIDADE, EVENTO, ORIGEM } from "../types/index.js";
-import { criarEvento } from "../domain/evento.rules.js";
-import { derivarPlanta } from "../domain/planta.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
+import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { derivarPlanta } from "../../domain/planta.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: derivarPlanta,

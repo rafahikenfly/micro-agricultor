@@ -52,6 +52,9 @@ export default function AdminSidebar() {
         <Nav.Link as={NavLink} to="/admin/caracteristicas">
           Características
         </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/categorias-especies">
+          Categorias
+        </Nav.Link>
         <Nav.Link as={NavLink} to="/admin/estados-canteiro">
           Estados de Canteiro
         </Nav.Link>

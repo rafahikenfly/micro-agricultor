@@ -1,6 +1,6 @@
-import { atenderNecessidade, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../domain/index.js";
-import { EVENTO, ORIGEM, ENTIDADE } from "../types/index.js";
-import { aplicarRegraPorBatch } from "./index.js";
+import { atenderNecessidade, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../../domain/index.js";
+import { EVENTO, ORIGEM, ENTIDADE } from "../../types/index.js";
+import { aplicarRegraPorBatch } from "../index.js";
 
 
 const mapTipoEntidadeManejo = {

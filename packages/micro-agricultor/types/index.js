@@ -1,4 +1,5 @@
 export * from "./ACTION_TYPES.js"
+export * from "./ACUMULACAO.JS"
 export * from "./AMBIENT_TYPES.js"
 export * from "./DISPOSITIVO.js"
 export * from "./EVENTO.js"

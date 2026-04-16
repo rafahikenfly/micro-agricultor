@@ -1,10 +1,10 @@
-import { EVENTO, ORIGEM, ENTIDADE } from "../types/index.js";
+import { EVENTO, ORIGEM, ENTIDADE } from "../../types/index.js";
 
-import { criarEvento } from "../domain/evento.rules.js";
-import { atenderNecessidade, getNecessidadeKey } from "../domain/necessidade.rules.js";
-import { monitorarPlanta } from "../domain/planta.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
-import { monitorarCanteiro } from "../domain/canteiro.rules.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { atenderNecessidade, getNecessidadeKey } from "../../domain/necessidade.rules.js";
+import { monitorarPlanta } from "../../domain/planta.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
+import { monitorarCanteiro } from "../../domain/canteiro.rules.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: monitorarPlanta,

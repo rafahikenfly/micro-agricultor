@@ -4,6 +4,7 @@ import cron from "node-cron";
 import { dailyEvolution } from "./dailyEvolution.js";
 import { runJob } from "../pipeline/runJob.js";
 import { log } from "../core/logger/index.js";
+import { cacheService } from "../services/cache.js";
 
 
 const dailyTasks = [
@@ -27,7 +28,7 @@ async function runTasks(tasks, label) {
 }
 
 export function dailyMaintenance() {
-  log("[CRON] dailyMaintenance agendado para 03:00");
+  log("[CRON] dailyMaintenance agendado para 03h15");
 
   cron.schedule("15 3 * * *", async () => {
     log("[dailyMaintenance] Iniciando manutenção diária...");
@@ -46,12 +47,29 @@ export function dailyMaintenance() {
 
 export function hourlyMaintenance() {
   log("[CRON] hourlyMaintenance agendado para cada hora");
-
+  
   cron.schedule("0 * * * *", async () => {
+    cacheService.clearCache("variedades");
+    cacheService.clearCache("plantas");
+    cacheService.clearCache("canteiros");
+
     log("[hourlyMaintenance] Iniciando manutenção horária...");
 
     await runTasks(hourlyTasks, "hourlyMaintenance");
 
     log("[hourlyMaintenance] Finalizado");
+  });
+}
+
+export function refreshCriticalCaches() {
+  log("[CRON] refreshCriticalCaches agendado para cada hora");
+  cron.schedule("*/30 * * * *", async () => {
+    cache.clearCache("caracteristicas");
+    cache.clearCache("necessidades");
+
+    await Promise.all([
+      cacheService.getCaracteristicas(),
+      cacheService.getNecessidades()
+    ]);
   });
 }

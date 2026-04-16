@@ -36,7 +36,7 @@ export async function currentStateInspector() {
 
   //Avalia os canteiros  e inclui
   //todas as necessidades ao array de necessidades.
-  console.log(`[currentStateInspector]: ${cacheCanteiros.list.length} canteiros para inspecionar`);
+  log(`[currentStateInspector]: ${cacheCanteiros.list.length} canteiros para inspecionar`);
   for (const canteiro of cacheCanteiros.list) {
     novasNecessidades.push(...getNecessidadesCanteiro({
       canteiro,
@@ -51,7 +51,7 @@ export async function currentStateInspector() {
 
   //Converte o mapa de tarefas em um array e cria os Ids no mapa
   const novasTarefas = Object.values(mapaTarefas);
-  log(`[currentStateInspector]: Salvando ${novasTarefas.length} novas tarefas e necessidades.`);
+  log(`[currentStateInspector]: Salvando ${novasTarefas.length} nova(s) tarefa(s) e respectivas necessidades.`);
   let batch = batchService.create();
 
   const necessidadesPorCaracteristica = {};

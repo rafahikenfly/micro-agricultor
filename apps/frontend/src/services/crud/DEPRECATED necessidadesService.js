@@ -5,7 +5,7 @@ const baseService = createCRUDService(firebaseAdapter, {
   collection: "necessidades",
 });
 
-export const necessidadesService = {
+export const __necessidadesService = {
   ...baseService,
 
     async getByEntidade(entidadeId) {

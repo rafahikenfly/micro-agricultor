@@ -18,7 +18,15 @@ export const cacheService = {
       crud.canteirosService,
       [{ field: "isDeleted", op: "==", value: false }],
       { field: "nome" }
-    ),  getCaracteristicas: async () =>
+    ),
+  getHortas: async () =>
+    await cache.get(
+      "hortas",
+      crud.hortasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+      { field: "nome" }
+    ),
+getCaracteristicas: async () =>
     await cache.get(
       "caracteristicas",
       crud.caracteristicasService,
@@ -41,5 +49,24 @@ export const cacheService = {
       "dispositivos",
       crud.dispositivosService,
       [{ field: "isDeleted", op: "==", value: false }],
-    )
+    ),
+
+  // DERIVED
+  getEntidades() {
+    const map = {
+      [ENTIDADE.planta.id]: this.getPlantas,
+      [ENTIDADE.canteiro.id]: this.getCanteiros,
+      [ENTIDADE.horta.id]: this.getHortas,
+    };
+
+    return async (entidadeId) => {
+      const fn = map[entidadeId];
+
+      if (!fn) {
+        throw new Error(`Cache não definido para entidade ${entidadeId}`);
+      }
+
+      return fn();
+    };
+  }    
 };

@@ -15,9 +15,10 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
     tipoSensorId: "",
     tipoEntidadeId: "",
     entidadeId: "",
-    pino: "",
+    pino: 0,
+    confianca: 0,
     mudancaMinima: 0,
-    heartbeatMs: 0,
+    intervaloLeitura: 0
   })
 
   const listaEntidades = {
@@ -32,9 +33,9 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
         header="Incluir sensor"
         headerData={form} //TODO
         colunas={[
-          {rotulo: "Entidade", dataKey: "entidadeId", render: (id)=>cacheCanteiros?.map.get(id)?.nome ?? `id: ${id}`},
-          {rotulo: "Tipo", dataKey: "tipoSensorId", render: (id)=>SENSOR[id]?.nome ?? `id: ${id}`},
-          {rotulo: "Caracteristica", dataKey: "caracteristicaId", render: (id)=>cacheCaracteristicas?.map.get(id)?.nome ?? `id: ${id}`},
+          {rotulo: "Entidade", dataKey: "entidadeId", render: (a)=>cachePlantas?.map.get(a.entidadeId)?.nome ?? `id: ${a.entidadeId}`},
+          {rotulo: "Tipo", dataKey: "tipoSensorId", render: (a)=>SENSOR[a.tipoSensorId]?.nome ?? `id: ${a.tipoSensorId}`},
+          {rotulo: "Caracteristica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? `id: ${a.caracteristicaId}`},
           {rotulo: "Pino", dataKey: "pino",},
           {rotulo: "Mín", dataKey: "mudancaMinima",},
           {rotulo: "Hb(ms)", dataKey: "heartbeatMs",},
@@ -62,7 +63,7 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
           onChange={e => setForm({...form, confianca: Number(e.target.value)})}
         />
       </StandardInput>
-      <StandardInput label="Valor relevante/heartbeat (ms)">
+      <StandardInput label="Valor relevante/Intervalo Leitura">
         <Form.Control
           type="number"
           value={form.mudancaMinima}
@@ -70,8 +71,8 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
         />
         <Form.Control
           type="number"
-          value={form.heartbeatMs}
-          onChange={e => setForm({...form, heartbeatMs: Number(e.target.value)})}
+          value={form.intervaloLeitura}
+          onChange={e => setForm({...form, intervaloLeitura: Number(e.target.value)})}
         />
       </StandardInput>
       <StandardInput label="Entidade">

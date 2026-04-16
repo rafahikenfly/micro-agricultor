@@ -66,10 +66,8 @@ export default function CaracteristicasCRUD() {
           <ListaComAcoes
             dados = {caracteristicas}
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
+              {rotulo: "Nome", dataKey: "nome", render: (a)=>a.nome},
               {rotulo: "Aplicável a", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: VARIANT_TYPES.YELLOW},

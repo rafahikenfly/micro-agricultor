@@ -13,8 +13,7 @@ import { useCalendarioEngine } from "../CalendarioEngine";
 import { useCache } from "../../../hooks/useCache";
 import { useEffect, useState } from "react";
 import { eventosService } from "../../../services/historyService";
-import { tarefasService } from "../../../services/crud/tarefasService";
-import { necessidadesService } from "../../../services/crud/necessidadesService";
+import { tarefasService, necessidadesService } from "../../../services/crudService";
 
   const VIEW_COMPONENTS = {
     agenda: CalendarioAgenda,

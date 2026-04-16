@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { plantasService } from "../../../services/crud/plantasService";
+import { plantasService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
 

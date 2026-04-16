@@ -1,16 +1,15 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
-import { validarTarefa, VARIANT_TYPES } from "micro-agricultor";
-
-import { catalogosService } from "../../../services/catalogosService";
-import { useToast } from "../../../services/toast/toastProvider";
+import { validarTarefa, } from "micro-agricultor";
 
 import { handleSaveForm } from "../../../utils/formUtils";
 
 import TarefaDadosTab from "./TarefaDadosTab";
 import TarefaContextoTab from "./TarefaContextoTab";
 import TarefaPlanejamentoTab from "./TarefaPlanejamentoTab";
+import TarefaExecucaoTab from "./TarefaExecucaoTab";
 import TarefaResolucaoTab from "./TarefaResolucao";
+import AparenciaTab from "../../../components/common/AparenciaTab";
 
 export default function TarefaModal({ show, onSave, onClose, data }) {
 
@@ -63,11 +62,22 @@ export default function TarefaModal({ show, onSave, onClose, data }) {
                 setFormPlanejamento={(planejamento)=>setForm({...form, planejamento})}
               />
             </Tab>
+            <Tab eventKey="execucao" title="Execução">
+              <TarefaExecucaoTab
+                formExecucao={form.execucao}
+                setFormExecucao={(execucao)=>setForm({...form, execucao})}
+              />
+            </Tab>
             <Tab eventKey="resolucao" title="Resolução">
               <TarefaResolucaoTab
                 formResolucao={form.resolucao}
                 setFormResolucao={(resolucao)=>setForm({...form, resolucao})}
               />
+            </Tab>
+            <Tab eventKey="aparencia" title="Aparência Padrão">
+              <AparenciaTab
+                formAparencia={form.aparencia}
+                setFormAparencia={(aparencia) => setForm({ ...form, aparencia })} />
             </Tab>
           </Tabs>
         </Modal.Body>

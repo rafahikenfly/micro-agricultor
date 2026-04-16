@@ -6,12 +6,17 @@ export async function dailyEvolution() {
     log("Iniciando evolução de características de todo o banco de dados...")
     const user = { uid: "dailyEvolution", nome: ORIGEM.BACKEND.id };
 
-    //TODO: usar o application evoluir!
-    //Recupera as plantas e faz a evolução delas,
-    //Recupera os canteiros e faz a evolução deles
-
+    const [
+      cacheCaracteristicas,
+      cachePlantas,
+      cacheCanteiros
+    ] = await Promise.all([
+      cacheService.getCaracteristicas(),
+      cacheService.getPlantas(),
+      cacheService.getCanteiros()
+    ]);
+    
     // Monta contexto da regra de evolução
-    const cacheCaracteristicas = await cacheService.getCaracteristicas();
     const contexto = {
       mapaCaracteristicas: cacheCaracteristicas.map
     }
@@ -36,10 +41,7 @@ export async function dailyEvolution() {
     // =========
     // Primeiro, evolui as caracteristicas das plantas
     // =========
-    const plantas = await plantasService.get([
-      { field: "isDeleted", op: "==", value: false },
-      { field: "isArchived", op: "==", value: false }
-    ]);
+    const plantas = cachePlantas.list.filter(p => !p.isArchived);
     log(`${plantas.length} plantas para evoluir...`);
     for (const planta of plantas) {
       await batch.commitIfNeeded();
@@ -68,10 +70,7 @@ export async function dailyEvolution() {
     // =========
     // Segundo, evolui as características dos canteiros
     // =========
-    const canteiros = await canteirosService.get([
-      { field: "isDeleted", op: "==", value: false },
-      { field: "isArchived", op: "==", value: false }
-    ]);
+    const canteiros = cacheCanteiros.list.filter(p => !p.isArchived);
     log(`${canteiros.length} canteiros para evoluir...`);
     for (const canteiro of canteiros) {
       await batch.commitIfNeeded();

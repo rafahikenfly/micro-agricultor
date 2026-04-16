@@ -1,15 +1,12 @@
 import { useEffect, useState } from "react";
-import { categoriasEspecieService } from "../../../services/crud/categoriasService";
+import { categoriasEspecieService } from "../../../services/crudService";
 import CategoriaModal from "./CategoriaModal";
-import ListaComAcoes from "../../common/ListaComAcoes";
-import Loading from "../../common/Loading";
-import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { NoUser } from "../../common/NoUser";
+import { NoUser } from "../../../components/common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
-import { setToast } from "../../../services/ui/toast";
-import { VARIANTE } from "@shared/types/VARIANT_TYPES";
+import Loading from "../../../components/Loading";
 
 export default function CategoriasCRUD() {
   const { user } = useAuth();
@@ -22,8 +19,7 @@ export default function CategoriasCRUD() {
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState({});
-
+  
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
     setLoading(true);
@@ -37,26 +33,16 @@ export default function CategoriasCRUD() {
   }, []);
 
   /* ================= CRUD ================= */
-  const {
-    criar,
-    editar,
-    atualizar,
-    arquivar,
-    desarquivar,
-    apagarComConfirmacao,
-  } = useCrudUI({
+  const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
     crudService: categoriasEspecieService,
     nomeEntidade: "categoria",
     masculino: false, // "a categoria"
     user,
-  
     editando,
     registroParaExcluir,
-    
     setEditando,
     setShowModal,
     setRegistroParaExcluir,
-    setShowToast,
   });
   /* ================= RENDER ================= */
   if (loading) return <Loading />
@@ -74,8 +60,6 @@ export default function CategoriasCRUD() {
             dados = {categorias}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
@@ -102,23 +86,7 @@ export default function CategoriasCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        setToast={(toast) => setToast(toast, setShowToast)}
       />
-      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
-      <AppToastMensagem
-        show={showToast.show && !showToast.confirmacao}
-        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-      <AppToastConfirmacao
-        show={showToast.show && showToast.confirmacao}
-        onCancel={showToast.onCancel}
-        onConfirm={showToast.onConfirm}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-
     </Container>
   );
 }

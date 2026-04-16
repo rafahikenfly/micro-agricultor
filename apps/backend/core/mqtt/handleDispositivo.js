@@ -1,6 +1,7 @@
 import { ENTIDADE, EVENTO, getNecessidadeKey, monitorar, ORIGEM } from "micro-agricultor";
-import { batchService, cacheService, canteirosService, eventosService, mutacoesService, necessidadesService, plantasService } from "../../services/index.js";
+import { batchService, cacheService, entidadeServices, eventosService, mutacoesService, necessidadesService } from "../../services/index.js";
 import { log, armazenarDado } from "../logger/index.js";
+import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO.js";
 
 export async function handleDispositivo(topic, message) {
   const user = { uid: "handleDispositivo", nome: ORIGEM.BACKEND.id };
@@ -10,18 +11,16 @@ export async function handleDispositivo(topic, message) {
   const [
     cacheNecessidades,
     cacheDispositivos,
+    cacheCaracteristicas,
     cachePlantas,
     cacheCanteiros
   ] = await Promise.all([
     cacheService.getNecessidades(),
     cacheService.getDispositivos(),
+    cacheService.getCaracteristicas(),
     cacheService.getPlantas(),
     cacheService.getCanteiros(),
   ]);
-  const entidadeServices = {
-    [ENTIDADE.planta.id]: plantasService,
-    [ENTIDADE.canteiro.id]: canteirosService,
-  }
   const entidadeCaches = {
     [ENTIDADE.planta.id]: cachePlantas,
     [ENTIDADE.canteiro.id]: cacheCanteiros,
@@ -84,8 +83,14 @@ export async function handleDispositivo(topic, message) {
           msgId
         });
 
-        // verifica a necessidade de monitoramento e se houver, inclui
-        // no objeto que vai ser iterado para monitoramento
+        // Verifica a necessidade de monitoramento e se houver, inclui
+        // no objeto que vai ser iterado para monitoramento. Isso só funciona
+        // para características sem acumulação. Características com acumulação
+        // devem ser processadas pelo inspetor
+        const caracteristica = cacheCaracteristicas.map.get(caracteristicaId)
+        if (!caracteristica || caracteristica.tipoAcumulacaoId !== ACUMULACAO.NENHUM.id) return;
+        // TODO: fazer a acumulação quando necessário
+
         const necessidadeKey = getNecessidadeKey({
           entidadeId,
           caracteristicaId,

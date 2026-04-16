@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { tarefasService } from "../../../services/crud/tarefasService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import TarefaModal from "./TarefaModal";
+import { tarefasService } from "../../../services/crudService";
+import { ESTADO_TAREFA, RECORRENCIA } from "micro-agricultor";
+import { ISOToReadableString } from "../../../utils/dateUtils";
 
 
 export default function TarefasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 
@@ -67,10 +67,10 @@ export default function TarefasCRUD() {
             dados = {tarefas}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
-              {rotulo: "Estado", dataKey: "estado", },
-              {rotulo: "Vencimento", dataKey: "vencimento", },
-              {rotulo: "Recorrência", dataKey: "recorrencia", },
+              {rotulo: "Estado", dataKey: "estado", render: (a) => ESTADO_TAREFA[a.estado]?.nome ?? "-"},
+              {rotulo: "Vencimento", dataKey: "planejamento", render: (a) => ISOToReadableString(a.planejamento.venceEm)},
+              {rotulo: "Recorrência", dataKey: "recorrencia", render: (a) => RECORRENCIA[a.planejamento.recorrencia?.tipoRecorrenciaId]?.nome ?? "-"},
+              {rotulo: "Execuções", dataKey: "execucoes", render: (a) => a.planejamento.recorrencia?.execucoes ?? 0},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

@@ -1,12 +1,10 @@
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import { Form, Button, Alert } from "react-bootstrap";
-import { catalogosService } from "../../services/catalogosService";
 import { renderOptions } from "../../utils/formUtils";
 import { useAuth } from "../../services/auth/authContext";
 import { canteirosService } from "../../services/crud/canteirosService";
-import { plantasService } from "../../services/crud/plantasService";
-import { eventosService, } from "../../services/crud/eventosService";
-import { historicoEfeitosService, } from "../../services/crud/historicoEfeitosService";
+import { plantasService, eventosService,  } from "../../services/crudService";
+import { historicoEfeitosService } from "../../services/crud/historicoEfeitosService";
 import { manejarCanteiro, monitorarCanteiro } from "@domain/canteiro.rules";
 import { manejarPlanta} from "@domain/planta.rules";
 import { calcularEfeitosDoEvento, montarLogEvento } from "@domain/evento.rules";
