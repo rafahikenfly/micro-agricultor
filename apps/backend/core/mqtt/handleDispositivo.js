@@ -175,21 +175,22 @@ log(`[handleDispostivo]: ${tipoEntidadeId} ${entidades} ${medidas}.`);
     if (Object.keys(medidas).length === 0) continue;
     if (!entidadesService(tipoEntidadeId)) continue;
     log(`[handleDispositivo]: Monitorando ${Object.keys(medidas).length} medida(s) de ${tipoEntidadeId}(s) a partir do MQTT`);
-    await monitorar({
-      tipoEntidadeId,
-      entidades: Array.from(entidades.values()),
-      medidas,
-      timestamp,
-      user,
-      services: {
-        batch: batchService,
-        eventos: eventosService,
-        entidade: entidadesService(tipoEntidadeId),
-        mutacoes: mutacoesService,
-        necessidades: necessidadesService,
-      },
-    });
-    limparCacheNecessidades = true;
+    log(medidas)
+//    await monitorar({
+//      tipoEntidadeId,
+//      entidades: Array.from(entidades.values()),
+//      medidas,
+//      timestamp,
+//      user,
+//      services: {
+//        batch: batchService,
+//        eventos: eventosService,
+//        entidade: entidadesService(tipoEntidadeId),
+//        mutacoes: mutacoesService,
+//        necessidades: necessidadesService,
+//      },
+//    });
+//    limparCacheNecessidades = true;
   }
   if (limparCacheNecessidades) cacheService.clearCache("necessidades")
 }
