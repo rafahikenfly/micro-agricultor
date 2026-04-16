@@ -64,8 +64,8 @@ export function hourlyMaintenance() {
 export function refreshCriticalCaches() {
   log("[CRON] refreshCriticalCaches agendado para cada hora");
   cron.schedule("*/30 * * * *", async () => {
-    cache.clearCache("caracteristicas");
-    cache.clearCache("necessidades");
+    cacheService.clearCache("caracteristicas");
+    cacheService.clearCache("necessidades");
 
     await Promise.all([
       cacheService.getCaracteristicas(),
