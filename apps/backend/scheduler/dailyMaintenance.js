@@ -63,7 +63,7 @@ export function hourlyMaintenance() {
 }
 
 export function refreshCriticalCaches() {
-  log("[CRON] refreshCriticalCaches agendado para cada hora");
+  log("[CRON] refreshCriticalCaches agendado para cada 30 minutos");
   cron.schedule("*/30 * * * *", async () => {
     cacheService.clearCache("caracteristicas");
     cacheService.clearCache("necessidades");
@@ -73,4 +73,6 @@ export function refreshCriticalCaches() {
       cacheService.getNecessidades()
     ]);
   });
+
+  log("[refreshCriticalCaches]: caches atualizados.")
 }

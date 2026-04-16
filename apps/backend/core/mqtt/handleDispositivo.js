@@ -2,6 +2,7 @@ import { ENTIDADE, EVENTO, getNecessidadeKey, monitorar, ORIGEM } from "micro-ag
 import { batchService, cacheService, entidadesService, eventosService, mutacoesService, necessidadesService } from "../../services/index.js";
 import { log, armazenarDado } from "../logger/index.js";
 import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO.js";
+import { countPorCaracteristicaNoPeriodo, maxPorCaracteristicaNoPeriodo, minPorCaracteristicaNoPeriodo, somaPorCaracteristicaNoPeriodo } from "../logger/sql/index.js";
 
 export async function handleDispositivo(topic, message) {
   const user = { uid: "handleDispositivo", nome: ORIGEM.BACKEND.id };
@@ -70,8 +71,8 @@ export async function handleDispositivo(topic, message) {
           log(`[handleDispositivo]: Sensor ${index} do dispositivo ${dispositivoId} sem caracteristicaId.`);
           return;
         }
-        if (!confianca) {
-          log(`[handleDispositivo]: Sensor ${index} do dispositivo ${dispositivoId} sem confianca.`);
+        if (confianca == null) { // == para null e undefined
+          log(`[handleDispositivo]: Sensor ${index} do dispositivo ${dispositivoId} sem confianca definida.`);
           return;
         }
         // armazena os dados
@@ -88,8 +89,41 @@ export async function handleDispositivo(topic, message) {
         // para características sem acumulação. Características com acumulação
         // devem ser processadas pelo inspetor
         const caracteristica = cacheCaracteristicas.map.get(caracteristicaId)
-        if (!caracteristica || caracteristica.tipoAcumulacaoId !== ACUMULACAO.NENHUM.id) return;
-        // TODO: fazer a acumulação quando necessário
+        if (!caracteristica) return;
+
+        const inicio = timestamp - caracteristica.tempoAcumulacao;
+        let valorAcumulado = valor;
+
+        switch (caracteristica.tipoAcumulacaoId) {
+          case ACUMULACAO.NENHUM.id:
+            break;
+          case ACUMULACAO.SOMA.id:
+            valorAcumulado = somaPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            break;
+          case ACUMULACAO.MAXIMO.id:
+            valorAcumulado = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            break;
+          case ACUMULACAO.MINIMO.id:
+            valorAcumulado = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            break;
+          case ACUMULACAO.AMPLITUDE.id: {
+            const min = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            const max = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            valorAcumulado = (min === null || max === null) ? null : (max - min);
+            break;
+          }
+          case ACUMULACAO.CONTAR.id: {
+            // aqui depende da regra (ex: contar acima de um threshold)
+            const count = countPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+            valorAcumulado = count;
+            break;
+          }
+
+          default:
+            log(`[handleDispositivo]: Acumulador ${caracteristica.tipoAcumulacaoId} da caracteristica ${caracteristica.id} desconhecido`);
+            valorAcumulado = null;
+        }
+        if (!valorAcumulado) return;
 
         const necessidadeKey = getNecessidadeKey({
           entidadeId,
@@ -115,7 +149,7 @@ export async function handleDispositivo(topic, message) {
           // adiciona medida no objeto
           grupo.medidas[entidadeId] ||= {};
           grupo.medidas[entidadeId][caracteristicaId] = {
-            valor,
+            valorAcumulado,
             confianca
           };  
         }

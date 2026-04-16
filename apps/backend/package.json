@@ -10,6 +10,7 @@
     "updaterlog": "tail -f updater.log"
   },
   "dependencies": {
+    "better-sqlite3": "^12.9.0",
     "firebase": "^8.10.1",
     "firebase-admin": "^13.7.0",
     "micro-agricultor": "file:../../packages/micro-agricultor",

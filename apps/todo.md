@@ -5,7 +5,8 @@ No frontend:
 No backend:
 - (low-priority) monitorar com alguma frequencia definida o cadastro de dispositivos, para publicar alterações via MQTT 
 - criar o inspetor de tarefas de monitoramento, que consulta o histórico local para cumprir todas as tarefas que puder, usando o lock/complete de tarefa
-- codificar o acumulador de dados de sensores no monitoramento ao receber MQTT (hoje em handleDispositivo, mas deve ir para uma funcao separada de dominio)
+- resolver o problema dos acumuladores MIN e MAX do período, que não avalia se há dados suficientes para retornar um min e max (só está implementado o SQL)
+- resolver o problema do acumulador CONTAR, que não avalia limite
 
 No firmware:
 - reboot periódico de segurança (deixar rodar alguns dias para ver quanto tempo dura o arduino)

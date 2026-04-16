@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# sql
+sensores.db
+sensores.sb-shm
+sensores.sb.wal
+
 # Cache do firebase
 .firebase
 
