@@ -125,8 +125,8 @@ log(`[handleDispostivo]: ${valor} ${index}.`);
             log(`[handleDispositivo]: Acumulador ${caracteristica.tipoAcumulacaoId} da caracteristica ${caracteristica.id} desconhecido`);
             valorAcumulado = null;
         }
-        if (!valorAcumulado) return;
-            log(`[handleDispositivo]: Acumulador acumulou ${valorAcumulado}.`);
+        if (valorAcumulado == null) return;
+        log(`[handleDispositivo]: Acumulador acumulou ${valorAcumulado}.`);
 
         const necessidadeKey = getNecessidadeKey({
           entidadeId,
