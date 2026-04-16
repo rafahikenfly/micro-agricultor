@@ -51,6 +51,8 @@ export async function handleDispositivo(topic, message) {
       }
   
       valores.forEach((valor, index) => {
+log(`[handleDispostivo]: ${valor} ${index}.`);
+
         // prepara a interpretacao, verificando o cadastro do sensor
         // no cache.
         const sensor = sensores[index];  
@@ -168,6 +170,7 @@ export async function handleDispositivo(topic, message) {
   let limparCacheNecessidades = false;
   for (const tipoEntidadeId in entidadesPorTipo) {
     const { entidades, medidas } = entidadesPorTipo[tipoEntidadeId];
+log(`[handleDispostivo]: ${tipoEntidadeId} ${entidades} ${medidas}.`);
 
     if (Object.keys(medidas).length === 0) continue;
     if (!entidadesService(tipoEntidadeId)) continue;
