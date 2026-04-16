@@ -1,5 +1,5 @@
 import { ENTIDADE, EVENTO, getNecessidadeKey, monitorar, ORIGEM } from "micro-agricultor";
-import { batchService, cacheService, entidadeServices, eventosService, mutacoesService, necessidadesService } from "../../services/index.js";
+import { batchService, cacheService, entidadesService, eventosService, mutacoesService, necessidadesService } from "../../services/index.js";
 import { log, armazenarDado } from "../logger/index.js";
 import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO.js";
 
@@ -135,7 +135,7 @@ export async function handleDispositivo(topic, message) {
     const { entidades, medidas } = entidadesPorTipo[tipoEntidadeId];
 
     if (Object.keys(medidas).length === 0) continue;
-    if (!entidadeServices[tipoEntidadeId]) continue;
+    if (!entidadesService[tipoEntidadeId]) continue;
     log(`[handleDispositivo]: Monitorando ${Object.keys(medidas).length} medida(s) de ${tipoEntidadeId}(s) a partir do MQTT`);
     await monitorar({
       tipoEntidadeId,
