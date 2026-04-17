@@ -161,6 +161,6 @@ export async function monitorar({
   // Commit final
   await batch.commit();
 
-  console.log("Monitoramento de entidades concluído.")
+  console.log("Monitoramento de entidades concluído.");
   return;
 }

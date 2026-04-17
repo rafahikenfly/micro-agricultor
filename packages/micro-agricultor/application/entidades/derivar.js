@@ -13,7 +13,6 @@ const mapTipoEntidadeRegra = {
  *
  * @param {Object} args
  * @param {string} args.tipoEntidadeId
- * @param {Object} args.implantacao
  * @param {Array<Object>} args.posicoes
  * @param {Object} [args.canteiro]
  * @param {Object} [args.especie]
@@ -69,7 +68,7 @@ export async function derivar({
   const eventoId = eventoRef.id;
 
   const evento = criarEvento({
-    tipoEvento: EVENTO.IMPLANTACAO,
+    tipoEvento: EVENTO.DERIVACAO,
     timestamp,
     origem: { id: "implantar", tipo: ORIGEM.FRONTEND.id },
     entidadesKey: [],

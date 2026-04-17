@@ -399,9 +399,7 @@ export const getNecessidadesPlanta = ({
           entidadesId: [entidadeId],
         };
         // Monta dados da tarefa
-        let acao = ""
-        if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
-        if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
+        let acao = EVENTO[pendencia.tipoEventoId]?.acao ?? "-"
         const dados = {
           nome: `${acao} ${caracteristica.nome}`,
           descricao: `${caracteristica.descricao} Plantas: ${entidadeNome}`

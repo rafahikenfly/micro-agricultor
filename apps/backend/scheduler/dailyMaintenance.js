@@ -13,6 +13,7 @@ const dailyTasks = [
 
 const hourlyTasks = [
   { name: "currentStateInspector" },
+  { name: "taskStateInspector"},
 ];
 
 async function runTasks(tasks, label) {

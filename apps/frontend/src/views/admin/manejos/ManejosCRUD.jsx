@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { ENTIDADE } from "micro-agricultor";
 
-import { manejoService } from "../../../services/crud/manejoService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
 
@@ -11,6 +10,7 @@ import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 
 import ManejoModal from "./ManejoModal";
+import { manejosService } from "../../../services/crudService";
 
 export default function ManejosCRUD() {
   const { user } = useAuth();
@@ -28,7 +28,7 @@ export default function ManejosCRUD() {
   useEffect(() => {
     setLoading(true);
 
-    const unsub = manejoService.subscribe((data) => {
+    const unsub = manejosService.subscribe((data) => {
       setManejos(data);
       setLoading(false); // só desliga quando os dados chegam
     });
@@ -38,7 +38,7 @@ export default function ManejosCRUD() {
 
   /* ================= CRUD ================= */
   const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
-    crudService: manejoService,
+    crudService: manejosService,
     nomeEntidade: "manejo",
     masculino: true, // "o manejo"
     user,  
@@ -64,9 +64,7 @@ export default function ManejosCRUD() {
             dados = {manejos}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Aplicável à", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},
-              {rotulo: "Apagado", dataKey: "isDeleted", boolean: true },
-              
+              {rotulo: "Aplicável à", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},              
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

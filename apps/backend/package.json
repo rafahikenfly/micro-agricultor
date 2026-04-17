@@ -3,6 +3,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
+    "job": "node index.js --job",
     "start:bg": "nohup node index.js > backend.log 2>&1 &",
     "stop:bg": "pkill -f index.js",
     "backendlog": "tail -f backend.log",

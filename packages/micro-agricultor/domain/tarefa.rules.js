@@ -32,6 +32,7 @@ const tarefaPadrao = {
     prioridade: 0,
     venceEm: 0,
     recorrencia: {
+      tarefaOrigemId: null,
       tipoRecorrenciaId: RECORRENCIA.NENHUMA.id,    // default seguro
       tipoRecorrenciaFim: RECORRENCIA_FIM.NUNCA.id, // default seguro
       expiraEm: null,
@@ -46,6 +47,7 @@ const tarefaPadrao = {
   //  iniciadoEm: 0,
   //  finalizadoEm: 0,
   //  tentativas: 0,
+  //  ultimoErro: "",
   //  maxTentativas: 3,
   //  agente: {
   //    tipo: "",
@@ -55,7 +57,6 @@ const tarefaPadrao = {
   resolucao: null
   //{
   //  tipoResolucaoId: "",
-  //  tipoEventoId: "",
   //  resolvidoEm: "",
   //  agente: {
   //    tipo: "",
@@ -99,51 +100,95 @@ export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000
     }
   };
 }
-
-export const resolverTarefa = ({tarefa, agente, timestamp, tipoResolucaoId, tipoEventoId}) => {
-  if (tarefa.resolucao?.tipoResolucaoId) throw new Error(`[resolverTarefa] Tarefa ${tarefa.id} já resolvida`);
-
-  const tarefaResolvida = {...resolveRecorrencia({tarefa,timestamp})}
-  tarefaResolvida.resolucao = {
-    ...(tarefaResolvida.resolucao ?? {}),
-    tipoResolucaoId,
-    tipoEventoId,
-    resolvidoEm: timestamp,
-    agente
+export const devolverTarefa = ({ tarefa, agente }) => {
+  if (!tarefa.execucao) {
+    throw new Error(`[devolverTarefa] Tarefa ${tarefa.id} não está em execução`);
   }
 
-  return tarefaResolvida
+  if (tarefa.execucao.agente.id !== agente.id) {
+    throw new Error(`[devolverTarefa] Agente não é o dono da execução`);
+  }
+
+  return {
+    ...tarefa,
+    execucao: null
+  };
+};
+
+export const retryTarefa = ({ tarefa, agente, timestamp, erro, }) => {
+  if (!tarefa.execucao) {
+    throw new Error(`[retryTarefa] Tarefa ${tarefa.id} não está em execução`);
+  }
+
+  if (tarefa.execucao.agente.id !== agente.id) {
+    throw new Error(`[retryTarefa] Agente não é o dono da execução`);
+  }
+
+  const tentativas = (tarefa.execucao.tentativas ?? 0) + 1;
+  const maxTentativas = tarefa.execucao.maxTentativas ?? 0;
+
+  // Estourou tentativas → falha definitiva
+  if (tentativas >= maxTentativas) {
+    return {
+      ...tarefa,
+      execucao: null,
+      estado: ESTADO_TAREFA.FEITO.id,
+      resolucao: {
+        ...(tarefa.resolucao ?? {}),
+        tipoResolucaoId: RESOLUCAO.FALHA.id,
+        resolvidoEm: timestamp,
+        agente,
+      }
+    };
+  }
+
+  // Retry normal
+  return {
+    ...tarefa,
+    execucao: {
+      ...tarefa.execucao,
+      tentativas,
+      ultimoErro: erro
+    }
+  };
+};
+export const resolverTarefa = ({tarefa, tipoResolucaoId, agente, timestamp}) => {
+  if (tarefa.resolucao?.tipoResolucaoId) throw new Error(`[resolverTarefa] Tarefa ${tarefa.id} já resolvida`);
+  const tarefaResolvida = {
+    ...tarefa,
+    estado: ESTADO_TAREFA.FEITO.id,
+    resolucao: {
+      ...(tarefa.resolucao ?? {}),
+      resolvidoEm: timestamp,
+      tipoResolucaoId,
+      agente
+    }
+  }
+
+  const novaTarefa = resolverRecorrencia({ tarefa, timestamp })
+
+  return { tarefaResolvida, novaTarefa }
 }
 
-function resolveRecorrencia({ tarefa, timestamp }) {
+function resolverRecorrencia({ tarefa, timestamp }) {
   const r = tarefa.planejamento?.recorrencia;
 
   // Sem recorrencia
   if (!r || r.tipoRecorrenciaId === RECORRENCIA.NENHUMA.id) {
-    return {
-      ...tarefa,
-      estado: ESTADO_TAREFA.FEITO.id,
-    };
+    return null;
   }
 
   // Recorrência expirada
-  const novasExecucoes = (r.execucoes ?? 0) + 1;
+  const novoExecucoes = (r.execucoes ?? 0) + 1;
   const passouData =
     r.terminaEm !== null &&
     timestamp > r.terminaEm;
   const passouQuantidade =
     r.quantidade !== null &&
-    novasExecucoes >= r.quantidade;
+    novoExecucoes >= r.quantidade;
   const expirou = passouData || passouQuantidade;
   if (expirou) {
-    return { 
-      ...tarefa,
-      estado: ESTADO_TAREFA.FEITO.id,
-      resolucao: {
-        ...(tarefa.resolucao ?? {}),
-        tipoResolucaoId: RESOLUCAO.EXPIRADO.id,
-      }
-     };
+    return null
   }
 
   // Recorrência vigente
@@ -174,7 +219,7 @@ function resolveRecorrencia({ tarefa, timestamp }) {
       proximoVencimento = adicionarAno(timestamp);
       break;
     default:
-      throw new Error(`[resolveRecorrencia]: Recorrência não suportada: ${r.tipoRecorrenciaId}`);
+      throw new Error(`[resolverRecorrencia]: Recorrência não suportada: ${r.tipoRecorrenciaId}`);
   }
 
   return {
@@ -185,10 +230,11 @@ function resolveRecorrencia({ tarefa, timestamp }) {
       venceEm: proximoVencimento,
       recorrencia: {
         ...tarefa.planejamento.recorrencia,
-        execucoes: novasExecucoes,
+        tarefaOrigemId: tarefa.planejamento.recorrencia.tarefaOrigemId ?? tarefa.id,
+        execucoes: novoExecucoes,
       }
     },
     execucao: null,
     resolucao: null,
-  };
+  }
 }

@@ -1,15 +1,74 @@
-export async function inspecionarTarefa(task, necessidades = []) {
-    try {
+import { resolverTarefa } from "../../domain/index.js";
+import { RESOLUCAO } from "../../types/index.js";
 
-        if (!necessidades.length) {
-            //usar resolve da tarefa!
-            await tarefasService.update(task.id, {
-                estado: ESTADO_TAREFA.FEITO.id
-            });
-            console.log(`Tarefa ${task.id} marcada como resolvida`);
-        }
-    } catch (error) {
-        log(`Erro ao processar tarefa ${task.id}:`, error);
-        throw error;
+export async function inspecionar({
+  tarefas,
+  agente,
+  user,
+  timestamp,
+  services, //batch, tarefas, necessidades
+}) {
+  // ======
+  // Validações
+  // ======
+  if (!tarefas?.length) {
+    throw new Error("Nenhuma tarefa para inspeção.");
+  }
+  const batch = services.batch;
+  console.log(`Inspecionando ${tarefas.length} tarefa(s)...`);
+  
+  // Buscar todas as necessidades ativas uma só vez
+  const necessidadesAtivas = await services.necessidades.get([
+    { field: "ativo", op: "==", value: true }
+    ]
+  );
+
+  // Mapeia as necessidades por vínculo
+  const necessidadesPorVinculo = necessidadesAtivas.reduce((map, necessidade) => {
+    const key = necessidade.vinculo?.id;
+    if (!key) return map;
+    
+    if (!map[key]) {
+        map[key] = [];
     }
+    
+    map[key].push(necessidade);
+    return map;
+  }, {});
+
+  // ======
+  // Tarefa
+  // ======
+  // Processa cada entidade do array
+  for (const tarefa of tarefas) {
+    await batch.commitIfNeeded();
+
+    // Se ainda há necessidades, não resolve a tarefa
+    if (necessidadesPorVinculo[tarefa.id]?.length) continue;
+    // TODO: há outros tipos de resolução para tratar
+    // aquisicao expirada: timestamp > execucao.adquiridoAte
+    // falhado: execucao.numTentativas > execucao.maxTentativas
+
+    // Aplica regra de resolução
+    const results = resolverTarefa({
+        tarefa,
+        timestamp,
+        agente,
+        tipoResolucaoId: RESOLUCAO.CONCLUIDO.id,
+      });
+    
+    // Atualiza a tarefa pelo batch
+    const tarefaRef = services.tarefas.getRefById(tarefa.id);
+    batch.add((b)=>services.tarefas.batchUpsert(tarefaRef, results.tarefaResolvida, user, b));
+    // Resultado sem nova tarefa
+    if (results.novaTarefa) {
+      batch.add((b)=>services.tarefas.batchCreate(results.novaTarefa, user, b));
+    }
+  }
+
+  // Commit final
+  await batch.commit();
+
+  console.log("Inspeção de tarefas concluído.");
+  return;
 }

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { VARIANTE } from "micro-agricultor";
 
-import { estadosPlantaService } from "../../../services/crud/estadosPlantaService";
+import { estadosPlantaService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useToast } from "../../../services/toast/toastProvider";

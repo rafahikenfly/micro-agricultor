@@ -50,6 +50,12 @@ getCaracteristicas: async () =>
       crud.dispositivosService,
       [{ field: "isDeleted", op: "==", value: false }],
     ),
+  getTarefas: async () =>
+    await cache.get(
+      "tarefas",
+      crud.tarefasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
 
   // DERIVED
   getEntidades() {

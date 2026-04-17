@@ -21,7 +21,8 @@ export async function currentStateInspector() {
   const novasNecessidades = [];
   const mapaTarefas = {}
 
-  // Avalia as plantas e muta o mapa de tarefas
+  // Avalia as plantas, mutando o contexto (mapaTarefas), e inclui
+  // todas as necessidades ao array de necessidades.
   log(`[currentStateInspector]: ${cachePlantas.list.length} plantas para inspecionar...`);
   for (const planta of cachePlantas.list) {
     novasNecessidades.push(...getNecessidadesPlanta({
@@ -34,8 +35,8 @@ export async function currentStateInspector() {
     }))
   }
 
-  //Avalia os canteiros  e inclui
-  //todas as necessidades ao array de necessidades.
+  // Avalia os canteiros, mutando o contexto (mapaTarefas), e inclui
+  // todas as necessidades ao array de necessidades.
   log(`[currentStateInspector]: ${cacheCanteiros.list.length} canteiros para inspecionar`);
   for (const canteiro of cacheCanteiros.list) {
     novasNecessidades.push(...getNecessidadesCanteiro({
@@ -49,13 +50,13 @@ export async function currentStateInspector() {
     }));
   }
 
-  //Converte o mapa de tarefas em um array e cria os Ids no mapa
+  // Converte o mapa de tarefas em um array e cria os Ids no mapa
   const novasTarefas = Object.values(mapaTarefas);
   log(`[currentStateInspector]: Salvando ${novasTarefas.length} nova(s) tarefa(s) e respectivas necessidades.`);
   let batch = batchService.create();
 
+  // Mapeia as necessidades por caracteristica
   const necessidadesPorCaracteristica = {};
-
   for (const n of novasNecessidades) {
     if (!necessidadesPorCaracteristica[n.caracteristicaId]) {
       necessidadesPorCaracteristica[n.caracteristicaId] = [];
@@ -63,6 +64,7 @@ export async function currentStateInspector() {
     necessidadesPorCaracteristica[n.caracteristicaId].push(n);
   }
 
+  // Gera as tarefas no batch
   for (const tarefa of novasTarefas) {
     await batch.commitIfNeeded();
 
