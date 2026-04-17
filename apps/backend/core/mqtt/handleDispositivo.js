@@ -86,47 +86,7 @@ export async function handleDispositivo(topic, message) {
         });
 
         // Verifica a necessidade de monitoramento e se houver, inclui
-        // no objeto que vai ser iterado para monitoramento. Isso só funciona
-        // para características sem acumulação. Características com acumulação
-        // devem ser processadas pelo inspetor
-        const caracteristica = cacheCaracteristicas.map.get(caracteristicaId)
-        if (!caracteristica) return;
-
-        const inicio = timestamp - caracteristica.tempoAcumulacao;
-        let valorAcumulado = valor;
-
-        switch (caracteristica.tipoAcumulacaoId) {
-          case ACUMULACAO.NENHUM.id:
-            break;
-          case ACUMULACAO.SOMA.id:
-            valorAcumulado = somaPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            break;
-          case ACUMULACAO.MAXIMO.id:
-            valorAcumulado = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            break;
-          case ACUMULACAO.MINIMO.id:
-            valorAcumulado = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            break;
-          case ACUMULACAO.AMPLITUDE.id: {
-            const min = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            const max = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            valorAcumulado = (min === null || max === null) ? null : (max - min);
-            break;
-          }
-          case ACUMULACAO.CONTAR.id: {
-            // aqui depende da regra (ex: contar acima de um threshold)
-            const count = countPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
-            valorAcumulado = count;
-            break;
-          }
-
-          default:
-            log(`[handleDispositivo]: Acumulador ${caracteristica.tipoAcumulacaoId} da caracteristica ${caracteristica.id} desconhecido`);
-            valorAcumulado = null;
-        }
-        if (valorAcumulado == null) return;
-        log(`[handleDispositivo]: Acumulador acumulou ${valorAcumulado}.`);
-
+        // no objeto que vai ser iterado para monitoramento.
         const necessidadeKey = getNecessidadeKey({
           entidadeId,
           caracteristicaId,
@@ -134,6 +94,45 @@ export async function handleDispositivo(topic, message) {
         });
         const necessidade = cacheNecessidades.map.get(necessidadeKey);
         if (necessidade && necessidade.ativo) {
+          const caracteristica = cacheCaracteristicas.map.get(caracteristicaId)
+          if (!caracteristica) return;
+
+          // Calcula a acumulação
+          const inicio = timestamp - caracteristica.tempoAcumulacao;
+          let valorAcumulado = valor;
+
+          switch (caracteristica.tipoAcumulacaoId) {
+            case ACUMULACAO.NENHUM.id:
+              break;
+            case ACUMULACAO.SOMA.id:
+              valorAcumulado = somaPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+              break;
+            case ACUMULACAO.MAXIMO.id:
+              valorAcumulado = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+              break;
+            case ACUMULACAO.MINIMO.id:
+              valorAcumulado = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp);
+              break;
+            case ACUMULACAO.AMPLITUDE.id: {
+              const min = minPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp, caracteristica.tempoAcumulacao * 0.8);
+              const max = maxPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp, caracteristica.tempoAcumulacao * 0.8);
+              valorAcumulado = (min === null || max === null) ? null : (max - min);
+              break;
+            }
+            case ACUMULACAO.CONTAR.id: {
+              // aqui depende da regra (ex: contar acima de um threshold)
+              const count = countPorCaracteristicaNoPeriodo(caracteristicaId, inicio, timestamp, caracteristica.limiteAcumulacao);
+              valorAcumulado = count;
+              break;
+            }
+
+            default:
+              log(`[handleDispositivo]: Acumulador ${caracteristica.tipoAcumulacaoId} da caracteristica ${caracteristica.id} desconhecido`);
+              valorAcumulado = null;
+              return;
+          }
+          log(`[handleDispositivo]: Acumulador acumulou ${valorAcumulado}.`);
+
           const grupo = entidadesPorTipo[tipoEntidadeId] ||= {
             entidades: new Map(),
             medidas: {}

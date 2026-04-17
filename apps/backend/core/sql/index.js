@@ -23,22 +23,53 @@ const avgStmt = sqlDb.prepare(`
   AND data_hora BETWEEN ? AND ?
 `);
 
-const minStmt = sqlDb.prepare(`
+const minStmtSemCobertura = sqlDb.prepare(`
   SELECT MIN(valor) as result
   FROM sensores_log
   WHERE caracteristica_id = ?
   AND data_hora BETWEEN ? AND ?
 `);
+const minStmtComCobertura = sqlDb.prepare(`
+  SELECT 
+    CASE 
+      WHEN (MAX(data_hora) - MIN(data_hora)) < ? THEN NULL
+      ELSE MIN(valor)
+    END as result
+  FROM sensores_log
+  WHERE caracteristica_id = ?
+  AND data_hora BETWEEN ? AND ?
+`);
 
-const maxStmt = sqlDb.prepare(`
+const maxStmtSemCobertura = sqlDb.prepare(`
   SELECT MAX(valor) as result
   FROM sensores_log
   WHERE caracteristica_id = ?
   AND data_hora BETWEEN ? AND ?
 `);
 
+const maxStmtComCobertura = sqlDb.prepare(`
+  SELECT 
+    CASE 
+      WHEN (MAX(data_hora) - MIN(data_hora)) < ? THEN NULL
+      ELSE MAX(valor)
+    END as result
+  FROM sensores_log
+  WHERE caracteristica_id = ?
+  AND data_hora BETWEEN ? AND ?
+`);
+
 // COUNT ajustado para retornar NULL quando não houver dados
-const countStmt = sqlDb.prepare(`
+const countStmtComLimite = sqlDb.prepare(`
+  SELECT CASE 
+    WHEN COUNT(*) = 0 THEN NULL 
+    ELSE COUNT(*) 
+  END as result
+  FROM sensores_log
+  WHERE caracteristica_id = ?
+  AND data_hora BETWEEN ? AND ?
+  AND valor > ?
+`);
+const countStmtSemLimite = sqlDb.prepare(`
   SELECT CASE 
     WHEN COUNT(*) = 0 THEN NULL 
     ELSE COUNT(*) 
@@ -82,14 +113,24 @@ export function mediaPorCaracteristicaNoPeriodo(id, inicio, fim) {
   return getNullableNumber(avgStmt.get(id, inicio, fim));
 }
 
-export function minPorCaracteristicaNoPeriodo(id, inicio, fim) {
-  return getNullableNumber(minStmt.get(id, inicio, fim));
+export function minPorCaracteristicaNoPeriodo(id, inicio, fim, coberturaMinimaMs) {
+  if (coberturaMinimaMs == null) {
+    return getNullableNumber(minStmtSemCobertura.get(coberturaMinimaMs, id, inicio, fim));
+  }
+  return getNullableNumber(minStmtComCobertura.get(id, inicio, fim));
 }
 
-export function maxPorCaracteristicaNoPeriodo(id, inicio, fim) {
-  return getNullableNumber(maxStmt.get(id, inicio, fim));
+export function maxPorCaracteristicaNoPeriodo(id, inicio, fim, coberturaMinimaMs) {
+  if (coberturaMinimaMs == null) {
+    return getNullableNumber(maxStmtSemCobertura.get(coberturaMinimaMs, id, inicio, fim));
+  }
+  return getNullableNumber(maxStmtComCobertura.get(id, inicio, fim));
 }
 
-export function countPorCaracteristicaNoPeriodo(id, inicio, fim) {
-  return getNullableNumber(countStmt.get(id, inicio, fim));
+export function countPorCaracteristicaNoPeriodo(id, inicio, fim, limite) {
+  if (limite == null) {
+    return getNullableNumber(countStmtSemLimite.get(id, inicio, fim));
+  }
+
+  return getNullableNumber(countStmtComLimite.get(id, inicio, fim, limite));
 }
