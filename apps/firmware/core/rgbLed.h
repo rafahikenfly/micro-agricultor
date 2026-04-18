@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 // ===== Tipos =====
-typedef void (*LedColorFunc)();
+typedef void (*LedColorFunc)(uint8_t);
 
 // ===== Estado interno =====
 static uint8_t _pinR, _pinG, _pinB;
@@ -12,12 +12,15 @@ static uint8_t _pinR, _pinG, _pinB;
 // blink
 static LedColorFunc _blinkColor = nullptr;
 static unsigned long _blinkInterval = 0;
-static bool _blinkState = false;
 static bool _blinkActive = false;
-static unsigned long _lastToggle = 0;
+static uint8_t _maxInterval = 0;
+static uint8_t _maxIntensity = 255;
+static unsigned long _fadeInterval = 0;
+static unsigned long _cycleStart = 0;
+//static bool _blinkState = false;
+//static unsigned long _lastToggle = 0;
 
 // fade
-static unsigned long _fadeInterval = 0; // velocidade do fade
 static int _fadeValue = 0;
 static int _fadeDirection = 1; // 1 = sobe, -1 = desce
 static unsigned long _lastFade = 0;
@@ -39,56 +42,48 @@ static inline void ledStart(uint8_t pinR, uint8_t pinG, uint8_t pinB) {
 }
 
 // ===== Cores =====
-static inline void ledOff() {
+static inline void ledOff(uint8_t fadeValue = 255) {
   digitalWrite(_pinR, LOW);
   digitalWrite(_pinG, LOW);
   digitalWrite(_pinB, LOW);
 }
-static inline void ledRed() {
-  digitalWrite(_pinR, HIGH);
+static inline void ledRed(uint8_t fadeValue = 255) {
+  analogWrite(_pinR, fadeValue);
   digitalWrite(_pinG, LOW);
   digitalWrite(_pinB, LOW);
 }
-static inline void ledYellow() {
-  digitalWrite(_pinR, HIGH);
-  digitalWrite(_pinG, HIGH);
+static inline void ledYellow(uint8_t fadeValue = 255) {
+  analogWrite(_pinR, fadeValue);
+  analogWrite(_pinG, fadeValue);
   digitalWrite(_pinB, LOW);
 }
-static inline void ledGreen() {
+static inline void ledGreen(uint8_t fadeValue = 255) {
   digitalWrite(_pinR, LOW);
-  digitalWrite(_pinG, HIGH);
+  analogWrite(_pinG, fadeValue = 255);
   digitalWrite(_pinB, LOW);
 }
-static inline void ledBlue() {
+static inline void ledBlue(uint8_t fadeValue = 255) {
   digitalWrite(_pinR, LOW);
   digitalWrite(_pinG, LOW);
-  digitalWrite(_pinB, HIGH);
-}
-
-static inline void ledFadeBlue() {
-  digitalWrite(_pinR, LOW);
-  digitalWrite(_pinG, LOW);
-  analogWrite(_pinB, _fadeValue);
+  analogWrite(_pinB, fadeValue);
 }
 
 // ===== Blink =====
 static inline void ledBlinkStart(
   LedColorFunc color,
   unsigned long blinkInterval,
-  unsigned long fadeInterval = 0
+  unsigned long fadeInterval = 0,
+  unsigned long maxInterval = 0,
+  uint8_t maxIntensity = 255
 ) {
   _blinkColor = color;
   _blinkInterval = blinkInterval;
   _fadeInterval = fadeInterval;
+  _maxInterval = maxInterval;
+  _maxIntensity = maxIntensity;
 
-  _lastToggle = millis();
-  _lastFade = millis();
-  _blinkState = true;
+  _cycleStart = millis();
   _blinkActive = true;
-  _fadeValue = 0;
-  _fadeDirection = 1;
-
-  if (_blinkColor) _blinkColor();
 }
 
 static inline void ledBlinkStop() {
@@ -97,56 +92,52 @@ static inline void ledBlinkStop() {
 }
 
 static inline void ledLoop() {
-  if (!_blinkActive) return;
+  if (!_blinkActive || !_blinkColor) return;
   
   unsigned long now = millis();
+  unsigned long t = now - _cycleStart;
 
-  //FADE
-  if (_fadeInterval > 0) {
-    if (now - _lastFade >= _fadeInterval) {
-      _lastFade = now;
+  // calcula ciclo
+  unsigned long fadeInStart  = _blinkInterval;
+  unsigned long fadeInEnd    = fadeInStart + _fadeInterval;
+  unsigned long fadeOutStart = fadeInEnd + _maxInterval;
+  unsigned long fadeOutEnd   = fadeOutStart + _fadeInterval;
 
-      _fadeValue += _fadeDirection * 5;
+  // reinicia ciclo
+  if (t >= fadeOutEnd) {
+    _cycleStart = now;
+    t = 0;
+  }
+  uint8_t value = 0;
 
-      if (_fadeValue >= 255) {
-        _fadeValue = 255;
-        _fadeDirection = -1;
-      } else if (_fadeValue <= 0) {
-        _fadeValue = 0;
-        _fadeDirection = 1;
-      }
-      //TODO: OUTRAS CORES
-      ledFadeBlue();
-    }
-    return;
+  // --- FADE IN ---
+  if (_fadeInterval > 0 && t >= fadeInStart && t < fadeInEnd) {
+    unsigned long fadeTime = t - fadeInStart;
+    float progress = (float)fadeTime / _fadeInterval;
+    value = progress * _maxIntensity;
+  }
+  // --- ON (PLENO) ---
+  else if (t >= fadeInEnd && t < fadeOutStart) {
+    value = _maxIntensity;
+  }
+  // --- FADE OUT ---
+  else if (_fadeInterval > 0 && t >= fadeOutStart && t < fadeOutEnd) {
+    unsigned long fadeTime = t - fadeOutStart;
+    float progress = (float)fadeTime / _fadeInterval;
+    value = _maxIntensity * (1.0 - progress);
+  }
+  // --- OFF ---
+  else {
+    value = 0;
   }
 
-  //BLINK
-  if (now - _lastToggle >= _blinkInterval) {
-    _lastToggle = now;
-    _blinkState = !_blinkState;
-
-  if (_blinkState && _blinkColor)
-    _blinkColor();
-  else
-    ledOff();
-  }
+  _blinkColor(value);
 }
 
-// ===== Callback padrão =====
-static inline void ledWaiting(unsigned long now) {
-  static unsigned long last = 0;
-  static bool state = false;
-
-  if (now - last >= 300) {
-    last = now;
-    state = !state;
-
-    if (state)
-      ledBlue();
-    else
-      ledOff();
-  }
+// ===== PADROES DE LED =====
+// ===== WAITING =====
+static inline void ledWaiting() {
+  ledBlinkStart(ledBlue, 10000, 2000, 1000, 170);
 }
 
 // ===== ERROR =====

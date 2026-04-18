@@ -53,8 +53,7 @@ void setup() {
   
   // WIFI
   wifiStart(deviceConfig.ssid, deviceConfig.password, ledWaiting);
-  ledOff();
-  ledBlinkStart(ledBlue, 0, 200);
+  ledWaiting();
   Serial.println("[DEVICE] Setup concluído");
 
   // TODO: CARREGA O SENSORS CONFIG DO EEPROM 
@@ -92,14 +91,14 @@ void loop() {
     if (strlen(TOPIC) + strlen(deviceConfig.client_id) + 2 > sizeof(fullTopic)) {
       Serial.println("Topic muito grande");
       ledError();
-      ledBlinkStart(ledBlue,0,200);
+      ledBlinkStart(ledBlue,200);
       return;
     }
 
     if (!mqttConnect(3000)) {
       Serial.println("Sem conexão");
       ledError();
-      ledBlinkStart(ledBlue,0,200);
+      ledBlinkStart(ledBlue,200);
       return;
     }
     
@@ -120,11 +119,11 @@ void loop() {
     if (!ok) {
       Serial.println("Falha");
       ledError();
-      ledBlinkStart(ledBlue,0,200);
+      ledBlinkStart(ledBlue, 5000, 1000, 1000);
     } else {
       Serial.println("OK");
       ledSuccess();
-      ledBlinkStart(ledBlue,0,200);
+      ledBlinkStart(ledBlue, 5000, 1000, 1000);
     }
   }
 }
