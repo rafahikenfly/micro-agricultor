@@ -43,17 +43,17 @@ export default function AdminSidebar() {
         <Nav.Link as={NavLink} to="/admin/manejos">
           Manejos
         </Nav.Link>
-        <Nav.Link as={NavLink} to="/admin/sensores">
-          Sensores (TODO)
-        </Nav.Link>
-        <Nav.Link as={NavLink} to="/admin/robos">
-          Robôs (TODO)
+        <Nav.Link as={NavLink} to="/admin/dispositivos">
+          Dispositivos
         </Nav.Link>
         <hr />
 
         <div className="text-muted small mb-2">Configuração</div>
         <Nav.Link as={NavLink} to="/admin/caracteristicas">
           Características
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/categorias-especies">
+          Categorias
         </Nav.Link>
         <Nav.Link as={NavLink} to="/admin/estados-canteiro">
           Estados de Canteiro
@@ -67,7 +67,7 @@ export default function AdminSidebar() {
         <Nav.Link as={NavLink} to="/admin/tarefas">
           Tarefas
         </Nav.Link>
-        <Nav.Link as={NavLink} to="/admin/midia">
+        <Nav.Link as={NavLink} to="/admin/midias">
           Mídia
         </Nav.Link>
 

@@ -4,13 +4,20 @@ import { Form } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions, StandardInput } from "../../../utils/formUtils";
 
 import { EntidadeLocalizacaoTab } from "../../../components/common/EntidadePosDimTab";
+import { useCache } from "../../../hooks/useCache";
+import Loading from "../../../components/Loading";
 
-export function PlantaLocalizacaoTab ({form, setForm, hortas=[], listaCanteiros=[], loading}) {
+export function PlantaLocalizacaoTab ({form, setForm, loading}) {
+  const { cacheCanteiros, cacheHortas, reading } = useCache(["canteiros", "hortas"])
+
 
   const canteirosDaHorta = useMemo(() => {
     if (!form.hortaId) return [];
-    return listaCanteiros.filter(c => c.hortaId === form.hortaId);
-  }, [listaCanteiros, form.hortaId]);
+    return cacheCanteiros?.list.filter(c => c.hortaId === form.hortaId);
+  }, [cacheCanteiros, form.hortaId]);
+
+  if (reading) return <Loading />
+  if (!cacheCanteiros || !cacheHortas) return;
 
   return (
       <EntidadeLocalizacaoTab
@@ -21,7 +28,7 @@ export function PlantaLocalizacaoTab ({form, setForm, hortas=[], listaCanteiros=
           <Form.Select
             value={form.hortaId}
             onChange={e => {handleSelectIdNome(e, {
-              list: hortas,
+              list: cacheHortas.list,
               setForm: setForm,
               fieldId: "hortaId",
               nomeKey: "hortaNome",
@@ -30,7 +37,7 @@ export function PlantaLocalizacaoTab ({form, setForm, hortas=[], listaCanteiros=
           }}
           >
             {renderOptions({
-              list: hortas,
+              list: cacheHortas.list,
               loading: loading,
               placeholder: "Selecione a horta do canteiro",
             })}

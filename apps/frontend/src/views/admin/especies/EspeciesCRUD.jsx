@@ -1,17 +1,16 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { especiesService } from "../../../services/crud/especiesService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useCache } from "../../../hooks/useCache";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import EspecieModal from "./EspecieModal";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { especiesService } from "../../../services/crudService";
 
 export default function EspeciesCRUD() {
   const { user } = useAuth();
@@ -65,13 +64,12 @@ export default function EspeciesCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {especies}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome", },
               {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: reading ? {} : cacheCategoriasEspecie?.list, width: "100px"},
-              {rotulo: "Estágios", dataKey: "ciclo", contar: true, width: "50px"},
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, width: "50px"},
+              {rotulo: "Estágios", dataKey: "ciclo", render: (a)=>a.ciclo.length, width: "50px"},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

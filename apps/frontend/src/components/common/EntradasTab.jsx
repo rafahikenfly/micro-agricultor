@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { InputGroup, Form, Button } from "react-bootstrap";
-import ListaAcoes from "./ListaAcoes";
+import ListaComAcoes from "./ListaComAcoes";
 
 export default function EntradasTab({ value = [], onChange}) {
   const [nome, setNome] = useState("");
@@ -56,7 +56,7 @@ export default function EntradasTab({ value = [], onChange}) {
       </Button>
 
       {/* LISTA */}
-      <ListaAcoes
+      <ListaComAcoes
         dados={value}
         campos={[
           {rotulo: "Nome", data: "nome"},

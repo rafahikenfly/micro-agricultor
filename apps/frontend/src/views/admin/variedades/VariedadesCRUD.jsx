@@ -1,20 +1,23 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { variedadesService } from "../../../services/crud/variedadesService";
+import { variedadesService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import VariedadeModal from "./VariedadeModal";
+import { useCache } from "../../../hooks/useCache";
 
 
 export default function VariedadesCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
+  const { cacheEspecies, reading } = useCache(["especies"]);
+  
 
   const [variedades, setVariedades] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -62,12 +65,11 @@ export default function VariedadesCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {variedades}
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Espécie", dataKey: "especieNome", },
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
+              {rotulo: "Nome", dataKey: "nome" },
+              {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId)?.nome ?? "-" },
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

@@ -2,13 +2,12 @@ import { useState } from "react";
 import { Form } from "react-bootstrap";
 import { handleSelectIdNome, renderOptions, StandardInput, StandardArrayInput } from "../../../utils/formUtils";
 import { EFEITO } from "micro-agricultor";
+import { useCache } from "../../../hooks/useCache";
 
-export default function ManejoEfeitosTab({
-  formEfeitos,
-  setFormEfeitos,
-  caracteristicas,
-  loading,
-}) {
+export default function ManejoEfeitosTab({ formEfeitos, setFormEfeitos }) {
+    const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
+    
+  
 
   const [formCaracteristicaAfetada, setFormCaracteristicaAfetada] = useState({
     caracteristicaId: "",
@@ -50,7 +49,7 @@ export default function ManejoEfeitosTab({
             value={formCaracteristicaAfetada.id}
             onChange={e =>
               handleSelectIdNome(e, {
-                list: caracteristicas,
+                list: cacheCaracteristicas?.list,
                 setForm: setFormCaracteristicaAfetada,
                 fieldId: "caracteristicaId",
                 fieldNome: "caracteristicaNome"
@@ -58,8 +57,8 @@ export default function ManejoEfeitosTab({
             }
           >
             {renderOptions({
-              list: caracteristicas,
-              loading,
+              list: cacheCaracteristicas?.list,
+              loading: reading,
               placeholder: "Selecione a característica afetada",
               nullOption: true,
             })}
@@ -77,7 +76,6 @@ export default function ManejoEfeitosTab({
           >
             {renderOptions({
               list: Object.values(EFEITO),
-              loading,
               placeholder: "Selecione o tipo de efeito no valor da característica",
             })}
           </Form.Select>
@@ -101,7 +99,6 @@ export default function ManejoEfeitosTab({
           >
             {renderOptions({
               list: Object.values(EFEITO),
-              loading,
               placeholder: "Selecione o tipo de efeito na confiança do valor da característica",
             })}
           </Form.Select>

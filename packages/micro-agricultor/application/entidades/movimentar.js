@@ -1,8 +1,8 @@
-import { ENTIDADE, EVENTO, ORIGEM } from "../types/index.js";
-import { criarEvento } from "../domain/evento.rules.js";
-import { desenharPlanta } from "../domain/planta.rules.js";
-import { movimentarCanteiro } from "../domain/canteiro.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
+import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { desenharPlanta } from "../../domain/planta.rules.js";
+import { movimentarCanteiro } from "../../domain/canteiro.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: desenharPlanta,
@@ -59,7 +59,7 @@ export async function movimentar({
   if (!regra) {
     throw new Error(`Nenhuma regra de movimentação para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Movimentando ${entidades.length} entidades...`);
+  console.log(`Movimentando ${entidades.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "movimentar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();

@@ -7,16 +7,10 @@ import MidiaDadosTab from "./MidiaDadosTab";
 import { MidiaMetadadosTab } from "./MidiaMetadadosTab";
 import { MidiaContextoTab } from "./MidiaContexto";
 import MidiaPreviewTab from "./MidiaPreviewTab";
-import { useCache } from "../../../hooks/useCache";
-
-
+import MidiaExecucaoTab from "./MidiaExecucao";
+import MidiaInferenciaTab from "./MidiaInferencia";
 
 export default function MidiaModal({ show, onSave, onClose, data = {}, }) {
-  const { cachePlantas, cacheCanteiros, reading } = useCache([
-    "plantas",
-    "canteiros"
-  ]);
-
   // Controle de tab
   const [tab, setTab] = useState("dados");
   // Formulário
@@ -57,21 +51,30 @@ export default function MidiaModal({ show, onSave, onClose, data = {}, }) {
               <MidiaContextoTab
                 formContexto={form.contexto}
                 setFormContexto={(contexto)=>setForm({...form, contexto})}
-                catalogoCanteiros = {cacheCanteiros?.list}
-                catalogoPlantas = {cachePlantas?.list}
-                loading = {reading}
               />
             </Tab>
             <Tab eventKey="preview" title="Preview">
-                <MidiaPreviewTab
-                  midia = {form}
-                  setForm = {setForm}
-                />
+              <MidiaPreviewTab
+                midia = {form}
+                setForm = {setForm}
+              />
             </Tab>
             <Tab eventKey="meta" title="Metadados">
               <MidiaMetadadosTab
                 formMetadados={form.metadados}
                 setFormMetadados={(metadados)=>setForm({ ...form, metadados })}
+              />
+            </Tab>
+            <Tab eventKey="execucao" title="Visão Computacional">
+              <MidiaExecucaoTab
+                formExecucao={form.execucao}
+                setFormExecucao={(execucao)=>setForm({ ...form, execucao })}
+              />
+            </Tab>
+            <Tab eventKey="inferencia" title="Inferência">
+              <MidiaInferenciaTab
+                formInferencia={form.inferencia}
+                setFormInferencia={(inferencia)=>setForm({ ...form, inferencia })}
               />
             </Tab>
           </Tabs>

@@ -2,11 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Container } from "react-bootstrap";
 
 import { useAuth } from "../../services/auth/authContext";
-import { tarefasService } from "../../services/crud/tarefasService";
-import { eventosService } from "../../services/history/eventosService";
-import { canteirosService } from "../../services/crud/canteirosService";
-import { plantasService } from "../../services/crud/plantasService";
-import { necessidadesService } from "../../services/crud/necessidadesService";
+import { eventosService } from "../../services/history/Service";
+import { plantasService, canteirosService, tarefasService, necessidadesService } from "../../services/crudService";
 import { catalogosService } from "../../services/catalogosService";
 
 import CalendarioGridSemana from "./views/CalendarioGridSemana";

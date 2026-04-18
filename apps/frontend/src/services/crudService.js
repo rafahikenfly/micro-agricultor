@@ -90,3 +90,28 @@ export const necessidadesService = createCRUDService (firebaseAdapter, {
   softDelete: true,
   useArchive: true,
 });
+
+export const dispositivosService = createCRUDService (firebaseAdapter, {
+  collection: "dispositivos",
+  softDelete: true,
+  useArchive: true,
+});
+
+
+
+// ===== DERIVED =====
+export const entidadesService = (tipoEntidadeId) => {
+  switch (tipoEntidadeId) {
+    case "canteiro": 
+      return canteirosService;
+
+    case "planta":
+      return plantasService;
+
+    case "horta":
+      return hortaService; //TODO: horta"S"Service
+
+    default:
+      throw new Error(`Tipo de entidade não suportado: ${tipoEntidadeId}`);
+  }
+}

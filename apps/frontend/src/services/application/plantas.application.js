@@ -1,6 +1,6 @@
 import { criarEfeitosDoEvento, criarEvento, monitorarPlanta, ORIGEM } from "micro-agricultor";
 import { db } from "../../firebase";
-import { plantasService } from "../crud/plantasService";
+import { plantasService } from "../crudService";
 import { eventosService, mutacoesService } from "../historyService";
 
 //TODO: levar para shared/types

@@ -26,6 +26,7 @@ export default function ManejoEntradasTab({
   }
   return (
     <>
+    TODO!
       <StandardArrayInput
         form={formEntradas ?? []}
         setForm={(entradas)=>setFormEntradas(entradas)}

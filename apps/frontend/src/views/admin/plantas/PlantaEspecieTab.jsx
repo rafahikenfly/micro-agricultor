@@ -3,19 +3,24 @@ import { Form } from "react-bootstrap";
 import { mudarVariedade } from "micro-agricultor";
 
 import { handleSelectIdNome, renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
+import Loading from "../../../components/Loading";
 
-export function PlantaEspecieTab ({form, setForm, variedades=[], especies=[], loading}) {
-
+export function PlantaEspecieTab ({form, setForm }) {
+  const {cacheEspecies, cacheVariedades, reading } = useCache(["especies", "variedades"])
 
   const variedadesDaEspecie = useMemo(() => {
     if (!form.especieId) return [];
-    return (variedades.filter(v => v.especieId === form.especieId) ?? []);
-  }, [variedades, form.especieId]);
-
+    return (cacheVariedades?.list.filter(v => v.especieId === form.especieId) ?? []);
+  }, [cacheVariedades, form.especieId]);
   const cicloDaEspecie = useMemo(() => {
     if (!form.especieId) return [];
-    return (especies.find(e => e.id === form.especieId)?.ciclo ?? []);
-  }, [especies, form.especieId]);
+    return (cacheEspecies?.list.find(e => e.id === form.especieId)?.ciclo ?? []);
+  }, [cacheEspecies, form.especieId]);
+
+  if (reading) return <Loading />
+  if (!cacheEspecies || !cacheVariedades) return;
+
 
   return (
     <>
@@ -25,7 +30,7 @@ export function PlantaEspecieTab ({form, setForm, variedades=[], especies=[], lo
             value={form.especieId}
             onChange={e =>{
               handleSelectIdNome(e, {
-                list: especies,
+                list: cacheEspecies.list,
                 setForm,
                 fieldId: "especieId",
                 fieldNome: "especieNome",
@@ -34,21 +39,21 @@ export function PlantaEspecieTab ({form, setForm, variedades=[], especies=[], lo
             }}
           >
             {renderOptions({
-              list: especies,
-              loading,
+              list: cacheEspecies.list,
+              loading: reading,
               placeholder: "Selecione a espécie da planta",
-              isOptionDisabled: (esp) => !variedades.some((v) => v.especieId === esp.id),
+              isOptionDisabled: (esp) => !cacheVariedades.list.some((v) => v.especieId === esp.id),
             })}
           </Form.Select>
         </StandardInput>
         <StandardInput label="Variedade">
           <Form.Select
             value={form.variedadeId}
-            onChange={e => setForm (mudarVariedade(form, variedades.find(i => i.id === e.target.value)))}
+            onChange={e => setForm (mudarVariedade(form, cacheVariedades.list.find(i => i.id === e.target.value)))}
           >
             {renderOptions({
               list: variedadesDaEspecie,
-              loading,
+              loading: reading,
               placeholder: "Selecione a variedade da planta",
             })}
         </Form.Select>
@@ -60,7 +65,7 @@ export function PlantaEspecieTab ({form, setForm, variedades=[], especies=[], lo
           >
             {renderOptions({
               list: cicloDaEspecie,
-              loading,
+              loading: reading,
               valueKey: "estagioId",
               labelKey: "estagioNome",
               placeholder: "Selecione o estágio",

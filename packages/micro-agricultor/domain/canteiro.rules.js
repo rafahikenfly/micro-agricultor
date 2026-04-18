@@ -2,7 +2,7 @@ import { ENTIDADE } from "../types/ENTITY_TYPES.js";
 import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { REASON_TYPES } from "../types/REASON_TYPES.js";
 import { RECORRENCIA } from "../types/RECORRENCIA.js";
-import { manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
+import { evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -200,7 +200,6 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
   const estadoAtual = canteiro?.estadoAtual || {};
   Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
     const caracteristica = estadoAtual[caracteristicaId];
-
     // Valor Desconhecido
     if (!caracteristica || typeof caracteristica.valor !== "number") {
       pendencias.push({
@@ -213,13 +212,13 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
     }
 
     // Valor Não-Confiável
-    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 30) { //TODO: vir de alguma configuracao
+    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < (faixaIdeal.confianca || 30)) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: caracteristica.confianca
+        confianca: caracteristica.confianca ?? null
       });
       return;
     }
@@ -249,7 +248,6 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
     }
   });
   
-
   return pendencias;
 }
 // ** UNDER REVIEW **
@@ -268,7 +266,6 @@ export const getNecessidadesCanteiro = ({
   const plantasArr = plantas.filter((p)=> p.canteiroId === entidadeId)
   const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, mapaVariedades})
   const pendencias = getPendenciasCanteiro({canteiro, mapaCaracteristicas: arrCaracteristicaIds});
-  console.log(`${pendencias.length} pendências para ${entidadeId}`);
   const necessidades = [];
 
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
@@ -341,6 +338,5 @@ export const getNecessidadesCanteiro = ({
     //Atualiza o mapa local para evitar duplicação
     mapaNecessidades.set(necessidadeId, necessidadeDesvinculada);
   };
-
   return necessidades
 }

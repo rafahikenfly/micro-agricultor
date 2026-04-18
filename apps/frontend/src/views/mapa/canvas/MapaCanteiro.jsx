@@ -3,7 +3,7 @@ import { useMapaEngine } from "../MapaEngine";
 import { getMouseInMapSpace, getPreviewPoints, pointNearBorder } from "../../../utils/coordinatesUtils";
 
 import SVGEntidade from "../../../services/svg/SVGEntidade";
-import { plantasService } from "../../../services/crud/plantasService";
+import { plantasService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { batchService } from "../../../services/batchService";
 import { eventosService, mutacoesService } from "../../../services/historyService";

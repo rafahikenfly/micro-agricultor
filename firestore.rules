@@ -20,44 +20,47 @@ service cloud.firestore {
     	  allow read, write: if true;
       }
     }
-	// Espécies
+		// Plantas (estados)
+		match /estados_planta/{estadoId} {
+      allow read, write: if true;
+    }
+  	// Espécies
     match /especies/{especieId} {
       allow read, write: if true;
-    }   
-    match /categorias_especies/{doc} {
-      allow read, write: if true;
     }
-		match /estagios_planta/{estagioId} {
-      allow read, write: if true;
-    }
-	// Variedades
+			// Espécies (categorias)
+      match /categorias_especies/{doc} {
+        allow read, write: if true;
+      }
+			// Espécies (estagios)
+      match /estagios_planta/{estagioId} {
+        allow read, write: if true;
+      }
+	  // Variedades
     match /variedades/{variedadeId} {
       allow read, write: if true;
     }
-    match /estados_planta/{estadoId} {
-      allow read, write: if true;
-    }
 
-// Hortas
-    match /hortas/{doc} {
-      allow read, write: if true;
-		// Canteiros
-      match /canteiros/{canteiroID} {
-        allow read, write: if true;
-      }
-    }
-    // Canteiros Collection Group
-    match /{path=**}/canteiros/{canteiroId} {
-      allow read, write: if true;
-      allow read, write: if true;
-    }
+	// Hortas
+  match /hortas/{hortaId} {
+    allow read, write: if true;
+  }
+	// Canteiros
+  match /canteiros/{canteiroID} {
+    allow read, write: if true;
+  }
     // Canteiros (estados)
     match /estados_canteiro/{estadoId} {
       allow read, write: if true;
     }
+	// Dispositivos
+  match /dispositivos/{dispositivoId} {
+	  allow read, write: if true;
+  }
 
-// Manejos, Eventos
-    match /manejos/{doc} {
+
+// Manejos
+    match /manejos/{manejoId} {
       allow read, write: if true;
       match /efeitos/{paramentroId} {
       	allow read, write: if true;
@@ -66,15 +69,17 @@ service cloud.firestore {
       	allow read, write: if true;
       }
     }
+// Eventos
     match /eventos/{eventoId} {
     	allow read, write: if true;
     }
-    match /historicoEfeitos/{historicoEfeitoId} {
+    match /mutacoes/{mutacaoId} {
     	allow read, write: if true;
     }
 
 
-// Jobs
+// Tarefas
+	//CV
 		match /cvJobRuns/{jobRunId} {
     	allow read, write: if true;
     }
@@ -84,11 +89,17 @@ service cloud.firestore {
     match /cvModelos/{modeloId} {
 	    allow read, write: if true;
     }
-
-
-// OLD RULES
-    match /climas_hortas/{doc} {
-  		allow read, write: if true;
-		}
+	//Tarefa
+		match /tarefas/{tarefaId} {
+    	allow read, write: if true;
+    }
+	//Necessidades
+	  match /necessidades/{entidadeId} {
+    	allow read, write: if true;
+    }
+	//Mídia
+		match /midias/{midiaId} {
+    	allow read, write: if true;
+    }
   }
 }

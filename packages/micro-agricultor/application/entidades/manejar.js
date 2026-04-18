@@ -1,6 +1,6 @@
-import { atenderNecessidade, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../domain/index.js";
-import { EVENTO, ORIGEM, ENTIDADE } from "../types/index.js";
-import { aplicarRegraPorBatch } from "./index.js";
+import { atenderNecessidade, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../../domain/index.js";
+import { EVENTO, ORIGEM, ENTIDADE } from "../../types/index.js";
+import { aplicarRegraPorBatch } from "../index.js";
 
 
 const mapTipoEntidadeManejo = {
@@ -53,7 +53,7 @@ export async function manejar({
     throw new Error(`Nenhuma regra de manejo para tipo ${tipoEntidadeId}`);
   }
 
-  console.log(`Iniciando manejo ${manejo.nome} de ${entidades.length} ${tipoEntidadeId}s...`);
+  console.log(`Manejando ${manejo.nome} de ${entidades.length} ${tipoEntidadeId}(s)...`);
   if (!user) user = { uid: "manejar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();
 

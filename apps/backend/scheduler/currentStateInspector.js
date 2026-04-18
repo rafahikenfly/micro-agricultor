@@ -1,8 +1,9 @@
 import { getNecessidadeKey, getNecessidadesCanteiro, getNecessidadesPlanta, ORIGEM } from "micro-agricultor";
 import { batchService, tarefasService, necessidadesService, cacheService } from "../services/index.js";
+import { log } from "../core/logger/index.js";
 
 export async function currentStateInspector() {
-  console.log("Iniciando inspeção de estados atuais...");
+  log("[currentStateInspector]: Iniciando inspeção de estados atuais...");
   const user = { uid: "currentStateInspector", nome: ORIGEM.BACKEND.id };
   const timestamp = Date.now();
 
@@ -13,15 +14,14 @@ export async function currentStateInspector() {
   const cacheNecessidades = await cacheService.getNecessidades();
   const cachePlantas = await cacheService.getPlantas();
   const cacheCanteiros = await cacheService.getCanteiros();
-
-
   
   // inicializa o mapa de tarefas
   const novasNecessidades = [];
   const mapaTarefas = {}
 
-  // Avalia as plantas e muta o mapa de tarefas
-  console.log(`${cachePlantas.list.length} plantas para inspecionar...`);
+  // Avalia as plantas, mutando o contexto (mapaTarefas), e inclui
+  // todas as necessidades ao array de necessidades.
+  log(`[currentStateInspector]: ${cachePlantas.list.length} plantas para inspecionar...`);
   for (const planta of cachePlantas.list) {
     novasNecessidades.push(...getNecessidadesPlanta({
       planta,
@@ -33,9 +33,9 @@ export async function currentStateInspector() {
     }))
   }
 
-  //Avalia os canteiros  e inclui
-  //todas as necessidades ao array de necessidades.
-  console.log(`${cacheCanteiros.list.length} canteiros para inspecionar`);
+  // Avalia os canteiros, mutando o contexto (mapaTarefas), e inclui
+  // todas as necessidades ao array de necessidades.
+  log(`[currentStateInspector]: ${cacheCanteiros.list.length} canteiros para inspecionar`);
   for (const canteiro of cacheCanteiros.list) {
     novasNecessidades.push(...getNecessidadesCanteiro({
       canteiro,
@@ -48,16 +48,13 @@ export async function currentStateInspector() {
     }));
   }
 
-  //Converte o mapa de tarefas em um array e cria os Ids no mapa
+  // Converte o mapa de tarefas em um array e cria os Ids no mapa
   const novasTarefas = Object.values(mapaTarefas);
-  console.log(`${novasTarefas.length} novas tarefas`);
-
-  //Salva as tarefas
-  console.log(`Salvando tarefas e necessidades...`);
+  log(`[currentStateInspector]: Salvando ${novasTarefas.length} nova(s) tarefa(s) e respectivas necessidades.`);
   let batch = batchService.create();
 
+  // Mapeia as necessidades por caracteristica
   const necessidadesPorCaracteristica = {};
-
   for (const n of novasNecessidades) {
     if (!necessidadesPorCaracteristica[n.caracteristicaId]) {
       necessidadesPorCaracteristica[n.caracteristicaId] = [];
@@ -65,6 +62,7 @@ export async function currentStateInspector() {
     necessidadesPorCaracteristica[n.caracteristicaId].push(n);
   }
 
+  // Gera as tarefas no batch
   for (const tarefa of novasTarefas) {
     await batch.commitIfNeeded();
 
@@ -99,7 +97,5 @@ export async function currentStateInspector() {
     };
   };
   await batch.commit();
-  console.log(`Inspeção de estados atuais (plantas e canteiros) concluída.`);
+  log(`[currentStateInspector]: Inspeção de estados atuais (plantas e canteiros) concluída.`);
 }
-
-currentStateInspector();

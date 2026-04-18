@@ -1,23 +1,24 @@
 import { Form, } from "react-bootstrap";
-import { RESOLUCAO } from "micro-agricultor";
+import { EVENTO, RESOLUCAO } from "micro-agricultor";
 
 import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { toDateTimeLocal } from "../../../utils/dateUtils";
 
 export default function TarefaResolucaoTab({ formResolucao, setFormResolucao }) {
+  if (!formResolucao) return <>Tarefa não resolvida</>
   return (
     <>
-      <StandardInput label="Resolução">
+      <StandardInput label="Resolvido em">
         <Form.Control
           type="datetime-local"
-          value={toDateTimeLocal(new Date(formResolucao.timestamp))}
-          onChange={(e) => setFormResolucao({  ...formResolucao, timestamp: new Date(e.target.value).getTime()}) }
+          value={toDateTimeLocal(new Date(formResolucao.resolvidoEm))}
+          onChange={(e) => setFormResolucao({  ...formResolucao, resolvidoEm: new Date(e.target.value).getTime()}) }
         />
       </StandardInput>
       <StandardInput label="Tipo de Resolução">
         <Form.Select
-          value={formResolucao.tipoResolucao}
-          onChange={(e)=> setFormResolucao({ ...formResolucao, tipoResolucao: e.target.value})}
+          value={formResolucao.tipoResolucaoId}
+          onChange={(e)=> setFormResolucao({ ...formResolucao, tipoResolucaoId: e.target.value})}
         >
           {renderOptions({
             list: Object.values(RESOLUCAO),
@@ -25,8 +26,20 @@ export default function TarefaResolucaoTab({ formResolucao, setFormResolucao }) 
             nullOption: true,
           })}
         </Form.Select>
-        TODO: AGENTE
       </StandardInput>
+      <StandardInput label="Tipo de Evento">
+        <Form.Select
+          value={formResolucao.tipoEventoId}
+          onChange={(e)=> setFormResolucao({ ...formResolucao, tipoEventoId: e.target.value})}
+        >
+          {renderOptions({
+            list: Object.values(EVENTO),
+            placeholder: "Selecione o tipo de evento de resolução.",
+            nullOption: true,
+          })}
+        </Form.Select>
+      </StandardInput>
+      <div>TODO AGENTE</div>
     </>
   );
 }

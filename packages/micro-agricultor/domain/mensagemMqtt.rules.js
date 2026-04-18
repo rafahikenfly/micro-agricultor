@@ -18,17 +18,7 @@ import mqtt from "mqtt";
  */
 /** @type {mensagemMqtt} */
 const payload = {
-  v: 1,
-  id: "sensor-123",
-  msgId: 42,
-  uptime: 12345678,
-  ts: 1710000000,
-  rssi: -70,
-  vals: [
-    { i: 0, v: 67 },
-    { i: 1, v: 22.5 },
-    { i: 2, v: 1 }
-  ]
+  [msgId]: []
 };
 
 
@@ -86,16 +76,10 @@ export function startMQTTTestLoop(interval = 5000) {
       uptime += interval;
 
       const payload = {
-        v: 1,
-        deviceId: "sensor-123",
-        msgId,
-        uptime,
-        ts: Date.now(),
-        rssi: -60,
-        leituras: [
-          { s: 0, v: Math.floor(Math.random() * 100) },
-          { s: 1, v: 20 + Math.random() * 10 },
-          { s: 2, v: Math.random() > 0.5 ? 1 : 0 }
+        [msgId]: [
+          Math.floor(Math.random() * 100),
+          Math.random() * 10,
+          Math.random() > 0.5 ? 1 : 0
         ]
       };
 

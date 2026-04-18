@@ -7,7 +7,7 @@ import { useCrudUI } from "../../services/ui/crudUI";
 import { useAuth } from "../../services/auth/authContext";
 import { setToast } from "../../services/ui/toast";
 import UsuarioModal from "./UsuarioModal"
-import ListaAcoes from "../common/ListaAcoes";
+import ListaComAcoes from "../common/ListaComAcoes";
 import Loading from "../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
 import { NoUser } from "../common/NoUser";
@@ -72,7 +72,7 @@ export default function UsuariosCRUD() {
 
       <Row>
         <Col>
-          <ListaAcoes
+          <ListaComAcoes
             dados = {usuarios}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

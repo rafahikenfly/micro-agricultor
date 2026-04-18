@@ -4,6 +4,7 @@ import { validarCaracteristica, ENTIDADE, VARIANTE } from "micro-agricultor";
 
 import { handleSaveForm, StandardCheckboxGroup, StandardCard, StandardInput, renderOptions } from "../../../utils/formUtils";
 import BaseTab from "../../../components/common/BaseTab";
+import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO";
 
 
 export default function CaracteristicaModal({ show, onSave, onClose, data = {}, }) {
@@ -161,15 +162,32 @@ export default function CaracteristicaModal({ show, onSave, onClose, data = {}, 
               </StandardCard>
               <StandardCard header="Sensoriamento">
                 <StandardInput
-                  label="Cumulatividade de dados"
+                  label="Tempo de acumulação"
                   unidade="minutos"
-                  info="Tempo de acumulação da informação de sensores."
+                  info="Tempo de acumulação da informação de sensores (zero para desativado)."
                 >
                   <Form.Control
                     type="number"
-                    value={form.cumulatividade/60000}
-                    onChange={e => setForm({...form, cumulatividade: Number(e.target.value)*60000})}
+                    value={form.tempoAcumulacao/60000}
+                    onChange={e => setForm({...form, tempoAcumulacao: Number(e.target.value)*60000})}
                   />
+                </StandardInput>
+                <StandardInput label="Tipo de Acumulação">
+                  <Form.Select
+                    value = {form.tipoAcumulacaoId}
+                    onChange={(e)=> setForm({...form, tipoAcumulacaoId: e.target.value})}
+                  >
+                    {renderOptions({
+                      list: Object.values(ACUMULACAO),
+                      placeholder: "Selecione o tipo de acumulação da característica"
+                    })}
+                  </Form.Select>
+                  <Form.Control
+                    type="number"
+                    value={form.limiteAcumulacao}
+                    onChange={(e)=> setForm({...form, limiteAcumulacao: Number(e.target.value)})}
+                  />
+
                 </StandardInput>
               </StandardCard>
             </Tab>

@@ -4,6 +4,7 @@ import * as crud from "./crud.js";
 const cache = createCacheService();
 
 export const cacheService = {
+  clearCache: cache.clearCache,
   getPlantas: async () =>
     await cache.get(
       "plantas",
@@ -17,7 +18,15 @@ export const cacheService = {
       crud.canteirosService,
       [{ field: "isDeleted", op: "==", value: false }],
       { field: "nome" }
-    ),  getCaracteristicas: async () =>
+    ),
+  getHortas: async () =>
+    await cache.get(
+      "hortas",
+      crud.hortasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+      { field: "nome" }
+    ),
+getCaracteristicas: async () =>
     await cache.get(
       "caracteristicas",
       crud.caracteristicasService,
@@ -34,6 +43,36 @@ export const cacheService = {
       "necessidades",
       crud.necessidadesService,
       [{ field: "isDeleted", op: "==", value: false }],
-    )
+    ),
+  getDispositivos: async () =>
+    await cache.get(
+      "dispositivos",
+      crud.dispositivosService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
+  getTarefas: async () =>
+    await cache.get(
+      "tarefas",
+      crud.tarefasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
 
+  // DERIVED
+  getEntidades() {
+    const map = {
+      [ENTIDADE.planta.id]: this.getPlantas,
+      [ENTIDADE.canteiro.id]: this.getCanteiros,
+      [ENTIDADE.horta.id]: this.getHortas,
+    };
+
+    return async (entidadeId) => {
+      const fn = map[entidadeId];
+
+      if (!fn) {
+        throw new Error(`Cache não definido para entidade ${entidadeId}`);
+      }
+
+      return fn();
+    };
+  }    
 };

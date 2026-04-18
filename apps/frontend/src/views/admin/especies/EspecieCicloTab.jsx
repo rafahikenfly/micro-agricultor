@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Form, Button } from "react-bootstrap";
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import { handleSelectIdNome, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
 import { useCache } from "../../../hooks/useCache";
 
@@ -112,7 +112,7 @@ export default function EspecieCicloTab({
       </Button>
 
       {/* LISTA */}
-      <ListaAcoes
+      <ListaComAcoes
         dados={Object.values(ciclo)}
         colunas={[
           {rotulo: "Estágio", dataKey: "estagioNome"},

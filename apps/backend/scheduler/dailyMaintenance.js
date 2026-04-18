@@ -2,19 +2,18 @@
 
 import cron from "node-cron";
 import { dailyEvolution } from "./dailyEvolution.js";
-import { currentStateInspector } from "./currentStateInspector.js";
-import { mediaStateInspector } from "./mediaStateInspector.js";
 import { runJob } from "../pipeline/runJob.js";
-import { log } from "node:console";
+import { log } from "../core/logger/index.js";
+import { cacheService } from "../services/cache.js";
 
 
 const dailyTasks = [
-  { name: "mediaStateInspect",  fn: mediaStateInspector },
+  { name: "mediaStateInspect", },
 ];
 
 const hourlyTasks = [
-  { name: "currentStateInspect", fn: currentStateInspector },
-  { name: "mediaStateInspect", fn: mediaStateInspector },
+  { name: "currentStateInspector" },
+  { name: "taskStateInspector"},
 ];
 
 async function runTasks(tasks, label) {
@@ -30,7 +29,7 @@ async function runTasks(tasks, label) {
 }
 
 export function dailyMaintenance() {
-  log("[CRON] dailyMaintenance agendado para 03:00");
+  log("[CRON] dailyMaintenance agendado para 03h15");
 
   cron.schedule("15 3 * * *", async () => {
     log("[dailyMaintenance] Iniciando manutenção diária...");
@@ -43,18 +42,38 @@ export function dailyMaintenance() {
 
     await runTasks(dailyTasks, "dailyMaintenance");
 
-    log("[dailyyMaintenance] Finalizado");
+    log("[dailyMaintenance] Finalizada a manutenção diária.");
   });
 }
 
 export function hourlyMaintenance() {
   log("[CRON] hourlyMaintenance agendado para cada hora");
-
+  
   cron.schedule("0 * * * *", async () => {
+    cacheService.clearCache("variedades");
+    cacheService.clearCache("plantas");
+    cacheService.clearCache("canteiros");
+    cacheService.clearCache("dispositivos");
+
     log("[hourlyMaintenance] Iniciando manutenção horária...");
 
     await runTasks(hourlyTasks, "hourlyMaintenance");
 
-    log("[hourlyMaintenance] Finalizado");
+    log("[hourlyMaintenance] Finalizada a manutenção horária.");
   });
+}
+
+export function refreshCriticalCaches() {
+  log("[CRON] refreshCriticalCaches agendado para cada 30 minutos");
+  cron.schedule("*/30 * * * *", async () => {
+    cacheService.clearCache("caracteristicas");
+    cacheService.clearCache("necessidades");
+
+    await Promise.all([
+      cacheService.getCaracteristicas(),
+      cacheService.getNecessidades()
+    ]);
+  });
+
+  log("[refreshCriticalCaches]: caches atualizados.")
 }

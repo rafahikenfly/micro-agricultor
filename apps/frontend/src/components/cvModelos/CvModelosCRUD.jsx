@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { cvModelosService } from "../../services/crud/cvModelosService";
-import ListaAcoes from "../common/ListaAcoes";
+import ListaComAcoes from "../common/ListaComAcoes";
 import Loading from "../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
@@ -70,7 +70,7 @@ export default function CvModelosCRUD() {
 
       <Row>
         <Col>
-          <ListaAcoes
+          <ListaComAcoes
             dados = {cvModelos}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},

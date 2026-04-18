@@ -1,10 +1,10 @@
-import { EVENTO, ORIGEM, ENTIDADE } from "../types/index.js";
+import { EVENTO, ORIGEM, ENTIDADE } from "../../types/index.js";
 
-import { criarEvento } from "../domain/evento.rules.js";
-import { atenderNecessidade, getNecessidadeKey } from "../domain/necessidade.rules.js";
-import { monitorarPlanta } from "../domain/planta.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
-import { monitorarCanteiro } from "../domain/canteiro.rules.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { atenderNecessidade, getNecessidadeKey } from "../../domain/necessidade.rules.js";
+import { monitorarPlanta } from "../../domain/planta.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
+import { monitorarCanteiro } from "../../domain/canteiro.rules.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: monitorarPlanta,
@@ -59,7 +59,7 @@ export async function monitorar({
   if (!regra) {
     throw new Error(`Nenhuma regra de monitoramento para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Iniciando monitoramento de ${entidades.length} ${tipoEntidadeId}s...`);
+  console.log(`Monitorando ${entidades.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "monitorar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();
@@ -120,7 +120,9 @@ export async function monitorar({
     // ======
     // Atualiza a necessidade de monitoramento de cada característica da entidade
     // TODO: para melhorar a performance, é possível recuperar até 10 ids com a mesma consulta usando o getByEntidadesArray do mesmo service. Tem que ver as implicações no resto da função.
-    const necessidades = await services.necessidades.getByEntidade(entidade.id);
+    const necessidades = await services.necessidades.get([
+      { field: "entidadeId", op: "==", value: entidade.id }
+    ]);
     const necessidadesMap = Object.fromEntries(
       necessidades.map(n => [n.id, n])
     );
@@ -138,7 +140,7 @@ export async function monitorar({
       // Atualiza a necessidade
       const necessidadeAtualizada = atenderNecessidade({
         necessidade,
-        agente: {uid: user.uid, tipo: ORIGEM.USER.id},
+        agente: {uid: user.uid, tipo: ORIGEM.USER.id}, //TODO: nem sempre o monitoramento vem do usuário!
         timestamp
       });
 
@@ -159,6 +161,6 @@ export async function monitorar({
   // Commit final
   await batch.commit();
 
-  console.log("Monitoramento de entidades concluído.")
+  console.log("Monitoramento de entidades concluído.");
   return;
 }

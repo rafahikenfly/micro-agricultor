@@ -3,15 +3,14 @@ import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { Button, Form, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import { ISOToReadableString, toDateTimeLocal } from "../../../utils/dateUtils";
-import { ENTIDADE, manejar, VARIANT_TYPES } from "micro-agricultor";
+import { manejar, VARIANT_TYPES } from "micro-agricultor";
 import { useCache } from "../../../hooks/useCache";
 import { useToast } from "../../../services/toast/toastProvider";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
 import { pluralizar } from "../../../utils/uiUtils";
-import { canteirosService, plantasService } from "../../../services/crudService";
+import { necessidadesService, entidadesService } from "../../../services/crudService";
 import { batchService } from "../../../services/batchService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
-import { necessidadesService } from "../../../services/crud/necessidadesService";
 import { useMapaEngine } from "../MapaEngine";
 
 export default function PainelManejar({selection, caches }) {
@@ -82,11 +81,6 @@ export default function PainelManejar({selection, caches }) {
 
 
     setWriting(true);
-    const servicesMap = {
-      [ENTIDADE.canteiro.id]: canteirosService,
-      [ENTIDADE.planta.id]: plantasService,
-    }
-
     try {
       await manejar({
         tipoEntidadeId: primaryType,
@@ -98,7 +92,7 @@ export default function PainelManejar({selection, caches }) {
         services: {
           batch: batchService,
           eventos: eventosService,
-          entidade: servicesMap[primaryType],
+          entidade: entidadesService(primaryType),
           mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }

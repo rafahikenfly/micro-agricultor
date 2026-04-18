@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { plantasService } from "../../../services/crud/plantasService";
+import { plantasService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -67,14 +67,13 @@ export default function PlantasCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {plantas}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: reading ? {} : cacheEstadosPlanta?.list,},
-              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: reading ? {} : cacheEstagiosEspecie?.list,},
-              {rotulo: "Apagado", dataKey: "isDeleted", boolean: true},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: cacheEstadosPlanta?.list,},
+              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: cacheEstagiosEspecie?.list,},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

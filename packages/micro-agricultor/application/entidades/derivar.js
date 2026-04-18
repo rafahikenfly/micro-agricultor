@@ -1,7 +1,7 @@
-import { ENTIDADE, EVENTO, ORIGEM } from "../types/index.js";
-import { criarEvento } from "../domain/evento.rules.js";
-import { derivarPlanta } from "../domain/planta.rules.js";
-import { aplicarRegraPorBatch } from "./batch.js";
+import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
+import { criarEvento } from "../../domain/evento.rules.js";
+import { derivarPlanta } from "../../domain/planta.rules.js";
+import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: derivarPlanta,
@@ -13,7 +13,6 @@ const mapTipoEntidadeRegra = {
  *
  * @param {Object} args
  * @param {string} args.tipoEntidadeId
- * @param {Object} args.implantacao
  * @param {Array<Object>} args.posicoes
  * @param {Object} [args.canteiro]
  * @param {Object} [args.especie]
@@ -48,16 +47,16 @@ export async function derivar({
   // Validações
   // ======
   if (!posicoes.length) {
-    throw new Error("Nenhuma posição para implantação.");
+    throw new Error("Nenhuma posição para derivação.");
   }
   if (!tipoEntidadeId) {
     throw new Error("Tipo de entidade não informado.");
   }
   const regra = mapTipoEntidadeRegra[tipoEntidadeId];
   if (!regra) {
-    throw new Error(`Nenhuma regra de implantação para tipo ${tipoEntidadeId}`);
+    throw new Error(`Nenhuma regra de derivação para tipo ${tipoEntidadeId}`);
   }
-  console.log(`Implantando ${posicoes.length} ${tipoEntidadeId}(s)...`);
+  console.log(`Derivando ${posicoes.length} ${tipoEntidadeId}(s)...`);
 
   if (!user) user = { uid: "implantar", nome: ORIGEM.FRONTEND.id };
   if (!timestamp) timestamp = Date.now();
@@ -69,7 +68,7 @@ export async function derivar({
   const eventoId = eventoRef.id;
 
   const evento = criarEvento({
-    tipoEvento: EVENTO.IMPLANTACAO,
+    tipoEvento: EVENTO.DERIVACAO,
     timestamp,
     origem: { id: "implantar", tipo: ORIGEM.FRONTEND.id },
     entidadesKey: [],

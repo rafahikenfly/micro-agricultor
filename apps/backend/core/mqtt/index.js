@@ -1,33 +1,36 @@
 import mqtt from "mqtt";
 import { log } from "../logger/index.js";
+import { handleDispositivo } from "./handleDispositivo.js";
 
 const BROKER_URL = "mqtt://localhost:1883"; // ou teu broker
 
 let client;
 
 export function startMQTT() {
-  client = mqtt.connect(BROKER_URL);
+  if (client) {
+    log("[startMQTT]: MQTT já iniciado, ignorando nova inicialização");
+    return;
+  }
+  client = mqtt.connect(BROKER_URL, {
+    clientId: "micro-agricultor-backend"
+  });
 
   client.on("connect", () => {
-    log("MQTT conectado");
+    log("[startMQTT]: MQTT conectado");
 
     // Subscribe nos tópicos
-    client.subscribe("micro-agricultor/#", (err) => {
+    client.subscribe("dispositivos/#", (err) => {
       if (err) {
-        log("Erro ao se inscrever nos tópicos MQTT", err);
+        log("[startMQTT]: Erro ao se inscrever nos tópicos MQTT", err);
       } else {
-        log("Inscrito nos tópicos MQTT");
+        log("[startMQTT]: Inscrito no tópico MQTT dispositivos/#");
       }
     });
   });
 
   client.on("message", (topic, message) => {
-    const msg = message.toString();
-
-    log(`MQTT mensagem recebida: ${topic} -> ${msg}`);
-
-    // TODO: roteamento por tópico
-    handleMessage(topic, msg);
+    log(`[startMQTT]: Recebida mensagem ${message.toString()} em ${topic}`)
+    handleMessage(topic, message);
   });
 
   client.on("error", (err) => {
@@ -40,8 +43,9 @@ export function startMQTT() {
 }
 
 function handleMessage(topic, message) {
-  if (topic === "micro-agricultor/irrigacao") {
-    log("Comando de irrigação recebido 💧");
-    // aqui você conecta com sua lógica
+  if (topic.startsWith("dispositivos/")) {
+    handleDispositivo(topic, message);
+    return;
   }
+  log(`MQTT ${message} no tópico ${topic} ignorada`)
 }

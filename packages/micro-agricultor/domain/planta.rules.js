@@ -262,16 +262,16 @@ export const getCaracteristicasRelevantesPlanta = ({planta, mapaVariedades}) => 
   return Array.from(caracteristicasSet);
 }
 // ** UNDER REVIEW **
-export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
+export function getPendenciasPlanta({planta, mapaCaracteristicas}) {
   const pendencias = [];
 
   const estadoAtual = planta?.estadoAtual || {};
 
-  arrCaracteristicaIds.forEach(caracteristicaId => {
+  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
     const caracteristica = estadoAtual[caracteristicaId];
 
-    // Valor Desconhecido
-    if (!caracteristica) {
+    // Valor Desconhecido ou inválido
+    if (!caracteristica || typeof caracteristica.valor !== "number") {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
@@ -282,7 +282,7 @@ export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
     }
 
     // Valor Não-Confiável
-    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 50) {
+    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < (faixaIdeal.confianca || 30) ) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
@@ -291,6 +291,30 @@ export function getPendenciasPlanta({planta, arrCaracteristicaIds}) {
         confianca: caracteristica.confianca ?? null
       });
     }
+    // Valor Abaixo do ideal
+    if (caracteristica.valor < faixaIdeal.min) {
+      pendencias.push({
+        tipoEventoId: EVENTO.MANEJO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
+        caracteristicaId,
+        motivo: REASON_TYPES.LOWER_BOUND,
+        valor: caracteristica.valor
+      });
+      return;
+    }
+
+    // Valor Acima do ideal
+    if (caracteristica.valor > faixaIdeal.max) {
+      pendencias.push({
+        tipoEventoId: EVENTO.MANEJO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
+        caracteristicaId,
+        motivo: REASON_TYPES.UPPER_BOUND,
+        valor: caracteristica.valor
+      });
+      return;
+    }
+
   });
 
   return pendencias;
@@ -363,7 +387,6 @@ export const getNecessidadesPlanta = ({
   // Obtem as pendências (necessidades candidatas)
   const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, mapaVariedades})
   const pendencias = getPendenciasPlanta({planta, arrCaracteristicaIds});
-  console.log(`${pendencias.length} pendências para ${planta.id}`);
   const necessidades = [];
   
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
@@ -400,9 +423,7 @@ export const getNecessidadesPlanta = ({
           entidadesId: [entidadeId],
         };
         // Monta dados da tarefa
-        let acao = ""
-        if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
-        if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
+        let acao = EVENTO[pendencia.tipoEventoId]?.acao ?? "-"
         const dados = {
           nome: `${acao} ${caracteristica.nome}`,
           descricao: `${caracteristica.descricao} Plantas: ${entidadeNome}`

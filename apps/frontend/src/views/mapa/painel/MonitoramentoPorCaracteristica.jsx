@@ -2,10 +2,8 @@ import { useState } from "react";
 import { Form, Button, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import Loading from "../../../components/Loading";
-import { ENTIDADE, monitorar, VARIANT_TYPES } from "micro-agricultor";
-import { canteirosService } from "../../../services/crud/canteirosService";
-import { plantasService } from "../../../services/crud/plantasService";
-import { necessidadesService } from "../../../services/crud/necessidadesService";
+import { monitorar, VARIANT_TYPES } from "micro-agricultor";
+import { necessidadesService, entidadesService } from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { batchService } from "../../../services/batchService";
 
@@ -96,10 +94,6 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
     
     // Processa os monitoramentos com user, tipoEntidadeId, entidades, medidas e timestamp
     setWriting(true);
-    const servicesMap = {
-      [ENTIDADE.canteiro.id]: canteirosService,
-      [ENTIDADE.planta.id]: plantasService,
-    }
     try {
       await monitorar({
         tipoEntidadeId,
@@ -110,7 +104,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
         services: {
           batch: batchService,
           eventos: eventosService,
-          entidade: servicesMap[tipoEntidadeId],
+          entidade: entidadesService(tipoEntidadeId),
           mutacoes: mutacoesService,
           necessidades: necessidadesService,
         }

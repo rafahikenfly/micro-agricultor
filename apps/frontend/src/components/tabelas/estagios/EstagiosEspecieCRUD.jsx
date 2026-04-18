@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { estagiosPlantaService } from "../../../services/crud/estagiosPlantaService";
 import EstagiosEspecieModal from "./EstagiosEspecieModal";
-import ListaAcoes from "../../common/ListaAcoes";
+import ListaComAcoes from "../../common/ListaComAcoes";
 import Loading from "../../common/Loading";
 import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
@@ -10,6 +9,7 @@ import { NoUser } from "../../common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
 import { setToast } from "../../../services/ui/toast";
 import { VARIANTE } from "@shared/types/VARIANT_TYPES";
+import { estagiosEspecieService } from "../../../services/crudService";
 
 
 export default function EstagiosEspecieCRUD() {
@@ -29,7 +29,7 @@ export default function EstagiosEspecieCRUD() {
   useEffect(() => {
     setLoading(true);
 
-    const unsub = estagiosPlantaService.subscribe((data) => {
+    const unsub = estagiosEspecieService.subscribe((data) => {
       setEstagios_especie(data);
       setLoading(false); // só desliga quando os dados chegam
     });
@@ -47,9 +47,9 @@ export default function EstagiosEspecieCRUD() {
     desarquivar,
     apagarComConfirmacao,
   } = useCrudUI({
-    crudService: estagiosPlantaService,
-    nomeEntidade: "estágio de planta",
-    masculino: true, // "o estágio de planta"
+    crudService: estagiosEspecieService,
+    nomeEntidade: "estágio de espécie",
+    masculino: true, // "o estágio de espécie"
     user,
   
     editando,
@@ -66,18 +66,17 @@ export default function EstagiosEspecieCRUD() {
     <Container fluid>
       <Row className="mb-3">
         <Col>
-          <Button variant="outline-success" onClick={criar}>+ Novo Estágio de Planta</Button>
+          <Button variant="outline-success" onClick={criar}>+ Novo Estágio de Espécie</Button>
         </Col>
       </Row>
 
       <Row>
         <Col>
-          <ListaAcoes
+          <ListaComAcoes
             dados = {estagios_especie}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

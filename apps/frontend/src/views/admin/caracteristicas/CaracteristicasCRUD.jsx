@@ -3,7 +3,7 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { VARIANT_TYPES, VARIANTE, ENTIDADE } from "micro-agricultor";
 
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
@@ -63,13 +63,11 @@ export default function CaracteristicasCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {caracteristicas}
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
+              {rotulo: "Nome", dataKey: "nome", render: (a)=>a.nome},
               {rotulo: "Aplicável a", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: VARIANT_TYPES.YELLOW},

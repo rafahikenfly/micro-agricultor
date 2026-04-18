@@ -2,12 +2,11 @@ import { useEffect, useState } from "react"
 import { Button, Form, Modal } from "react-bootstrap"
 import { StandardCard, StandardInput } from "../../../utils/formUtils"
 import { eventosService, mutacoesService } from "../../../services/historyService"
-import { canteirosService, plantasService, necessidadesService, tarefasService } from "../../../services/crudService"
+import { necessidadesService, tarefasService, entidadesService } from "../../../services/crudService"
 import { useCalendarioEngine } from "../CalendarioEngine"
 import { useToast } from "../../../services/toast/toastProvider"
 import { useAuth } from "../../../services/auth/authContext"
 import { toDateTimeLocal } from "../../../utils/dateUtils"
-import {  } from "../../../services/crud/necessidadesService"
 import { ENTIDADE } from "micro-agricultor"
 import { useCache } from "../../../hooks/useCache"
 
@@ -110,10 +109,6 @@ export const MonitorarModal = ({show, data, onClose}) => {
 
     // Processa os monitoramentos com user, tipoEntidadeId, entidades, medidas e timestamp
     setWriting(true);
-    const servicesMap = {
-      [ENTIDADE.canteiro.id]: canteirosService,
-      [ENTIDADE.planta.id]: plantasService,
-    }
     try {
       await processarMonitoramento({
         user,
@@ -123,7 +118,7 @@ export const MonitorarModal = ({show, data, onClose}) => {
         entidades,
         services: {
           eventos: eventosService,
-          entidade: servicesMap[data.contexto.tipoEntidadeId],
+          entidade: entidadesService(data.contexto.tipoEntidadeId),
           historicoEfeitos: mutacoesService,
           necessidades: necessidadesService,
         }

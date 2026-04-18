@@ -1,27 +1,25 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { tarefasService } from "../../../services/crud/tarefasService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { useToast } from "../../../services/toast/toastProvider";
 
-import ListaAcoes from "../../../components/common/ListaAcoes";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import TarefaModal from "./TarefaModal";
+import { tarefasService } from "../../../services/crudService";
+import { ESTADO_TAREFA, RECORRENCIA } from "micro-agricultor";
+import { ISOToReadableString } from "../../../utils/dateUtils";
 
 
 export default function TarefasCRUD() {
-  const { toastMessage } = useToast();  
   const { user } = useAuth();
   if (!user) return <NoUser />
 
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const [reading, setReading] = useState(false);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
@@ -38,31 +36,6 @@ export default function TarefasCRUD() {
     });
 
     return unsub;
-  }, []);
-
-  useEffect(() => {
-
-    let ativo = true;
-    setReading(true);
-  
-    Promise.all([
-//      catalogosService.getEstagios_especie(),
-    ]).then(([este, ]) => {
-      if (!ativo) return;
-//      setEstagios_especie(este);
-    })
-    .catch((err) => {
-      console.error("Erro ao carregar catálogos da tarefa:", err);
-      toastMessage({
-        body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
-      });
-    })
-    .finally(() => {
-      if (ativo) setReading(false);
-    });
-  
-    return () => { ativo = false };
   }, []);
 
   /* ================= CRUD ================= */
@@ -90,14 +63,14 @@ export default function TarefasCRUD() {
       <Row>
         <Col style={{ position: "relative" }}>
           {loading && <Loading variant="overlay" />}
-          <ListaAcoes
+          <ListaComAcoes
             dados = {tarefas}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Apagado", dataKey: "isDeleted",  boolean: true, },
-              {rotulo: "Estado", dataKey: "estado", },
-              {rotulo: "Vencimento", dataKey: "vencimento", },
-              {rotulo: "Recorrência", dataKey: "recorrencia", },
+              {rotulo: "Estado", dataKey: "estado", render: (a) => ESTADO_TAREFA[a.estado]?.nome ?? "-"},
+              {rotulo: "Vencimento", dataKey: "planejamento", render: (a) => ISOToReadableString(a.planejamento.venceEm)},
+              {rotulo: "Recorrência", dataKey: "recorrencia", render: (a) => RECORRENCIA[a.planejamento.recorrencia?.tipoRecorrenciaId]?.nome ?? "-"},
+              {rotulo: "Execuções", dataKey: "execucoes", render: (a) => a.planejamento.recorrencia?.execucoes ?? 0},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

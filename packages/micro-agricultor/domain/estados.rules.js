@@ -26,8 +26,10 @@ const caracteristicaPadrao = {
     unidade: "",
     longevidade: 10,
     resolucao: 100,
-    cumulatividade: 0,
     aplicavel: {},
+    tempoAcumulacao: 0,
+    tipoAcumulacaoId: "",
+    limiteAcumulacao: 0,
 };
 
 export const validarEstado = (dataObj = {}) => {

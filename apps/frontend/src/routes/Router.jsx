@@ -15,6 +15,7 @@ import TarefasCRUD from "../views/admin/tarefas/TarefasCRUD";
 import EstadosCanteiroCRUD from "../views/admin/estadosCanteiros/EstadosCanteiroCRUD";
 import EstadosPlantaCRUD from "../views/admin/estadosPlantas/EstadosPlantaCRUD";
 import MidiasCRUD from "../views/admin/midias/MidiasCRUD";
+import CategoriasCRUD from "../views/admin/categorias/CategoriasCRUD";
 //MAPA
 //TODO: indexar o mapa no url
 import AppMapa from "../views/AppMapa";
@@ -23,6 +24,7 @@ import { MapaVazio } from "../views/mapa/canvas/MapaVazio";
 import AppCalendario from "../views/AppCalendario";
 import { CalendarioVazio } from "../views/calendario/canvas/CalendarioVazio";
 import CalendarioCanvas from "../views/calendario/canvas/CalendarioCanvas";
+import DispositivosCRUD from "../views/admin/dispositivos/DispositivosCRUD";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -38,11 +40,13 @@ export default function Router() {
             <Route path="especies" element={<EspeciesCRUD />} />
             <Route path="variedades" element={<VariedadesCRUD />} />
             <Route path="manejos" element={<ManejosCRUD />} />
+            <Route path="dispositivos" element={<DispositivosCRUD />} />
             <Route path="caracteristicas" element={<CaracteristicasCRUD />} />
             <Route path="estados-canteiro" element={<EstadosCanteiroCRUD />} />
             <Route path="estados-planta" element={<EstadosPlantaCRUD />} />
+            <Route path="categorias-especies" element={<CategoriasCRUD />} />
             <Route path="tarefas" element={<TarefasCRUD />} />
-            <Route path="midia" element={<MidiasCRUD />} />
+            <Route path="midias" element={<MidiasCRUD />} />
           </Route>
           <Route path="/mapa" element={<AppMapa />}>
             <Route index element={<MapaVazio />} />
