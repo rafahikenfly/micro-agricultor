@@ -67,7 +67,7 @@ export default function AdminSidebar() {
         <Nav.Link as={NavLink} to="/admin/tarefas">
           Tarefas
         </Nav.Link>
-        <Nav.Link as={NavLink} to="/admin/midia">
+        <Nav.Link as={NavLink} to="/admin/midias">
           Mídia
         </Nav.Link>
 

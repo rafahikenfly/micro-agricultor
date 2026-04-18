@@ -6,7 +6,6 @@ const midiaPadrao = {
   nome: "",                           //string
   descricao: "",                      //string
   estado: ESTADO_TAREFA.PENDENTE.id,   //ESTADO_TAREFA[].id
-  ultimoRunId: "",
   tipoMediaId: MIDIA.CAPTURA.id,      //MEDIA_TYPES.id
   mimeType: MIME_TYPES.JPEG.nome,          //MIME_TYPES.mime
   metadados: {
@@ -24,7 +23,26 @@ const midiaPadrao = {
     hortaId: "",            //string
     timestamp: Date.now(),  //epoch
   },
-
+  execucao: null,
+  //{
+  //  adquiridaEm: 0,
+  //  adquiridaAte: 0,
+  //  iniciadoEm: 0,
+  //  finalizadoEm: 0,
+  //  tentativas: 0,
+  //  ultimoErro: "",
+  //  maxTentativas: 3,
+  //  agente: {
+  //    tipo: "",
+  //    id: "",
+  //  },
+  //}
+  resolucao: null
+// processada: false,
+// modeloId: null,
+// modeloVersao: null,
+// resultados: {}, // bounding boxes, labels, etc.
+// confiancaMedia: null,
 }
 
 export const validarMidia = (dataObj = {}) => {

@@ -1,25 +1,38 @@
-import { Form, FormControl } from "react-bootstrap"
+import { Form } from "react-bootstrap"
 import { ENTIDADE } from "micro-agricultor"
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils"
-import { useState } from "react";
 import { toDateTimeLocal } from "../../../utils/dateUtils";
-import { timestamp } from "../../../firebase";
+import { useCache } from "../../../hooks/useCache";
+import Loading from "../../../components/Loading";
 
-export const MidiaContextoTab = ({formContexto, setFormContexto, loading, catalogoPlantas, catalogoCanteiros}) => {
+export const MidiaContextoTab = ({formContexto, setFormContexto }) => {
+  const { cachePlantas, cacheCanteiros, cacheHortas, reading } = useCache([
+    "plantas",
+    "canteiros",
+    "hortas",
+  ]);
+
+  if (reading) return <Loading />
+
   const MAPA_CATALOGOS = {
-    planta: catalogoPlantas,
-    canteiro: catalogoCanteiros,
+    [ENTIDADE.planta.id]: cachePlantas?.list,
+    [ENTIDADE.canteiro.id]: cacheCanteiros?.list,
   }
 
   return (
     <>
     <StandardCard header="Horta">
       <StandardInput label = "HortaId">
-        TODO: SELECTBOX
-        <Form.Control
-          value={formContexto.hortaId}
-          onChange={(e)=>setFormContexto({...formContexto, hortaId: e.target.value})}
-        />
+        <Form.Select
+          value={formContexto.entidadeId}
+          onChange={e => setFormContexto({...formContexto, hortaId: e.target.value})}
+        >
+          {renderOptions({
+            list: cacheHortas?.list,
+            placeholder: "Selecione a horta",
+            loading: reading,
+          })}
+        </Form.Select>
       </StandardInput>
     </StandardCard>
     <StandardCard header="Contexto">
@@ -42,9 +55,9 @@ export const MidiaContextoTab = ({formContexto, setFormContexto, loading, catalo
           onChange={e => setFormContexto({...formContexto, entidadeId: e.target.value})}
         >
           {renderOptions({
-            list: MAPA_CATALOGOS[formContexto.tipoEntidadeId].list,
+            list: MAPA_CATALOGOS[formContexto.tipoEntidadeId],
             placeholder: "Selecione a entidade",
-            loading,
+            loading: reading,
           })}
         </Form.Select>
       </StandardInput>

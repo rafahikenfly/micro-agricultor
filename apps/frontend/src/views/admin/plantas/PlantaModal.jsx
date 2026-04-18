@@ -11,17 +11,8 @@ import { handleSaveForm } from "../../../utils/formUtils";
 import { PlantaLocalizacaoTab } from "./PlantaLocalizacaoTab";
 import { PlantaEspecieTab } from "./PlantaEspecieTab";
 import PlantaDadosTab from "./PlantaDadosTab";
-import { useCache } from "../../../hooks/useCache";
 
 export default function PlantaModal({ show, onSave, onClose, data}) {
-  const { cacheEstadosPlanta, cacheVariedades, cacheHortas, cacheEspecies, cacheCanteiros, cacheCaracteristicas, reading } = useCache([
-    "estadosPlanta",
-    "variedades",
-    "hortas",
-    "especies",
-    "canteiros",
-    "caracteristicas",
-  ])
   // Controle de tab
   const [tab, setTab] = useState("dados");
   // Formulário
@@ -55,26 +46,18 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
               <PlantaDadosTab
                 form={form}
                 setForm={setForm}
-                estadosPlanta={cacheEstadosPlanta?.list ?? []}
-                loading={reading}
               />
             </Tab>
             <Tab eventKey="localizacao" title="Localização">
               <PlantaLocalizacaoTab
                 form={form}
                 setForm={setForm}
-                hortas={cacheHortas?.list ?? []}
-                listaCanteiros={cacheCanteiros?.list ?? []}
-                loading={reading}
               />
             </Tab>
             <Tab eventKey="especie" title="Espécie">
               <PlantaEspecieTab
                 form={form}
                 setForm={setForm}
-                variedades={cacheVariedades?.list ?? []}
-                especies={cacheEspecies?.list ?? []}
-                loading={reading}
               />
             </Tab>
             <Tab eventKey="aparencia" title="Aparência">
@@ -85,7 +68,6 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
             <Tab eventKey="estadoAtual" title="Estado">
               <EntidadeEstadoAtualTab
                 formEstadoAtual={form.estadoAtual ?? {}}
-                caracteristicas={cacheCaracteristicas}
                 tipoEntidadeId="planta"
                 setFormEstadoAtual={(estadoAtual) => setForm({ ...form, estadoAtual })}
               />

@@ -8,12 +8,11 @@ import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 
-import { midiasService } from "../../../services/crud/midiasService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import MidiaModal from "./MidiaModal";
+import { midiasService } from "../../../services/crudService";
 
 export default function MidiasCRUD() {
   const { user } = useAuth();
@@ -67,7 +66,6 @@ export default function MidiasCRUD() {
             dados = {midias}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: VARIANT_TYPES.YELLOW},

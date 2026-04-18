@@ -14,8 +14,6 @@ export async function currentStateInspector() {
   const cacheNecessidades = await cacheService.getNecessidades();
   const cachePlantas = await cacheService.getPlantas();
   const cacheCanteiros = await cacheService.getCanteiros();
-
-
   
   // inicializa o mapa de tarefas
   const novasNecessidades = [];

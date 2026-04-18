@@ -42,7 +42,7 @@ export function dailyMaintenance() {
 
     await runTasks(dailyTasks, "dailyMaintenance");
 
-    log("[dailyMaintenance] Finalizado");
+    log("[dailyMaintenance] Finalizada a manutenção diária.");
   });
 }
 
@@ -59,7 +59,7 @@ export function hourlyMaintenance() {
 
     await runTasks(hourlyTasks, "hourlyMaintenance");
 
-    log("[hourlyMaintenance] Finalizado");
+    log("[hourlyMaintenance] Finalizada a manutenção horária.");
   });
 }
 

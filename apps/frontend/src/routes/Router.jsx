@@ -46,7 +46,7 @@ export default function Router() {
             <Route path="estados-planta" element={<EstadosPlantaCRUD />} />
             <Route path="categorias-especies" element={<CategoriasCRUD />} />
             <Route path="tarefas" element={<TarefasCRUD />} />
-            <Route path="midia" element={<MidiasCRUD />} />
+            <Route path="midias" element={<MidiasCRUD />} />
           </Route>
           <Route path="/mapa" element={<AppMapa />}>
             <Route index element={<MapaVazio />} />

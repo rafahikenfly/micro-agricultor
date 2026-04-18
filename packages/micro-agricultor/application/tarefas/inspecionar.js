@@ -43,18 +43,43 @@ export async function inspecionar({
   for (const tarefa of tarefas) {
     await batch.commitIfNeeded();
 
-    // Se ainda há necessidades, não resolve a tarefa
-    if (necessidadesPorVinculo[tarefa.id]?.length) continue;
-    // TODO: há outros tipos de resolução para tratar
-    // aquisicao expirada: timestamp > execucao.adquiridoAte
-    // falhado: execucao.numTentativas > execucao.maxTentativas
+    const execucao = tarefa.execucao;
+    const necessidades = necessidadesPorVinculo[tarefa.id] ?? [];
 
-    // Aplica regra de resolução
+    // Identifica o tipo de resolução
+    let tipoResolucaoId = null;
+
+    // ======
+    // 1. ERROS
+    // ======
+    if (execucao) {
+      if (execucao.tentativas > execucao.maxTentativas) {
+        tipoResolucaoId = RESOLUCAO.FALHADO.id;
+      } 
+      else if (timestamp > execucao.expiraEm) {
+        tipoResolucaoId = RESOLUCAO.EXPIRADO.id;
+      }
+    }
+
+    // ======
+    // 2. RESOLUÇÃO NORMAL
+    // ======
+    if (!tipoResolucaoId) {
+      if (necessidades.length > 0) {
+        continue; // ainda não pode resolver
+      }
+
+      tipoResolucaoId = RESOLUCAO.CONCLUIDO.id;
+    }    
+    
+    // ======
+    // 3. EXECUTA RESOLUÇÃO
+    // ======
     const results = resolverTarefa({
         tarefa,
         timestamp,
         agente,
-        tipoResolucaoId: RESOLUCAO.CONCLUIDO.id,
+        tipoResolucaoId,
       });
     
     // Atualiza a tarefa pelo batch

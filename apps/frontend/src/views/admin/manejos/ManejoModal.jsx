@@ -52,9 +52,6 @@ export default function ManejoModal({ show, onSave, onClose, data = {}}) {
               <ManejoDadosTab
                 form={form}
                 setForm={setForm}
-                estados_canteiro={cacheEstadosCanteiro?.list}
-                estados_planta={cacheEstadosPlanta?.list}
-                loading={reading}
               />
             </Tab>
 

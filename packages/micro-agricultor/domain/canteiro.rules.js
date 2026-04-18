@@ -200,7 +200,6 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
   const estadoAtual = canteiro?.estadoAtual || {};
   Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
     const caracteristica = estadoAtual[caracteristicaId];
-
     // Valor Desconhecido
     if (!caracteristica || typeof caracteristica.valor !== "number") {
       pendencias.push({
@@ -213,13 +212,13 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
     }
 
     // Valor Não-Confiável
-    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < 30) { //TODO: vir de alguma configuracao
+    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < (faixaIdeal.confianca || 30)) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: caracteristica.confianca
+        confianca: caracteristica.confianca ?? null
       });
       return;
     }
@@ -249,7 +248,6 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
     }
   });
   
-
   return pendencias;
 }
 // ** UNDER REVIEW **
@@ -340,6 +338,5 @@ export const getNecessidadesCanteiro = ({
     //Atualiza o mapa local para evitar duplicação
     mapaNecessidades.set(necessidadeId, necessidadeDesvinculada);
   };
-
   return necessidades
 }

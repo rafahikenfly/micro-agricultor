@@ -7,9 +7,9 @@ import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCalendarioEngine } from "../CalendarioEngine";
 import { eventosService, mutacoesService } from "../../../services/historyService";
-import { necessidadesService, tarefasService, entidadesService } from "../../../services/crudService";
+import { necessidadesService, entidadesService } from "../../../services/crudService";
 
-import { concluirTarefa, ENTIDADE } from "micro-agricultor";
+import { ENTIDADE } from "micro-agricultor";
 import { useCache } from "../../../hooks/useCache";
 
 const processarManejo = () => {console.warn("UNDER REVIEW")};
@@ -52,7 +52,7 @@ export const ManejarModal = ({show, data, onClose }) => {
     const caracteristicaManejada = 
       cacheCaracteristicas?.map.get(data?.contexto?.caracteristicaId)
     setCaracteristica(caracteristicaManejada)
-  }, [data])
+  }, [data, cacheCaracteristicas])
 
   const catalogMap = {
     [ENTIDADE.canteiro.id]: cacheCanteiros?.list,
@@ -120,19 +120,8 @@ export const ManejarModal = ({show, data, onClose }) => {
         }
       })
       //Conclui a tarefa
-      concluirTarefa({
-        tarefa: data,
-        resolucao: {
-          tipoResolucao: RESOLVE_TYPES.HANDLED,
-          dataConclusao: timestamp,
-          agente: {
-            tipo: SOURCE_TYPES.USER,
-            id: user.id,  
-          },
-        },
-        user,
-        tarefasService,
-      })
+      //TODO
+
       //Fecha modal
         toastMessage({
           body: `Manejo de ${entidades.length > 1 ? `${entidades.length} ${data.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,

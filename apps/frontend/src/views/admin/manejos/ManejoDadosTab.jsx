@@ -2,8 +2,14 @@ import { Form } from "react-bootstrap";
 import { ENTIDADE } from "micro-agricultor";
 import { handleSelectIdNome, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
 import BaseTab from "../../../components/common/BaseTab";
+import { useCache } from "../../../hooks/useCache";
 
-export default function ManejoDadosTab({ form, setForm, estados_canteiro, estados_planta, loading}) {
+export default function ManejoDadosTab({ form, setForm }) {
+  const { cacheEstadosPlanta, cacheEstadosCanteiro, reading } = useCache([
+    "estadosPlanta",
+    "estadosCanteiro",
+  ]);
+
   return (
     <BaseTab
       form={form}
@@ -24,8 +30,8 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoOrigemId}
           onChange={e => handleSelectIdNome(e,{
-            list: form?.aplicavel.canteiro ? estados_canteiro :
-                  form?.aplicavel.planta ? estados_planta :
+            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
+                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
                   [],
             setForm: setForm,
             fieldId: "estadoOrigemId",
@@ -33,10 +39,10 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           })}
         >
           {renderOptions({
-            list: form?.aplicavel.canteiro ? estados_canteiro :
-                  form?.aplicavel.planta ? estados_planta :
+            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
+                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
                   [],
-            loading,
+            loading: reading,
             placeholder: "Nenhum estado de origem",
             nullOption: true,
           })}
@@ -45,8 +51,8 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoDestinoId}
           onChange={e => handleSelectIdNome(e,{
-            list: form?.aplicavel.canteiro ? estados_canteiro :
-                  form?.aplicavel.planta ? estados_planta :
+            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
+                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
                   [],
             setForm: setForm,
             fieldId: "estadoDestinoId",
@@ -54,10 +60,10 @@ export default function ManejoDadosTab({ form, setForm, estados_canteiro, estado
           })}
         >
           {renderOptions({
-            list: form?.aplicavel.canteiro ? estados_canteiro :
-                  form?.aplicavel.planta ? estados_planta :
+            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
+                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
                   [],
-            loading,
+            loading: reading,
             placeholder: "Nenhum estado de destino",
             nullOption: true,
           })}

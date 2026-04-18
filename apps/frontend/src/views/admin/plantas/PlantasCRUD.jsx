@@ -72,9 +72,8 @@ export default function PlantasCRUD() {
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: reading ? {} : cacheEstadosPlanta?.list,},
-              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: reading ? {} : cacheEstagiosEspecie?.list,},
-              {rotulo: "Apagado", dataKey: "isDeleted", boolean: true},
+              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: cacheEstadosPlanta?.list,},
+              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: cacheEstagiosEspecie?.list,},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},

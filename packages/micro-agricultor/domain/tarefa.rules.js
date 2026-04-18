@@ -42,8 +42,8 @@ const tarefaPadrao = {
   },
   execucao: null,
   //{
-  //  adquiridoEm: 0,
-  //  adquiridoAte: 0,
+  //  adquiridaEm: 0,
+  //  adquiridaAte: 0,
   //  iniciadoEm: 0,
   //  finalizadoEm: 0,
   //  tentativas: 0,
@@ -93,8 +93,8 @@ export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000
   return {
     ...tarefa,
     execucao: {
-      adquiridoEm: timestamp,
-      expiraEm: timestamp + prazoExpiracao,
+      adquiridaEm: timestamp,
+      adquiridaAte: timestamp + prazoExpiracao,
       tentativas: (tarefa.execucao?.tentativas ?? 0) + 1,
       agente,
     }

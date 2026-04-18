@@ -14,7 +14,7 @@ export async function taskStateInspector() {
       const tarefasPendentes = (await cacheService
         .getTarefas())
         .list
-        .filter(t =>t.estado === ESTADO_TAREFA.PENDENTE.id);
+        .filter(t => t.estado === ESTADO_TAREFA.PENDENTE.id);
 
       await inspecionar({
         tarefas: tarefasPendentes,

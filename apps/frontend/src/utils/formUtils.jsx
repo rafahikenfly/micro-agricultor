@@ -229,6 +229,7 @@ export const StandardBadgeGroup = ({children}) => {
 export const StandardArrayInput = ({
   form,
   map,
+  noHeader = false,
   header = "Novo item do array",
   headerButton = "Adicionar",
   headerVariant = "success",
@@ -268,7 +269,7 @@ export const StandardArrayInput = ({
   if (!form) return <>Nenhum dado</>
   return (
     <>
-      <StandardCard header={header}>
+      {!noHeader && <StandardCard header={header}>
         {children}
         <Button
           variant={`outline-${headerVariant}`}
@@ -278,12 +279,12 @@ export const StandardArrayInput = ({
         >
           {headerButton}
         </Button>
-      </StandardCard>
+      </StandardCard>}
       <ListaComAcoes
         dados={map ?? form}
         sort={false}
         colunas={colunas}
-        acoes={[...acoes,
+        acoes={noHeader ? [] : [...acoes,
           {rotulo: "▲", funcao: moveUp, variant: "outline-warning"},
           {rotulo: "▼", funcao: moveDown, variant: "outline-warning"},
           {rotulo: "Excluir", funcao: remove, variant: "danger"},

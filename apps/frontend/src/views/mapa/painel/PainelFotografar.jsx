@@ -3,13 +3,13 @@ import CapturaImagemEntidade from "../../../components/CapturaImagemEntidade";
 import { getImageDimensions } from "../../../utils/blobUtils";
 import { storage } from "../../../firebase";
 import { unixToReadableString } from "../../../utils/dateUtils";
-import { midiasService } from "../../../services/crud/midiasService";
 import { resolvePrimarySelection } from "../../../utils/catalogUtils";
 import { useToast } from "../../../services/toast/toastProvider";
 import { useEffect, useState } from "react";
 import { useMapaEngine } from "../MapaEngine";
 import { useAuth } from "../../../services/auth/authContext";
 import { cacheService } from "../../../services/cacheService";
+import { midiasService } from "../../../services/crudService";
 
 export default function PainelFotografar({ show, caches, onCancel}) {
 

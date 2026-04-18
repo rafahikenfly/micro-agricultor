@@ -46,7 +46,7 @@ export function aplicarRegraPorBatch({
         // precisa ter algo em results.after e faz o update da entidade.
         if (entidade) {
           if (!results?.after || !Object.keys(results.after).length) {
-            console.warn("aplicarRegraPorBatch: Nenhuma mutação resultante da aplicação de regra.")
+            console.warn(`aplicarRegraPorBatch: Nenhuma mutação resultante da aplicação de regra em ${entidade.id}.`)
             return {};
           }
     

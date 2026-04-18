@@ -1,5 +1,6 @@
 No frontend:
-- ajustar todos os usos de ListaComAcao para usar o render ao inves de outras formas de renderizacao
+- ajustar todos os usos de ListaComAcao para usar o render ao inves de outras formas de renderizacao, assim como o lazy caching
+   (AUTALIZANDO DE BAIXO PARA CIMA, ATÉ OS MANEJOS)
 - eliminar os services individuais e atualizar os imports
 
 No backend:
