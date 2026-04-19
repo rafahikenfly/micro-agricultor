@@ -97,6 +97,12 @@ export const dispositivosService = createCRUDService (firebaseAdapter, {
   useArchive: true,
 });
 
+export const modelosCVService = createCRUDService(firebaseAdapter, {
+  collection: "cvModelos", //TODO: RENOMEAR A COLEÇÃO
+  softDelete: true,
+  useArchive: true,
+})
+
 
 
 // ===== DERIVED =====

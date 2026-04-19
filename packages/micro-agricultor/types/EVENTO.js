@@ -52,5 +52,12 @@ export const EVENTO = {
     categoria: "usuário",
     geraNecessidade: false
   },
+  INFERENCIA: {
+    id: "INFERENCIA",
+    nome:"Inferência por visão computacional",
+    acao:"Inferir",
+    categoria: "visão computacional",
+    geraNecessidade: true
+  },  
   [EVENTO_TYPES.CREATE]: {id: EVENTO_TYPES.CREATE, nome: "Criação", categoria: "entidade", geraNecessidade: false},
 };

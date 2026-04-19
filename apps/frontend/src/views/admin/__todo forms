@@ -1,9 +1,0 @@
-em todos os modais, conferir:
-- clear do onSaveForm:
-    clear: true,
-    onClear: ()=>setForm(validarCaracteristica({})),
-- regras de validacao do formulario no onSaveForm
-    transform: validarCaracteristica,
-
-em todos os cruds, conferir:
- toogles de listafuncoes usam apenas um variant

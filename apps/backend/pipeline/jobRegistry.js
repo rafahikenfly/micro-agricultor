@@ -1,11 +1,11 @@
 import { currentStateInspector } from "../scheduler/currentStateInspector.js";
 import { dailyEvolution } from "../scheduler/dailyEvolution.js";
-import { mediaStateInspector } from "../scheduler/mediaStateInspector.js";
+import { mediaTaskInspector } from "../scheduler/mediaTaskInspector.js";
 import { taskStateInspector } from "../scheduler/taskStateInspector.js"
 
 export const jobRegistry = {
   dailyEvolution,
   currentStateInspector,
-  mediaStateInspector,
+  mediaTaskInspector,
   taskStateInspector,
 };

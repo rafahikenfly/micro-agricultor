@@ -46,6 +46,9 @@ export default function AdminSidebar() {
         <Nav.Link as={NavLink} to="/admin/dispositivos">
           Dispositivos
         </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/modelosCV">
+          Modelos de Visão Computacional
+        </Nav.Link>
         <hr />
 
         <div className="text-muted small mb-2">Configuração</div>
@@ -53,7 +56,10 @@ export default function AdminSidebar() {
           Características
         </Nav.Link>
         <Nav.Link as={NavLink} to="/admin/categorias-especies">
-          Categorias
+          Categorias de Espécies
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/estagios-especies">
+          Estágios de Espécies
         </Nav.Link>
         <Nav.Link as={NavLink} to="/admin/estados-canteiro">
           Estados de Canteiro
@@ -69,6 +75,9 @@ export default function AdminSidebar() {
         </Nav.Link>
         <Nav.Link as={NavLink} to="/admin/midias">
           Mídia
+        </Nav.Link>
+        <Nav.Link as={NavLink} to="/admin/usuarios">
+          Usuários
         </Nav.Link>
 
       </Nav>

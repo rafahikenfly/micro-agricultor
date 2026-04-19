@@ -1,6 +1,6 @@
 import { Form, FormControl } from "react-bootstrap";
-import BaseTab from "../common/BaseTab";
-import ListaArray from "../common/ListaArray";
+import BaseTab from "../../../components/common/BaseTab";
+import ListaArray from "../../../components/common/ListaArray";
 
 export default function CvModeloClassesTab({ form, setForm, }) {
   const formArray = form?.classes ?? []

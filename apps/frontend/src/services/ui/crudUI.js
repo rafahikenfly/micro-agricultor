@@ -1,6 +1,8 @@
 import { VARIANT_TYPES } from "micro-agricultor";
 import { useToast } from "../toast/toastProvider";
 
+// TODO: mover para HOOKS
+
 export function useCrudUI({
     crudService,
     nomeEntidade,

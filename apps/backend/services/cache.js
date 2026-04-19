@@ -26,7 +26,7 @@ export const cacheService = {
       [{ field: "isDeleted", op: "==", value: false }],
       { field: "nome" }
     ),
-getCaracteristicas: async () =>
+  getCaracteristicas: async () =>
     await cache.get(
       "caracteristicas",
       crud.caracteristicasService,
@@ -54,6 +54,18 @@ getCaracteristicas: async () =>
     await cache.get(
       "tarefas",
       crud.tarefasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
+  getMidias: async () =>
+    await cache.get(
+      "midias",
+      crud.midiasService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
+  getModelosCV: async () =>
+    await cache.get(
+      "modelosCV",
+      crud.modelosCVService,
       [{ field: "isDeleted", op: "==", value: false }],
     ),
 

@@ -1,5 +1,6 @@
 //TODO:
 //MISTURA CONFIG COM SERVICE COM HOOK
+// TODO: mover para HOOKS
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { auth, db } from "../../firebase";

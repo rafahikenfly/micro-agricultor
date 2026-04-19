@@ -1,4 +1,4 @@
-import { criarEfeitosDoEvento, criarEvento, monitorarPlanta, ORIGEM } from "micro-agricultor";
+/* import { criarEfeitosDoEvento, criarEvento, monitorarPlanta, ORIGEM } from "micro-agricultor";
 import { db } from "../../firebase";
 import { plantasService } from "../crudService";
 import { eventosService, mutacoesService } from "../historyService";
@@ -122,4 +122,4 @@ export const monitorarMultiplasPlantas = async ({
   opCount++;
 
   await batch.commit();
-};
+}; */

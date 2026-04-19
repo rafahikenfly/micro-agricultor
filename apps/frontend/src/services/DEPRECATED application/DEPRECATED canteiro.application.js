@@ -1,4 +1,4 @@
-import { criarEfeitosDoEvento, criarEvento, monitorarCanteiro, manejarCanteiro, ORIGEM } from "micro-agricultor";
+/* import { criarEfeitosDoEvento, criarEvento, monitorarCanteiro, manejarCanteiro, ORIGEM } from "micro-agricultor";
 import { db } from "../../firebase";
 import { canteirosService } from "../crud/canteirosService";
 import { eventosService, mutacoesService } from "../historyService";
@@ -190,4 +190,4 @@ export const manejarMultiplosCanteiros = async ({
   opCount++;
 
   await batch.commit();
-};
+}; */

@@ -1,8 +1,6 @@
 
 export * from "./canteiro.rules.js"
-export * from "./cvRuns.rules.js"
-export * from "./cvSpecs.rules.js"
-export * from "./cvModelo.rules.js"
+export * from "./modeloCV.rules.js"
 export * from "./dispositivo.rules.js"
 export * from "./especie.rules.js"
 export * from "./estados.rules.js"

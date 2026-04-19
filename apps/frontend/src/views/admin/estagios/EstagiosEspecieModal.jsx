@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button } from "react-bootstrap";
-import { validarEstagio } from "@domain/estados.rules";
+import { validarEstagio, VARIANTE } from "micro-agricultor";
 import { handleSaveForm, renderOptions } from "../../../utils/formUtils";
-import { VARIANTE } from "@shared/types/VARIANT_TYPES";
 
 export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, }) {
     const [form, setForm] = useState(validarEstagio(data))
@@ -15,21 +14,21 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
       }
     }, [data]);
     
-      const salvar = () => {
-        onSave({
-          ...form,
-        });
-      };
-    
+
     if (!show) return null;
     return (
     <Modal show onHide={onClose} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>{data ? "Editar Estágio de Planta" : "Novo Estágio de Planta"}</Modal.Title>
-      </Modal.Header>
+      <Form onSubmit={(evt)=>handleSaveForm({
+          onSave,
+          form,
+          setForm,
+          clearCache:"estagiosEspecie"
+        })}>
+        <Modal.Header closeButton>
+          <Modal.Title>{data ? "Editar Estágio de Espécie" : "Novo Estágio de Espécie"}</Modal.Title>
+        </Modal.Header>
 
         <Modal.Body>
-          <Form>
 
             <Form.Group className="mb-3">
               <Form.Label>Nome</Form.Label>
@@ -63,22 +62,13 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
                 })}
               </Form.Select>
             </Form.Group>
-
-          </Form>
-        </Modal.Body>
-        
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" onClick={()=>handleSaveForm({
-              onSave,
-              form,
-              setForm,
-              clearCache:"estagios_especie"
-            })}
-          >
-            Salvar
-          </Button>
-        </Modal.Footer>
+          </Modal.Body>
+          
+          <Modal.Footer>
+            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+            <Button variant="success" type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
     )
 }

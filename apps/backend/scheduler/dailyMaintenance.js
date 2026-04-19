@@ -8,12 +8,12 @@ import { cacheService } from "../services/cache.js";
 
 
 const dailyTasks = [
-  { name: "mediaStateInspect", },
 ];
 
 const hourlyTasks = [
   { name: "currentStateInspector" },
   { name: "taskStateInspector"},
+  { name: "mediaTaskInspect" },
 ];
 
 async function runTasks(tasks, label) {

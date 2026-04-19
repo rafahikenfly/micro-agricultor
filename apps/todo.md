@@ -2,6 +2,8 @@ No frontend:
 - ajustar todos os usos de ListaComAcao para usar o render ao inves de outras formas de renderizacao, assim como o lazy caching
    (AUTALIZANDO DE BAIXO PARA CIMA, ATÉ OS MANEJOS)
 - eliminar os services individuais e atualizar os imports
+- ajustar o CRUD de usuários
+- ajustar o perfil
 
 No backend:
 - (low-priority) monitorar com alguma frequencia definida o cadastro de dispositivos, para publicar alterações via MQTT 

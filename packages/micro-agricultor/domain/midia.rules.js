@@ -37,10 +37,9 @@ const midiaPadrao = {
   //    id: "",
   //  },
   //}
-  resolucao: null
+  inferencia: null
 // processada: false,
-// modeloId: null,
-// modeloVersao: null,
+// modelosId: [],
 // resultados: {}, // bounding boxes, labels, etc.
 // confiancaMedia: null,
 }

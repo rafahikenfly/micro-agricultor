@@ -1,36 +1,33 @@
 import { useEffect, useState } from "react";
-import EstagiosEspecieModal from "./EstagiosEspecieModal";
-import ListaComAcoes from "../../common/ListaComAcoes";
-import Loading from "../../common/Loading";
-import { AppToastConfirmacao, AppToastMensagem } from "../../common/toast";
 import { Button, Col, Container, Row } from "react-bootstrap";
+import EstagiosEspecieModal from "./EstagiosEspecieModal";
+import { VARIANTE } from "micro-agricultor";
+import { NoUser } from "../../../components/common/NoUser";
+import Loading from "../../../components/Loading";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { NoUser } from "../../common/NoUser";
-import { useAuth } from "../../../services/auth/authContext";
-import { setToast } from "../../../services/ui/toast";
-import { VARIANTE } from "@shared/types/VARIANT_TYPES";
 import { estagiosEspecieService } from "../../../services/crudService";
+import { useAuth } from "../../../services/auth/authContext";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 
 
 export default function EstagiosEspecieCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
-  const [estagios_especie, setEstagios_especie] = useState([]);
+  const [estagiosEspecie, setEstagiosEspecie] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
   const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
     setLoading(true);
 
     const unsub = estagiosEspecieService.subscribe((data) => {
-      setEstagios_especie(data);
+      setEstagiosEspecie(data);
       setLoading(false); // só desliga quando os dados chegam
     });
 
@@ -38,27 +35,16 @@ export default function EstagiosEspecieCRUD() {
   }, []);
 
   /* ================= CRUD ================= */
-  const {
-    criar,
-    editar,
-    duplicar,
-    atualizar,
-    arquivar,
-    desarquivar,
-    apagarComConfirmacao,
-  } = useCrudUI({
+  const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
     crudService: estagiosEspecieService,
-    nomeEntidade: "estágio de espécie",
-    masculino: true, // "o estágio de espécie"
+    nomeEntidade: "estágios de espécie",
+    masculino: true, // "o estágio de especie"
     user,
-  
     editando,
     registroParaExcluir,
-    
     setEditando,
     setShowModal,
     setRegistroParaExcluir,
-    setShowToast,
   });
   /* ================= RENDER ================= */
   if (loading) return <Loading />
@@ -73,7 +59,7 @@ export default function EstagiosEspecieCRUD() {
       <Row>
         <Col>
           <ListaComAcoes
-            dados = {estagios_especie}
+            dados = {estagiosEspecie}
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
@@ -83,11 +69,10 @@ export default function EstagiosEspecieCRUD() {
               {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
               { toggle: "isArchived",
                 rotulo: "Desarquivar",
-                funcao: desarquivar,
-                variant: "secondary",
                 rotuloFalse: "Arquivar",
+                funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variantFalse: "dark"
+                variant: "secondary",
               },
             ]}
           />
@@ -95,7 +80,7 @@ export default function EstagiosEspecieCRUD() {
       </Row>
 
       <EstagiosEspecieModal
-        key={editando ? editando.id : `novo`}
+        key={editando?.id ?? `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -103,23 +88,7 @@ export default function EstagiosEspecieCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        setToast={(toast) => setToast(toast, setShowToast)}
       />
-      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
-      <AppToastMensagem
-        show={showToast.show && !showToast.confirmacao}
-        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-      <AppToastConfirmacao
-        show={showToast.show && showToast.confirmacao}
-        onCancel={showToast.onCancel}
-        onConfirm={showToast.onConfirm}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-
     </Container>
   );
 }

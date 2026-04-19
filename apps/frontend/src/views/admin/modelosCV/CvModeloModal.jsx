@@ -1,35 +1,36 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
-import { validarCvModelo } from "@domain/cvModelo.rules";
+import { validarModeloCV } from "micro-agricultor";
 import CvModeloDadosTab from "./CvModeloDados"
 import CvModeloClassesTab from "./CvModeloClassesTab";
+import { handleSaveForm } from "../../../utils/formUtils";
 
 export default function CvModeloModal({ show, onSave, onClose, data = {}, }) {
   // Controle de tab
   const [tab, setTab] = useState("dados");
-
-  const [form, setForm] = useState(validarCvModelo(data))
+  // Formulário
+  const [form, setForm] = useState(validarModeloCV(data))
   
-  useEffect(() => {
-    if (!data) { setForm(validarCvModelo({})); } // novo modelo limpo
-    else { setForm(validarCvModelo(data)); }     // edição
-  }, [data]);
+  // ========== CARREGAR DADOS ==========
+  // Sanitiza data
+  useEffect(() => { setForm(validarModeloCV(data ?? {})); }, [data]);
   
-  const salvar = () => {
-    onSave({
-      ...form,
-    });
-  };
-
   if (!show) return null;
   return (
     <Modal show onHide={onClose} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>{data ? "Editar Modelo de Visão Computacional" : "Novo Modelo de Visão Computacional"}</Modal.Title>
-      </Modal.Header>
+      <Form onSubmit={(evt)=>handleSaveForm({
+          evt,
+          onSave,
+          form,
+          setForm,
+          clearCache:"modelosCv"
+        })}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{data ? "Editar Modelo de Visão Computacional" : "Novo Modelo de Visão Computacional"}</Modal.Title>
+        </Modal.Header>
 
         <Modal.Body>
-          <Form onSubmit={salvar}>
           <Tabs
             activeKey={tab}
             onSelect={(k) => k && setTab(k)}
@@ -48,13 +49,13 @@ export default function CvModeloModal({ show, onSave, onClose, data = {}, }) {
                 />
               </Tab>
             </Tabs>
-          </Form>
-        </Modal.Body>
-        
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" onClick={salvar}>Salvar</Button>
-        </Modal.Footer>
+          </Modal.Body>
+          
+          <Modal.Footer>
+            <Button variant="secondary" onClick={onClose}>Cancelar</Button>
+            <Button variant="success" type="submit">Salvar</Button>
+          </Modal.Footer>
+        </Form>
       </Modal>
     )
 }
