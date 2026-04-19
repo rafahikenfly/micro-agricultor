@@ -89,7 +89,7 @@ export async function mediaTaskInspector() {
       maxTentativas: 3,
     };
     for (const modelo of modelosAplicaveis) {
-      const resultado = await executarModeloPython(imagem.path, modelo.path);
+      const resultado = await executarModeloPython(midia.path, modelo.path);
       console.log(`TODO: Registrar mutações da inferência`);    // placeholder
       modelosId.push(modelo.id);
     }
