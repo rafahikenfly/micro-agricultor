@@ -103,6 +103,11 @@ export const modelosCVService = createCRUDService(firebaseAdapter, {
   useArchive: true,
 })
 
+export const usuariosCVService = createCRUDService(firebaseAdapter, {
+  collection: "usuarios",
+  softDelete: true,
+  useArchive: true,
+})
 
 
 // ===== DERIVED =====

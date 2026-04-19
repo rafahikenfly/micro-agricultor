@@ -70,7 +70,7 @@ export const validarTarefa = (dataObj = {}) => {
     return valid;
 }
 
-export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => {
+export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => { //TODO: update
   const novaTarefa = {
     ...tarefaPadrao,
     contexto: { ...tarefaPadrao.contexto, ...contexto },

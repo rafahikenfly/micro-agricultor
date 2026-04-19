@@ -224,7 +224,8 @@ export function mudarVariedade(planta, novaVariedade) {
 // =====
 // ** UNDER REVIEW **
 export const getCaracteristicasRelevantesPlanta = ({planta, mapaVariedades}) => {
-  const caracteristicasSet = new Set();
+  //const caracteristicasSet = new Set();
+  const caracteristicasRelevantes = {};
 
   // para cada planta
   const variedade = mapaVariedades.get(planta.variedadeId);
@@ -233,33 +234,32 @@ export const getCaracteristicasRelevantesPlanta = ({planta, mapaVariedades}) => 
   // para cada fase do ciclo da variedade
   variedade.ciclo.forEach(fase => {
     
-    // ambiente => chaves do objeto
-    // não pega para as plantas, só para os canteiros
-    //if (fase.ambiente && typeof fase.ambiente === "object") {
-    //  Object.keys(fase.ambiente).forEach(id => {
-    //    caracteristicasSet.add(id);
-    //  });
-    //}
-
-    // transicao => chaves do objeto
-    if (fase.transicao && typeof fase.transicao === "object") {
-      Object.keys(fase.transicao).forEach(id => {
-        caracteristicasSet.add(id);
+    // ambiente => chaves do objeto são caracteristicaId, com objeto {min, max, confianca}
+    // Para plantas, não usa isso só canteiros
+    // TODO: Compatibilizar com canteiros
+    
+    // tarefas => chaves do objeto são caracteristicaId, com array [{op, limite}]
+    if (fase.tarefas && Array.isArray(fase.tarefas)) {
+      fase.tarefas.forEach(tarefa => {
+        const {caracteristicaId, ...pendencia} = tarefa;
+        if (!caracteristicasRelevantes[caracteristicaId]) caracteristicasRelevantes[caracteristicaId] = [];
+        caracteristicasRelevantes[caracteristicaId].push(pendencia)
       });
     }
-
-    // tarefas => array
-    if (Array.isArray(fase.tarefas)) {
-      fase.tarefas.forEach(tarefa => {
-        if (tarefa?.caracteristicaId) {
-          caracteristicasSet.add(tarefa.caracteristicaId);
+    // transicao => chaves do objeto
+    // TODO: NÃO É UM SET, MAS UM OBJETO
+    if (fase.transicao && typeof fase.transicao === "object") {
+      Object.entries(fase.transicao).forEach(([caracteristicaId, limite]) => {
+        if (!caracteristicasRelevantes[caracteristicaId]) {
+          caracteristicasRelevantes[caracteristicaId] = { ...limite }
         }
       });
-    }
+    };
 
   });
 
-  return Array.from(caracteristicasSet);
+  return caracteristicasRelevantes;
+//  return Array.from(caracteristicasSet); //TODO: isso aqui tem que retornar igual o canteiro
 }
 // ** UNDER REVIEW **
 export function getPendenciasPlanta({planta, mapaCaracteristicas}) {
@@ -267,11 +267,11 @@ export function getPendenciasPlanta({planta, mapaCaracteristicas}) {
 
   const estadoAtual = planta?.estadoAtual || {};
 
-  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
-    const caracteristica = estadoAtual[caracteristicaId];
+  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, tarefas]) => {
+    const estadoAtualCaracteristica = estadoAtual[caracteristicaId];
 
     // Valor Desconhecido ou inválido
-    if (!caracteristica || typeof caracteristica.valor !== "number") {
+    if (!estadoAtualCaracteristica || typeof estadoAtualCaracteristica.valor !== "number") {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
@@ -282,39 +282,59 @@ export function getPendenciasPlanta({planta, mapaCaracteristicas}) {
     }
 
     // Valor Não-Confiável
-    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < (faixaIdeal.confianca || 30) ) {
+    if (typeof estadoAtualCaracteristica.confianca !== "number" || estadoAtualCaracteristica.confianca < 30) { //TODO: HARDCODED
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
         caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: caracteristica.confianca ?? null
+        confianca: estadoAtualCaracteristica.confianca ?? null
       });
-    }
-    // Valor Abaixo do ideal
-    if (caracteristica.valor < faixaIdeal.min) {
-      pendencias.push({
-        tipoEventoId: EVENTO.MANEJO.id,
-        tipoEntidadeId: ENTIDADE.planta.id,
-        caracteristicaId,
-        motivo: REASON_TYPES.LOWER_BOUND,
-        valor: caracteristica.valor
-      });
-      return;
     }
 
-    // Valor Acima do ideal
-    if (caracteristica.valor > faixaIdeal.max) {
-      pendencias.push({
-        tipoEventoId: EVENTO.MANEJO.id,
-        tipoEntidadeId: ENTIDADE.planta.id,
-        caracteristicaId,
-        motivo: REASON_TYPES.UPPER_BOUND,
-        valor: caracteristica.valor
-      });
-      return;
-    }
-
+    // Valor Fora do parâmetro
+    tarefas.forEach ((tarefa) => {
+      switch (tarefa.operador) {
+        case "==":
+          if (estadoAtualCaracteristica.valor == tarefa.limite) {
+            pendencias.push({
+              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEntidadeId: ENTIDADE.planta.id,
+              caracteristicaId,
+              motivo: REASON_TYPES.UPPER_BOUND, //TODO
+              valor: estadoAtualCaracteristica.valor
+            });
+          }
+          break;
+        case "<=":
+          if (estadoAtualCaracteristica.valor <= tarefa.limite) {
+            pendencias.push({
+              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEntidadeId: ENTIDADE.planta.id,
+              caracteristicaId,
+              motivo: REASON_TYPES.UPPER_BOUND, //TODO
+              valor: estadoAtualCaracteristica.valor
+            });
+          }
+          break;
+        case ">=":
+          if (estadoAtualCaracteristica.valor >= tarefa.limite) {
+            pendencias.push({
+              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEntidadeId: ENTIDADE.planta.id,
+              caracteristicaId,
+              motivo: REASON_TYPES.UPPER_BOUND, //TODO
+              valor: estadoAtualCaracteristica.valor
+            });
+          }
+          break;
+      
+        default:
+          console.warn("erro") //TODO
+          break;
+      }
+    });
+    return;
   });
 
   return pendencias;
@@ -386,7 +406,7 @@ export const getNecessidadesPlanta = ({
   
   // Obtem as pendências (necessidades candidatas)
   const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, mapaVariedades})
-  const pendencias = getPendenciasPlanta({planta, arrCaracteristicaIds});
+  const pendencias = getPendenciasPlanta({planta, mapaCaracteristicas: arrCaracteristicaIds});
   const necessidades = [];
   
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro
@@ -428,10 +448,12 @@ export const getNecessidadesPlanta = ({
           nome: `${acao} ${caracteristica.nome}`,
           descricao: `${caracteristica.descricao} Plantas: ${entidadeNome}`
         }
-        contexto.mapaTarefas[caracteristicaId] = criarTarefa({
+        contexto.mapaTarefas[caracteristicaId] = criarTarefa({ //TODO: UPDATE
           contexto: contextoTarefa,
           planejamento: {
-            recorrencia: RECORRENCIA.NENHUMA.id,
+            recorrencia: {
+              tipoRecorrenciaId: RECORRENCIA.NENHUMA.id,
+            },
             vencimento: timestamp,
             prioridade: 1
           },

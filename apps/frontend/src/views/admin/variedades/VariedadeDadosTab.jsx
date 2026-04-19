@@ -5,8 +5,13 @@ import { handleSelectWithRule, renderOptions, StandardCard, StandardInput } from
 
 import BaseTab from "../../../components/common/BaseTab";
 import VetorTab from "../../../components/common/VetorTab";
+import { useCache } from "../../../hooks/useCache";
 
-export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
+export default function VariedadeDadosTab({ form, setForm }) {
+  const { cacheEspecies, reading } = useCache([
+    "especies",
+  ]);
+
   return (
     <BaseTab
       form = {form}
@@ -16,7 +21,7 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
         <Form.Select
           value={form.especieId}
           onChange={e => handleSelectWithRule(e,{
-            list: especies,
+            list: cacheEspecies?.list,
             setForm: setForm,
             regra: alteraEspecieDaVariedade,
             refEntityKey: "especie",
@@ -24,8 +29,8 @@ export default function VariedadeDadosTab({ form, setForm, especies, loading}) {
           })}
         >
           {renderOptions({
-            list: especies,
-            loading,
+            list: cacheEspecies?.list,
+            loading: reading,
             placeholder: "Selecione a espécie",
             isOptionDisabled: (a)=>(a?.ciclo || []).length === 0
           })}

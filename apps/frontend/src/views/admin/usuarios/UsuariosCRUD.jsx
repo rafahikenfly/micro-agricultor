@@ -2,15 +2,13 @@ import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { AMBIENTE } from "micro-agricultor";
 
-import { usuariosService } from "../../services/crud/usuariosService";
-import { useCrudUI } from "../../services/ui/crudUI";
-import { useAuth } from "../../services/auth/authContext";
-import { setToast } from "../../services/ui/toast";
 import UsuarioModal from "./UsuarioModal"
-import ListaComAcoes from "../common/ListaComAcoes";
-import Loading from "../common/Loading";
-import { AppToastConfirmacao, AppToastMensagem } from "../common/toast";
-import { NoUser } from "../common/NoUser";
+import { useAuth } from "../../../services/auth/authContext";
+import { NoUser } from "../../../components/common/NoUser";
+import { usuariosService } from "../../../services/crudService";
+import { useCrudUI } from "../../../services/ui/crudUI";
+import Loading from "../../../components/Loading";
+import ListaComAcoes from "../../../components/common/ListaComAcoes";
 
 
 export default function UsuariosCRUD() {
@@ -39,27 +37,18 @@ export default function UsuariosCRUD() {
   }, []);
 
   /* ================= CRUD ================= */
-  const {
-    criar,
-    editar,
-    atualizar,
-    arquivar,
-    desarquivar,
-    apagarComConfirmacao,
-  } = useCrudUI({
+  const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
     crudService: usuariosService,
-    nomeEntidade: "usuarios",
-    masculino: true, // "o usuario"
+    nomeEntidade: "usuário",
+    masculino: true, // "o usuário"
     user,
-  
     editando,
     registroParaExcluir,
-    
     setEditando,
     setShowModal,
     setRegistroParaExcluir,
-    setShowToast,
   });
+
   /* ================= RENDER ================= */
   if (loading) return <Loading />
   return (
@@ -77,7 +66,6 @@ export default function UsuariosCRUD() {
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Acessos", dataKey: "acesso", tagVariantList: Object.values(AMBIENTE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
               {rotulo: "Editar", funcao: editar, variant: "warning"},
@@ -96,7 +84,7 @@ export default function UsuariosCRUD() {
       </Row>
 
       <UsuarioModal
-        key={editando ? editando.id : `novo`}
+        key={editando?.id ?? `novo`}
         show={showModal}
         onClose={() => {
           setShowModal(false);
@@ -104,23 +92,7 @@ export default function UsuariosCRUD() {
         }}
         onSave={atualizar}
         data={editando}
-        setToast={(toast) => setToast(toast, setShowToast)}
       />
-      {/* ======= TOAST MENSAGEM E CONFIRMACAO ========= */}
-      <AppToastMensagem
-        show={showToast.show && !showToast.confirmacao}
-        onClose={() => setShowToast(prev => ({ ...prev, show: false }))}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-      <AppToastConfirmacao
-        show={showToast.show && showToast.confirmacao}
-        onCancel={showToast.onCancel}
-        onConfirm={showToast.onConfirm}
-        body={showToast.body}
-        variant={showToast.variant}
-      />
-
     </Container>
   );
 }

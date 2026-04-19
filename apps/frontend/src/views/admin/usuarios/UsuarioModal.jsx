@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
-import { validarUsuario } from "@domain/usuarios.rules";
+import { validarUsuario } from "micro-agricultor";
 import UsuarioDadosTab from "./UsuarioDadosTab";
 import UsuarioAcessosTab from "./UsuarioAcessosTab";
 
@@ -11,28 +11,27 @@ export default function UsuarioModal({ show, onSave, onClose, data = {}, }) {
   const [tab, setTab] = useState("dados");
   const [form, setForm] = useState(validarUsuario(data))
   
-  useEffect(() => {
-    if (!data) {
-      setForm(validarUsuario({}));   // novo usuario limpo
-    } else {
-      setForm(validarUsuario(data)); // edição
-    }
-  }, [data]);
-    
-  const salvar = () => {
-    onSave({
-      ...form,
-    });
-  };
+  // ========== CARREGAR DADOS ==========
+  // Sanitiza data
+  useEffect(() => { setForm(validarUsuario(data ?? {})); }, [data]);
     
   return (
     <Modal show onHide={onClose} size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>{data ? "Editar Usuario" : "Novo Usuario"}</Modal.Title>
-      </Modal.Header>
+      <Form onSubmit={(evt)=>handleSaveForm({
+          evt,
+          onSave,
+          form,
+          transform: validarVariedade,
+          clear: true,
+          onClear: setForm(validarUsuario({})),
+          clearCache: "usuarios"
+        })}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{data ? "Editar Usuario" : "Novo Usuario"}</Modal.Title>
+        </Modal.Header>
 
         <Modal.Body>
-          <Form onSubmit={salvar}>
         
           <Tabs
             activeKey={tab}
@@ -47,18 +46,18 @@ export default function UsuarioModal({ show, onSave, onClose, data = {}, }) {
             </Tab>
             <Tab eventKey="acessos" title="Acessos">
               <UsuarioAcessosTab
-                form={form}
-                setForm={setForm}
+                formAcesso={form.acesso}
+                setFormAcesso={(acesso)=>setForm({...form, acesso})}
               />
             </Tab>
           </Tabs>
-          </Form>
         </Modal.Body>
         
         <Modal.Footer>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" onClick={salvar}>Salvar</Button>
+          <Button variant="success" type="submit">Salvar</Button>
         </Modal.Footer>
-      </Modal>
-    )
+      </Form>
+    </Modal>
+  )
 }

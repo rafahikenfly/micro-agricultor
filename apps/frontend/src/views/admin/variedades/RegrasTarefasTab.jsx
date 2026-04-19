@@ -109,9 +109,10 @@ export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas
   return (
     <>
     <StandardArrayInput
-      array={formTarefas ?? []}
-      data={formTarefas ?? []}
-      header="Condição"
+      form={formTarefas ?? []}
+      header="Tarefa condicionada à característica"
+      headerData={formRegra}
+      setForm={(tarefas)=> setFormTarefas(idxCiclo, tarefas)}
       colunas={[
         { rotulo: "Característica", dataKey: "caracteristicaNome" },
         { rotulo: "Condição", dataKey: "operador" },
@@ -121,7 +122,6 @@ export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas
         { rotulo: "Associar Manejos", funcao: ()=>{}, variant: VARIANT_TYPES.GREY },
       ]}
       novoItem={formRegra}
-      onChange={(tarefas)=> setFormTarefas(idxCiclo, tarefas)}
     >
       <Form.Select
         value={formRegra.caracteristicaId}

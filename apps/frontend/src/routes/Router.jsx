@@ -27,6 +27,7 @@ import CalendarioCanvas from "../views/calendario/canvas/CalendarioCanvas";
 import DispositivosCRUD from "../views/admin/dispositivos/DispositivosCRUD";
 import ModelosCVCRUD from "../views/admin/modelosCV/ModelosCVCRUD";
 import EstagiosEspecieCRUD from "../views/admin/estagios/EstagiosEspecieCRUD";
+import UsuariosCRUD from "../views/admin/usuarios/UsuariosCRUD";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -51,6 +52,7 @@ export default function Router() {
             <Route path="tarefas" element={<TarefasCRUD />} />
             <Route path="midias" element={<MidiasCRUD />} />
             <Route path="modelosCV" element={<ModelosCVCRUD />} />
+            <Route path="usuarios" element={<UsuariosCRUD />} />
           </Route>
           <Route path="/mapa" element={<AppMapa />}>
             <Route index element={<MapaVazio />} />

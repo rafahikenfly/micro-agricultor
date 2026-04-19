@@ -39,7 +39,11 @@ export default function RegrasAmbienteTab({ formAmbiente, idxCiclo, caracteristi
           })
         }
       >
-        {renderOptions({ list: caracteristicas, nullOption: true, loading })}
+        {renderOptions({
+          list: caracteristicas,
+          nullOption: true,
+          loading
+        })}
       </Form.Select>
       <InputGroupText>Min</InputGroupText>
       <Form.Control

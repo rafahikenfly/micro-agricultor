@@ -1,21 +1,22 @@
 import { Form } from "react-bootstrap";
-import { AMBIENTE } from "@shared/types/AMBIENT_TYPES";
+import { AMBIENTE } from "micro-agricultor";
+import { StandardCheckboxGroup } from "../../../utils/formUtils";
 
-export default function UsuarioAcessosTab({ form, setForm }) {
-  if (!form.acesso) form.acesso = {}
+export default function UsuarioAcessosTab({ formAcesso, setFormAcesso }) {
+  if (!formAcesso) formAcesso = {}
   return (
-    <>
-    {Object.values(AMBIENTE).map((a)=> (
-      <Form.Group className="mb-3">
+    <StandardCheckboxGroup
+      label = "Ambientes"
+    >
+      {Object.values(AMBIENTE).map((a)=> (
         <Form.Check
           type="checkbox"
           id={`acesso-${a.id}`}
           label={a.nome}
-          checked={!!form.acesso?.[a.id]}
-          onChange={(e) => setForm({...form, acesso: {...form.acesso, [a.id]: e.target.checked}})}
+          checked={!!formAcesso?.[a.id]}
+          onChange={(e) => setFormAcesso({...formAcesso, [a.id]: e.target.checked})}
         />
-      </Form.Group>
-    ))}
-    </>
+      ))}
+    </StandardCheckboxGroup>
   );
 }

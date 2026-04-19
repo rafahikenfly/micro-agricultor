@@ -139,12 +139,9 @@ export const getCaracteristicasRelevantesCanteiro = ({plantas, mapaVariedades}) 
     variedade.ciclo.forEach(fase => {
       
       // ambiente => chaves do objeto
+      // TODO: Compatibilizar com plantas! Aqui vem um objeto caracteristicaID: {min, max, confianca}
+      // mas nas plantas vem um objeto caracteristicaId: [{op, limite}]
       if (fase.ambiente && typeof fase.ambiente === "object") {
-        /* Apenas IDs
-        Object.keys(fase.ambiente).forEach(id => {
-          caracteristicasSet.add(id);
-        });
-        */
         Object.entries(fase.ambiente).forEach(([caracteristicaId, faixa]) => {
           if (!caracteristicasRelevantes[caracteristicaId]) {
             caracteristicasRelevantes[caracteristicaId] = { ...faixa }
@@ -296,19 +293,16 @@ export const getNecessidadesCanteiro = ({
         // Monta contexto da tarefa
         const caracteristica = mapaCaracteristicas.get(caracteristicaId);
         const contextoTarefa = {
-         // TODO: por que o motivo da pendência não veio pra cá?
           tipoEventoId: pendencia.tipoEventoId,
           tipoEntidadeId: pendencia.tipoEntidadeId,
           caracteristicaId: pendencia.caracteristicaId,
           entidadesId: [entidadeId],
         };
         // Monta dados da tarefa
-        let acao = ""
-        if (pendencia.tipoEventoId === EVENTO_TYPES.MONITOR) acao = "Monitorar" //TODO: Isso pode ir para EVENTO_TYPES
-        if (pendencia.tipoEventoId === EVENTO_TYPES.HANDLE) acao = "Manejar"
+        let acao = EVENTO[pendencia.tipoEventoId]?.acao ?? "-"
         const dados = {
           nome: `${acao} ${caracteristica.nome}`,
-          descricao: `${caracteristica.descricao} Canteiros: ${entidadeNome}`
+          descricao: `${caracteristica.descricao} Plantas: ${entidadeNome}`
         }
         contexto.mapaTarefas[caracteristicaId] = criarTarefa({
           contexto: contextoTarefa,

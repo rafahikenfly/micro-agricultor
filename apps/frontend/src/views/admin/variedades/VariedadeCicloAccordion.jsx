@@ -4,8 +4,13 @@ import RegrasAmbienteTab from "./RegrasAmbienteTab";
 import RegrasTarefasTab from "./RegrasTarefasTab";
 import RegrasTransicaoTab from "./RegrasTransicaoTab";
 import VetorTab from "../../../components/common/VetorTab";
+import { useCache } from "../../../hooks/useCache";
 
-export default function VariedadeCicloAccordion({ formCiclo, caracteristicas = [], manejos = [], loading, setFormCiclo }) {
+export default function VariedadeCicloAccordion({ formCiclo, setFormCiclo }) {
+  const { cacheManejos, cacheCaracteristicas, reading } = useCache([
+    "manejos",
+    "caracteristicas"
+  ]);
   if (!formCiclo) return null
 
   // Handlers
@@ -64,8 +69,8 @@ export default function VariedadeCicloAccordion({ formCiclo, caracteristicas = [
                   formAmbiente={formCiclo[idx]?.ambiente ?? {}}
                   idxCiclo={idx}
                   setFormAmbiente={(a,b)=>atualizarRegrasObj(a,b,"ambiente")}
-                  caracteristicas={caracteristicas.filter((a) => a.aplicavel.canteiro || a.aplicavel.horta)}
-                  loading={loading}
+                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.canteiro || a.aplicavel.horta)}
+                  loading={reading}
                 />
               </Tab>
 
@@ -74,9 +79,9 @@ export default function VariedadeCicloAccordion({ formCiclo, caracteristicas = [
                   formTarefas={formCiclo[idx]?.tarefas ?? []}
                   idxCiclo={idx}
                   setFormTarefas={(a,b)=>atualizarRegrasArr(a,b,"tarefas")}
-                  caracteristicas={caracteristicas.filter((a) => a.aplicavel.planta)}
-                  manejos={manejos.filter((a) => a.aplicavel.planta)}
-                  loading={loading}
+                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.planta)}
+                  manejos={cacheManejos?.list.filter((a) => a.aplicavel.planta)}
+                  loading={reading}
                 />
               </Tab>
 
@@ -85,8 +90,8 @@ export default function VariedadeCicloAccordion({ formCiclo, caracteristicas = [
                   formTransicoes={formCiclo[idx]?.transicoes || {}}
                   idxCiclo={idx}
                   setFormTransicoes={(a,b)=>atualizarRegrasObj(a,b,"transicoes")}
-                  caracteristicas={caracteristicas.filter((a) => a.aplicavel.planta)}
-                  loading={loading}
+                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.planta)}
+                  loading={reading}
                 />
               </Tab>
             </Tabs>

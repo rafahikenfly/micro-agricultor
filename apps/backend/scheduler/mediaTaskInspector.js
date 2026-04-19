@@ -1,6 +1,7 @@
 import { criarEvento, ESTADO_TAREFA, EVENTO, ORIGEM } from "micro-agricultor";
 import { batchService, cacheService, eventosService, midiasService } from "../services/index.js";
 import { log } from "../core/logger/index.js";
+import { executarModeloPython } from "../core/python/index.js";
 
 export async function mediaTaskInspector() {
   console.log("Iniciando inspeção de tarefas de mídia...")
@@ -88,7 +89,7 @@ export async function mediaTaskInspector() {
       maxTentativas: 3,
     };
     for (const modelo of modelosAplicaveis) {
-      console.log(`TODO: Rodar modelo ${modelo.id}`);           // placeholder
+      const resultado = await executarModeloPython(imagem.path, modelo.path);
       console.log(`TODO: Registrar mutações da inferência`);    // placeholder
       modelosId.push(modelo.id);
     }
