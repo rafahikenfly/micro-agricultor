@@ -21,10 +21,8 @@ void readLine(char* buffer, size_t size) {
       if (c == '\r') continue;
 
       if (c == '\n') {
-        if (index > 0) {
-          buffer[index] = '\0';
-          return;
-        }
+        buffer[index] = '\0';
+        return;
       } else if (index < size - 1) {
         buffer[index++] = c;
       }
@@ -54,16 +52,6 @@ bool isConfigValid() {
 void saveConfig() {
   EEPROM.put(0, deviceConfig);
   Serial.println("Config salva no EEPROM");
-
-  DeviceConfig test;
-  EEPROM.get(0, test);
-
-  Serial.println("DEBUG apos salvar:");
-  Serial.println(test.ssid);
-  Serial.println(test.mqtt_server);
-  Serial.println(test.mqtt_port);
-  Serial.println(test.publish_interval);
-  Serial.println(test.client_id);
 }
 
 void configurarViaSerial() {
@@ -75,38 +63,60 @@ void configurarViaSerial() {
 
   char buffer[64];
   Serial.print("SSID atual: ");
-  Serial.println(deviceConfig.ssid);
-  Serial.print("Novo SSID: ");
+  Serial.print(deviceConfig.ssid);
+  Serial.print(" [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println(buffer);
-  strncpy(deviceConfig.ssid, buffer, sizeof(deviceConfig.ssid));
+  if (strlen(buffer) > 0) {
+    strncpy(deviceConfig.ssid, buffer, sizeof(deviceConfig.ssid));
+    deviceConfig.ssid[sizeof(deviceConfig.ssid) - 1] = '\0';
+  }
 
-  Serial.print("Senha WiFi: ");
+  Serial.print("Senha WiFi [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println("****");
-  strncpy(deviceConfig.password, buffer, sizeof(deviceConfig.password));
+  if (strlen(buffer) > 0) {
+    strncpy(deviceConfig.password, buffer, sizeof(deviceConfig.password));
+    deviceConfig.password[sizeof(deviceConfig.password) - 1] = '\0';
+  }
 
-  Serial.print("MQTT server: ");
+  Serial.print("MQTT server atual: ");
+  Serial.print(deviceConfig.mqtt_server);
+  Serial.print(" [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println(buffer);
-  strncpy(deviceConfig.mqtt_server, buffer, sizeof(deviceConfig.mqtt_server));
+  if (strlen(buffer) > 0) {
+    strncpy(deviceConfig.mqtt_server, buffer, sizeof(deviceConfig.mqtt_server));
+    deviceConfig.mqtt_server[sizeof(deviceConfig.mqtt_server) - 1] = '\0';
+  }
 
   Serial.print("MQTT port: ");
+  Serial.print(deviceConfig.mqtt_port);
+  Serial.print(" [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println(buffer);
-  deviceConfig.mqtt_port = atoi(buffer);
+  if (strlen(buffer) > 0) {
+    deviceConfig.mqtt_port = atoi(buffer);
+  }
 
-  Serial.print("Intervalo máximo de publicação (ms): ");
+  Serial.print("Intervalo de publicação (ms): ");
+  Serial.print(deviceConfig.publish_interval);
+  Serial.print(" [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println(buffer);
-  deviceConfig.publish_interval = strtoul(buffer, NULL, 10);
+  if (strlen(buffer) > 0) {
+    deviceConfig.publish_interval = strtoul(buffer, NULL, 10);
+  }
 
-  Serial.print("Client Id atual: ");
-  Serial.println(deviceConfig.client_id);
-  Serial.print("Novo Client Id: ");
+  Serial.print("Client Id: ");
+  Serial.print(deviceConfig.client_id);
+  Serial.print(" [enter para manter]: ");
   readLine(buffer, sizeof(buffer));
   Serial.println(buffer);
-  strncpy(deviceConfig.client_id, buffer, sizeof(deviceConfig.client_id));
+  if (strlen(buffer) > 0) {
+    strncpy(deviceConfig.client_id, buffer, sizeof(deviceConfig.client_id));
+  deviceConfig.mqtt_server[sizeof(deviceConfig.mqtt_server) - 1] = '\0';
+  }
 
   saveConfig();
   Serial.println("Reinicie o dispositivo para aplicar novas configurações.");
