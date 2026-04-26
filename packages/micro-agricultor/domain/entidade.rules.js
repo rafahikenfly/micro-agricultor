@@ -30,14 +30,14 @@ export function evoluirEntidade({entidade, mapaCaracteristicas, eventoId, timest
     if (!estado)             return false;
     if (!caracteristica)     return false;
     if (!estado.calculadoEm) return false;
-    if (!caracteristica.aplicarObsolescencia && !caracteristica.aplicarVariacao) return false;
-    if (caracteristica.aplicarObsolescencia) {
+    if (!caracteristica.obsolescencia.ativo && !caracteristica.variacao.ativo) return false;
+    if (caracteristica.obsolescencia.ativo) {
       if (!estado.confianca && !caracteristica.longevidade) {
         throw new Error(`${caracteristica.nome} com obsolescência inválida!`);
       }
     }
-    if (caracteristica.aplicarVariacao) {
-      if (estado.valor === null && !caracteristica.variacaoDiaria){
+    if (caracteristica.variacao.ativo) {
+      if (estado.valor === null && !caracteristica.variacao.valor){
         throw new Error(`${caracteristica.nome} com degradação inválida!`);
       }
     }
@@ -70,21 +70,21 @@ export function evoluirEntidade({entidade, mapaCaracteristicas, eventoId, timest
 
       // Calcula a nova confianca da característica
       let novaConfianca = estado.confianca;
-      if (caracteristica.aplicarObsolescencia) {
+      if (caracteristica.obsolescencia.ativo) {
         const diasEstimados = estimarDiasDaInformacao(
           estado.confianca,
-          caracteristica.longevidade
+          caracteristica.obsolescencia.longevidade
         );
         novaConfianca = calcularConfiancaPorTempoTotal(
           diasEstimados + diasDecorridos,
-          caracteristica.longevidade
+          caracteristica.obsolescencia.longevidade
         );
       }
 
       // Calcula novo valor da característica
       let novoValor = estado.valor;
-      if (caracteristica.aplicarVariacao) {
-        novoValor = estado.valor + diasDecorridos * caracteristica.variacaoDiaria
+      if (caracteristica.variacao.ativo) {
+        novoValor = estado.valor + diasDecorridos * caracteristica.variacao.valor
       }
 
       // Processa a mutação
@@ -177,12 +177,19 @@ export const manejarEntidade = ({entidade, manejo, eventoId, timestamp}) => {
   const before = {};
   const after = {};
 
+  // O manejo tem efeitos em propriedades e em caracteríticas. Primeiro eu processo
+  // os efeitos em propriedades (atualmente, estado e estágio). Depois processo as
+  // características (estadoAtual). De qualquer forma, o after que é gerado pela função
+  // tem o formato de {
+  //    [caracteristicaId] : { valor, confiance, manejos, calculadoEm }
+  // || [propKey]: { valor }
+  // }
+
   // Atualiza o estado de destino da entidade conforme o manejo
   // Só há mudança de estado se a entidade estiver no estado de origem
   // E houver um estado de destino
   if (manejo.estadoDestinoId && entidade.estadoId === manejo.estadoOrigemId) {
     entidadeManejada.estadoId = manejo.estadoDestinoId;
-    entidadeManejada.estadoNome = manejo.estadoDestinoNome;
 
     // Registra a mutação no after
     if (entidade.estadoId !== entidadeManejada.estadoId) {
@@ -192,6 +199,24 @@ export const manejarEntidade = ({entidade, manejo, eventoId, timestamp}) => {
       after.estadoId = {
         tipo: "propriedade",
         valor: entidadeManejada.estadoId,
+      }
+    }
+  }
+
+  // Atualiza o estágio de destino da entidade conforme o manejo
+  // Só há mudança de estágio se a entidade estiver no estagio de origem
+  // E houver um estágio de destino
+  if (manejo.estagioDestinoId && entidade.estagioId === manejo.estagioOrigemId) {
+    entidadeManejada.estagioId = manejo.estagioDestinoId;
+
+    // Registra a mutação no after
+    if (entidade.estagioId !== entidadeManejada.estagioId) {
+      before.estagioId = {
+        valor: entidade.estagioId,
+      }
+      after.estagioId = {
+        tipo: "propriedade",
+        valor: entidadeManejada.estagioId,
       }
     }
   }
@@ -305,19 +330,21 @@ export function movimentarEntidade ({entidade, posicao}) {
 
 /**
  * Transforma a dimensao de uma entidade, retornando a entidade modificada.
+ * Recebe também o argumento da nova posição central da entidade.
  * Se não há transformação, devolve a própria entidade sem before e after.
- * @param {entidade, dimensao} args 
+ * @param {entidade, dimensao, posicao} args 
  * @returns {entidade, before, after}
  * - entidade: entidade com a posicao atualizada conforme o argumento
  * - before: posicao da entidade antes da movimentação
  * - after: posição da entidade após a movimentação (tipado para mutação)
  */
 export function redimensionarEntidade ({entidade, dimensao, posicao}) {
-  if (!entidade) throw new Error ("movimentarEntidade: entidade obrigatório.")
-  if (!dimensao) throw new Error ("movimentarEntidade: dimensao obrigatório.")
+  if (!entidade) throw new Error ("redimensionarEntidade: entidade obrigatório.")
+  if (!dimensao) throw new Error ("redimensionarEntidade: dimensao obrigatório.")
+  if (!posicao) throw new Error ("redimensionarEntidade: posicao obrigatório.")
  
   // Cria uma cópia da entidade para não modificar a original, garantindo a existencia da chave estadoAtual
-  const entidadeMovimentada = {
+  const entidadeRedimensionada = {
     ...entidade,
     dimensao: {
       ...(entidade.dimensao ?? {x: 0, y: 0, z: 0}),
@@ -325,9 +352,9 @@ export function redimensionarEntidade ({entidade, dimensao, posicao}) {
   };
 
   const mudou =
-    entidadeMovimentada.posicao.x !== dimensao.x ||
-    entidadeMovimentada.posicao.y !== dimensao.y ||
-    entidadeMovimentada.posicao.z !== dimensao.z;
+    entidadeRedimensionada.dimensao.x !== dimensao.x ||
+    entidadeRedimensionada.dimensao.y !== dimensao.y ||
+    entidadeRedimensionada.dimensao.z !== dimensao.z;
 
   if (!mudou) return {entidade}
 
@@ -343,12 +370,13 @@ export function redimensionarEntidade ({entidade, dimensao, posicao}) {
     }
   }
 
-  entidadeMovimentada.dimensao = {...dimensao}
-  entidadeMovimentada.posicao  = {...posicao}
+  entidadeRedimensionada.dimensao = {...dimensao}
+  entidadeRedimensionada.posicao  = {...posicao}
 
-  return { entidade: entidadeMovimentada, before, after }
+  return { entidade: entidadeRedimensionada, before, after, operacao: "UPDATE" }
 }
 
+// UNDER REVIEW
 export function desenharEntidade ({entidade}) {
   if (!entidade) throw new Error ("desenharEntidade: entidade obrigatória.")
 
@@ -356,6 +384,52 @@ export function desenharEntidade ({entidade}) {
   return { entidade, after: {valid: true} }
 }
 
+/**
+ * Atualiza o estadoId de uma entidade, retornando a entidade modificada.
+ * Se não há transformação, devolve a própria entidade sem before e after.
+ * @param {entidade, estadoId} args 
+ * @returns {entidade, before, after}
+ * - entidade: entidade com o estadoId atualizado conforme o argumento
+ * - before: estadoId da entidade antes da movimentação
+ * - after: estadoId da entidade após a movimentação (tipado para mutação)
+ */
+export function atualizarEstadoEntidade ({entidade, estado}) {
+  if (!entidade) throw new Error ("atualizarEstadoEntidade: entidade obrigatório.")
+  if (!estado) throw new Error ("atualizarEstadoEntidade: estado obrigatório.")
+ 
+  // Cria uma cópia da entidade para não modificar a original, garantindo a existencia da chave estadoAtual
+  const entidadeAtualizada = {
+    ...entidade,
+  };
+
+  const mudou =
+    entidadeAtualizada.estadoId !== estado.id ||
+    entidadeAtualizada.visivelNoMapa !== estado.propriedades?.visivelNoMapa
+
+  if (!mudou) return {entidade}
+
+  const before = {
+    estadoId: {
+      valor: entidade.estadoId
+    }
+  }
+  const after = {
+    estadoId: {
+      tipo: "propriedade",
+      valor: estado.id,
+    }
+  }
+
+  entidadeAtualizada.estadoId = estado.id
+  entidadeAtualizada.visivelNoMapa = estado.visivelNoMapa
+
+  return { entidade: entidadeAtualizada, before, after, operacao: "UPDATE" }
+}
+
+
+
+
+// DEPRECATED
 export function sanitizarPosDim ({entidade}) {
   const round = (v) => (typeof v === "number" ? Math.round(v) : v);
 

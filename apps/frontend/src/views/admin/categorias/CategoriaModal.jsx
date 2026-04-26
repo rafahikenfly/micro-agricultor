@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button } from "react-bootstrap";
+import { Modal, Form, Button, Badge } from "react-bootstrap";
 import { handleSaveForm, renderOptions, StandardInput } from "../../../utils/formUtils";
 import { validarCategoria, VARIANTE } from "micro-agricultor";
 import BaseTab from "../../../components/common/BaseTab";
@@ -34,11 +34,10 @@ export default function CategoriaModal({ show, onSave, onClose, data = {}, }) {
             form={form}
             setForm={setForm}
           >
-            <StandardInput label="Cor da Tag">
+            <StandardInput label="Tag">
               <Form.Select
-                value={form.tagVariant}
-                onChange={e => setForm({...form, tagVariant: e.target.value})}
-                label="Cor da Tag"
+                value={form.variant}
+                onChange={e => setForm({...form, variant: e.target.value})}
                 required
               >
                 {renderOptions({
@@ -46,6 +45,7 @@ export default function CategoriaModal({ show, onSave, onClose, data = {}, }) {
                   placeholder: "Selecione a cor da tag",
                 })}
               </Form.Select>
+              <Badge bg={VARIANTE[form.variant]?.variant}> </Badge>
             </StandardInput>
           </BaseTab>
         </Modal.Body>

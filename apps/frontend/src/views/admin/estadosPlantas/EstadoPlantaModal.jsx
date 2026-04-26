@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button } from "react-bootstrap";
+import { Modal, Form, Button, Badge } from "react-bootstrap";
 import { validarEstado, VARIANTE } from "micro-agricultor";
-import { handleSaveForm, renderOptions } from "../../../utils/formUtils";
+import { handleSaveForm, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
+import BaseTab from "../../../components/common/BaseTab";
 
 export default function EstadoPlantaModal({ show, onSave, onClose, data = {}, }) {
   const [form, setForm] = useState(validarEstado(data))
@@ -27,30 +28,15 @@ export default function EstadoPlantaModal({ show, onSave, onClose, data = {}, })
 
         <Modal.Body>
 
-          <Form.Group className="mb-3">
-            <Form.Label>Nome</Form.Label>
-            <Form.Control
-              value={form.nome}
-              onChange={e => setForm({...form, nome: e.target.value})}
-              required
-            />
-          </Form.Group>
+          <BaseTab
+            form={form}
+            setForm={setForm}
+          >
 
-          <Form.Group className="mb-3">
-            <Form.Label>Descrição</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              value={form.descricao}
-              onChange={e => setForm({...form, descricao: e.target.value})}
-            />
-          </Form.Group>
-
-          <Form.Group className="mb-3">
+          <StandardInput label="Tag">
             <Form.Select
-              value={form.tagVariant}
-              onChange={e => setForm({...form, tagVariant: e.target.value})}
-              label="Cor da Tag"
+              value={form.variant}
+              onChange={e => setForm({...form, variant: e.target.value})}
               required
             >
               {renderOptions({
@@ -58,7 +44,26 @@ export default function EstadoPlantaModal({ show, onSave, onClose, data = {}, })
                 placeholder: "Selecione a cor da tag",
               })}
             </Form.Select>
-          </Form.Group>
+            <Badge bg={VARIANTE[form.variant]?.variant}> </Badge>
+          </StandardInput>
+          <StandardCheckboxGroup label="Propriedades">
+            <Form.Check
+              label="Visível no mapa"
+              checked={form.propriedades.visivelNoMapa}
+              onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, visivelNoMapa: e.target.checked}})}
+            />
+            <Form.Check
+              label="Editável no mapa"
+              checked={form.propriedades.editavelNoMapa}
+              onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, editavelNoMapa: e.target.checked}})}
+            />
+            <Form.Check
+              label="Requer monitoramento"
+              checked={form.propriedades.requerMonitoramento}
+              onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, requerMonitoramento: e.target.checked}})}
+            />
+          </StandardCheckboxGroup>
+        </BaseTab>
 
         </Modal.Body>
         

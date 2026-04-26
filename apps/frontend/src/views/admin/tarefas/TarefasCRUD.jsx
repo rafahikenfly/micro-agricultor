@@ -10,7 +10,7 @@ import { NoUser } from "../../../components/common/NoUser";
 
 import TarefaModal from "./TarefaModal";
 import { tarefasService } from "../../../services/crudService";
-import { ESTADO_TAREFA, RECORRENCIA } from "micro-agricultor";
+import { ESTADO_TAREFA, RECORRENCIA, VARIANTE } from "micro-agricultor";
 import { ISOToReadableString } from "../../../utils/dateUtils";
 
 
@@ -65,6 +65,7 @@ export default function TarefasCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {tarefas}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
               {rotulo: "Estado", dataKey: "estado", render: (a) => ESTADO_TAREFA[a.estado]?.nome ?? "-"},
@@ -73,14 +74,15 @@ export default function TarefasCRUD() {
               {rotulo: "Execuções", dataKey: "execucoes", render: (a) => a.planejamento.recorrencia?.execucoes ?? 0},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: "secondary",
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

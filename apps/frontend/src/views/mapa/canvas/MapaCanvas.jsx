@@ -24,8 +24,12 @@ import MapaCanteiro from "./MapaCanteiro"
 import MapaPlanta from "./MapaPlanta"
 import MapaDrag from "./MapaDrag";
 import MapaPreview from "./MapaPreview";
+import { useMemo } from "react";
 
-
+const servicesMap = {
+  [ENTIDADE.planta.id]: plantasService,
+  [ENTIDADE.canteiro.id]: canteirosService,
+}
 
 export default function MapaCanvas () {
   // Recupera usuário
@@ -38,7 +42,7 @@ export default function MapaCanvas () {
 
   //Conecta hooks
   const svgRef = useRef(null);
-  const { activeTool, toolSetup, dragActive, selection, previewActive, setShowModal } = useMapaEngine();
+  const { activeTool, toolSetup, dragActive, selection, previewActive, setShowModal, filters } = useMapaEngine();
   const { drag, dragStart, dragMove, dragFinish } = useDrag();
   const { gRef, pan, zoomAt, rotateAt, centerOn, focusOn } = useSVGTransform({
     onRotate: (newRotate) => setRotateState(newRotate),
@@ -79,7 +83,10 @@ export default function MapaCanvas () {
     const unsubPlantas = plantasService.subscribe((data) => {
       setPlantas(data);
       markLoaded();
-    }, [{field: "hortaId", op: "==", value: hortaId}]);
+    }, [
+      {field: "hortaId", op: "==", value: hortaId},
+      { field: "visivelNoMapa", op: "==", value: true }
+    ]);
 
 
     async function carregarHorta() {
@@ -99,9 +106,32 @@ export default function MapaCanvas () {
     };
   }, [hortaId]);
 
-  if (loading) return <Loading variant="overlay" />
-  if (!horta) return <div>Nada por aqui...</div>
+  //Filtra as entidades
+  const plantasFiltradas = useMemo(() => {
+    if (!filters?.planta) return plantas;
 
+    return plantas.filter((p) => {
+      // filtro tipo select
+      if (filters?.planta.estadoId && p.estadoId !== filters.planta.estadoId) return false;
+      if (filters?.planta.especieId && p.especieId !== filters.planta.especieId) return false;
+      if (filters?.planta.estagioId && p.estagioId !== filters.planta.estagioId) return false;
+
+      return true;
+    });
+  }, [plantas, filters?.planta]);
+  const canteirosFiltrados = useMemo(() => {
+    if (!filters?.canteiro) return canteiros;
+
+    return canteiros.filter((c) => {
+      if (filters.canteiro.estadoId && c.estadoId !== filters.canteiro.estadoId) {
+        return false;
+      };
+
+      return true;
+    });
+  }, [canteiros, filters?.canteiro]);
+
+  // Handlers
   const handleFinishDrag = (evt) => {
     dragFinish(evt,svgRef);
 
@@ -124,8 +154,8 @@ export default function MapaCanvas () {
       };
 
       // Filtra a nova seleção
-      const canteirosSelecionados = entitiesInBounds(canteiros, bounds)
-      const plantasSelecionadas = entitiesInBounds(plantas, bounds)
+      const canteirosSelecionados = entitiesInBounds(canteirosFiltrados, bounds)
+      const plantasSelecionadas = entitiesInBounds(plantasFiltradas, bounds)
 
       // Limpa e rafaz seleção
       selection.clear();
@@ -235,7 +265,6 @@ export default function MapaCanvas () {
       })
     }
   }
-
   const handleStartDrag = (evt) => {
     switch (activeTool) {
       case "selecionar":
@@ -253,6 +282,9 @@ export default function MapaCanvas () {
     }
   }
 
+  // Render
+  if (loading) return <Loading variant="overlay" />
+  if (!horta) return <div>Nada por aqui...</div>
   return (
       <div
         style={{
@@ -278,7 +310,7 @@ export default function MapaCanvas () {
               svgRef={svgRef.current}
               gRef={gRef.current}
             />
-            {canteiros.map((cant) => (
+            {canteirosFiltrados.map((cant) => (
               <MapaCanteiro
                 key={cant.id}
                 canteiro={cant}
@@ -291,7 +323,7 @@ export default function MapaCanvas () {
                 focusOn={focusOn}
               />
             ))}
-            {plantas.map((plan) => (
+            {plantasFiltradas.map((plan) => (
               <MapaPlanta
                 key={plan.id}
                 planta={plan}

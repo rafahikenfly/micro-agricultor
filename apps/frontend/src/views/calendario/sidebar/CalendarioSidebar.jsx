@@ -1,5 +1,5 @@
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 import { useCalendarioEngine } from "../CalendarioEngine";
 
 export default function CalendarioSidebar() {
@@ -89,7 +89,7 @@ export default function CalendarioSidebar() {
             overlay={<Tooltip>{tool.text}</Tooltip>}
         >
             <Button
-            variant={tool.active ? VARIANT_TYPES.GREEN : VARIANT_TYPES.WHITE}
+            variant={tool.active ? VARIANTE.GREEN.variant : VARIANTE.WHITE}
             className="mb-2 d-flex align-items-center justify-content-center"
             style={{
                 width: "40px",

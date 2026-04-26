@@ -1,4 +1,4 @@
-import { atenderNecessidade, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../../domain/index.js";
+import { atenderNecessidade, atualizarEstadoPlanta, criarEvento, getNecessidadeKey, manejarCanteiro, manejarPlanta } from "../../domain/index.js";
 import { EVENTO, ORIGEM, ENTIDADE } from "../../types/index.js";
 import { aplicarRegraPorBatch } from "../index.js";
 
@@ -102,7 +102,7 @@ export async function manejar({
 
     // Resultado sem mutações
     if (!results.after) {
-      console.log(`${entidade.nome} (${entidade.id}) sem mutações`);
+      console.log(`Manejo de ${entidade.nome} (${entidade.id}) sem mutações`);
       continue;
     }
 
@@ -115,38 +115,55 @@ export async function manejar({
     // Necessidades
     // ======
     // Atualiza a necessidade de manejo de cada característica da entidade
-    // TODO: para melhorar a performance, é possível recuperar até 10 ids com a mesma consulta usando o getByEntidadesArray do mesmo service. Tem que ver as implicações no resto da função.
-    const necessidades = await services.necessidades.getByEntidade(entidade.id);
+    // Se existente. Se não existe a necessidade, não precisa criar, então passa para
+    // a proxima necessidade
+    // TODO: para melhorar a performance, é possível recuperar até 10 ids com a mesma consulta usando
+    // um operador de array Tem que ver as implicações no resto da função.
+    const necessidades = await services.necessidades.get(
+      [{field: "entidadeId", op: "==", value: entidade.id}]
+    );
     const necessidadesMap = Object.fromEntries(
       necessidades.map(n => [n.id, n])
     );
-    const listaNecessidades = [
-      ...Object.keys(results.after),
-      manejo.id
-    ]; // Características afetadas + manejo
 
-
-    for (const caracteristicaId of listaNecessidades) {
+    for (const [resultadoId, resultado] of Object.entries(results.after)) {
       await batch.commitIfNeeded();
-      // Recupera a necessidade
-      const necessidadeId = getNecessidadeKey({
-        entidadeId: entidade.id,
-        caracteristicaId,
-        tipoEventoId: EVENTO.MANEJO.id,
-      });
-      const necessidade = necessidadesMap[necessidadeId];
+      switch (resultado.tipo) {
+        case "propriedade":
+          // Nada a fazer
+          continue;
+        case "caracteristica":
+          // Recupera a necessidade, se existente
+          const necessidadeId = getNecessidadeKey({
+            entidadeId: entidade.id,
+            caracteristicaId: resultadoId,
+            tipoEventoId: EVENTO.MANEJO.id,
+          });
+          const necessidade = necessidadesMap[necessidadeId];
+    
+          // Verifica se há a necessidade. Casos em que não há a necessidade
+          // incluem os resultados que não são de estadoAtual (por exemplo, mudança de
+          // estadoId)
+          if (!necessidade) {
+            console.warn(`${entidade.id} sem necessidade de manejo de caracteristica ${resultadoId}.`)
+            continue;
+          }
+    
+          // Atualiza a necessidade
+          const necessidadeAtualizada = atenderNecessidade({
+            necessidade,
+            agente: { uid: user.uid, tipo: ORIGEM.USER.id },
+            timestamp
+          });
+    
+          // Inclui no batch se houver atualização
+          if (necessidadeAtualizada) {
+            const ref = services.necessidades.getRefById(necessidadeId);
+            batch.add((b) => services.necessidades.batchUpsert(ref, necessidadeAtualizada, user, b));
+          }
+        default:
+          console.error(`manejar: Tipo de resultado de regra ${resultado.tipo} desconhecido`)
 
-      // Atualiza a necessidade
-      const necessidadeAtualizada = atenderNecessidade({
-        necessidade,
-        agente: { uid: user.uid, tipo: ORIGEM.USER.id },
-        timestamp
-      });
-
-      // Inclui no batch se houver atualização
-      if (necessidadeAtualizada) {
-        const ref = services.necessidades.getRefById(necessidadeId);
-        batch.add((b) => services.necessidades.batchUpsert(ref, necessidadeAtualizada, user, b));
       }
     }
   }

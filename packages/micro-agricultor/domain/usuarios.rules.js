@@ -2,7 +2,6 @@ import { mergeComValidacao } from "./rulesUtils.js";
 const acessoPadrao = {
     admin: false,
     dev: false,
-    usuario: true,
 }
 const usuarioPadrao = {
   acesso: acessoPadrao,

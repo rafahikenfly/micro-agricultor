@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { AMBIENTE } from "micro-agricultor";
+import { AMBIENTE, VARIANTE } from "micro-agricultor";
 
 import UsuarioModal from "./UsuarioModal"
 import { useAuth } from "../../../services/auth/authContext";
@@ -9,6 +9,7 @@ import { usuariosService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import Loading from "../../../components/Loading";
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
+import { renderBadge, renderBadgeGroup } from "../../../utils/uiUtils";
 
 
 export default function UsuariosCRUD() {
@@ -63,20 +64,21 @@ export default function UsuariosCRUD() {
         <Col>
           <ListaComAcoes
             dados = {usuarios}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Acessos", dataKey: "acesso", tagVariantList: Object.values(AMBIENTE)},
+              {rotulo: "Acessos", dataKey: "acesso", render: (a)=>renderBadgeGroup(a, "acesso", AMBIENTE)},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
-                variant: "secondary",
-                rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "dark"
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

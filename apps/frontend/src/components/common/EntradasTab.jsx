@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { InputGroup, Form, Button } from "react-bootstrap";
 import ListaComAcoes from "./ListaComAcoes";
+import { VARIANTE } from "micro-agricultor";
 
 export default function EntradasTab({ value = [], onChange}) {
   const [nome, setNome] = useState("");
@@ -61,7 +62,7 @@ export default function EntradasTab({ value = [], onChange}) {
         campos={[
           {rotulo: "Nome", data: "nome"},
           {rotulo: "Tipo", data: "tipo"},
-          {rotulo: "Obrigatório", data: "obrigatorio", boolean: true},
+          {rotulo: "Obrigatório", data: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a[col.dataKey] ? "Sim" : "Não"}</Badge>},
         ]}
         acoes={[
           {rotulo: "Excluir", funcao: remover, variant: "danger"},

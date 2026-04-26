@@ -23,7 +23,7 @@ const tarefaPadrao = {
   estado: ESTADO_TAREFA.PENDENTE.id,     // default seguro
   aparencia: aparenciaPadrao,
   contexto: {
-    tipoEntidadeId: "",   // ENTITY_TYPES
+    tipoEntidadeId: "",   // ENTIDADE
     entidadesId: [],      // string [ entidadeId ]
     caracteristicaId: "", // Catalogo Características
     tipoEventoId: "",     // EVENTO_TYPES

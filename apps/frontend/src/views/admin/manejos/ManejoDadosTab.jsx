@@ -1,13 +1,15 @@
 import { Form } from "react-bootstrap";
 import { ENTIDADE } from "micro-agricultor";
-import { handleSelectIdNome, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
+import { renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
 import BaseTab from "../../../components/common/BaseTab";
 import { useCache } from "../../../hooks/useCache";
 
 export default function ManejoDadosTab({ form, setForm }) {
-  const { cacheEstadosPlanta, cacheEstadosCanteiro, reading } = useCache([
+  const { cacheEstadosPlanta, cacheEstadosCanteiro, cacheEstagiosEspecie, reading } = useCache([
     "estadosPlanta",
     "estadosCanteiro",
+    "especies",
+    "estagiosEspecie"
   ]);
 
   return (
@@ -25,18 +27,11 @@ export default function ManejoDadosTab({ form, setForm }) {
           />
         ))}
       </StandardCheckboxGroup>
-      <StandardInput label="Estado">
+      <StandardInput label="Estado de vida" width="180px">
         <Form.Select
           disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoOrigemId}
-          onChange={e => handleSelectIdNome(e,{
-            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
-                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
-                  [],
-            setForm: setForm,
-            fieldId: "estadoOrigemId",
-            fieldNome: "estadoOrigemNome",
-          })}
+          onChange={e => setForm({...form, estadoOrigemId: e.target.value})}
         >
           {renderOptions({
             list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
@@ -50,14 +45,7 @@ export default function ManejoDadosTab({ form, setForm }) {
         <Form.Select
           disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
           value={form.estadoDestinoId}
-          onChange={e => handleSelectIdNome(e,{
-            list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
-                  form?.aplicavel.planta ? cacheEstadosPlanta?.list :
-                  [],
-            setForm: setForm,
-            fieldId: "estadoDestinoId",
-            fieldNome: "estadoDestinoNome",
-          })}
+          onChange={e =>  setForm({...form, estadoDestinoId: e.target.value}) }
         >
           {renderOptions({
             list: form?.aplicavel.canteiro ? cacheEstadosCanteiro?.list :
@@ -69,6 +57,32 @@ export default function ManejoDadosTab({ form, setForm }) {
           })}
         </Form.Select>
       </StandardInput>
+      {form.aplicavel.planta && <StandardInput label="Estágio de espécie" width="180px">
+        <Form.Select
+          disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
+          value={form.estagioOrigemId}
+          onChange={e => setForm({...form, estagioOrigemId: e.target.value})}
+        >
+          {renderOptions({
+            list: cacheEstagiosEspecie?.list ?? [],
+            loading: reading,
+            placeholder: "Nenhum estágio de origem",
+            nullOption: true,
+          })}
+        </Form.Select>
+        <Form.Select
+          disabled={Object.keys(form.aplicavel || {}).length > 1 || form?.aplicavel.horta}
+          value={form.estagioDestinoId}
+          onChange={e =>  setForm({...form, estagioDestinoId: e.target.value}) }
+        >
+          {renderOptions({
+            list: cacheEstagiosEspecie?.list ?? [],
+            loading: reading,
+            placeholder: "Nenhum estágio de destino",
+            nullOption: true,
+          })}
+        </Form.Select>
+      </StandardInput>}
       <StandardCheckboxGroup label="Opções">
         <Form.Check
           label="Tem efeitos"

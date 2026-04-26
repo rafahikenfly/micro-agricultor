@@ -10,6 +10,7 @@ import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import DispositivoModal from "./DispositivoModal";
+import { VARIANTE } from "micro-agricultor";
 
 
 export default function DispositivosCRUD() {
@@ -62,20 +63,20 @@ export default function DispositivosCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {dispositivos}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
-                variant: "secondary",
-                rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "dark"
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

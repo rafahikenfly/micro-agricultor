@@ -27,7 +27,7 @@ export function EntidadeEstadoAtualTab ({formEstadoAtual, setFormEstadoAtual, ti
           {caracteristicasAplicaveisSemEstadoAtual.map((c)=>
             <Badge
               key={c.id}
-              bg={c.tagVariant}>
+              bg={c.variant}>
                 {c.nome}
             </Badge>
           )}
@@ -65,7 +65,7 @@ export function EntidadeEstadoAtualTab ({formEstadoAtual, setFormEstadoAtual, ti
             </Row>
             <StandardInput label="Eventos desde o último monitoramento manual" stacked>
               <StandardArrayInput
-                noHeader
+                showInput = {false}
                 form={estado.eventos}
                 colunas={[
                   {rotulo: "Tipo", dataKey: "tipoEventoId", render: (a)=>EVENTO[cacheEventos?.map.get(a)?.tipoEventoId]?.nome ?? "-"},

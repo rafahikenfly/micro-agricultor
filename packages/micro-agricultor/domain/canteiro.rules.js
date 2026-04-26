@@ -1,8 +1,5 @@
-import { ENTIDADE } from "../types/ENTITY_TYPES.js";
-import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
-import { REASON_TYPES } from "../types/REASON_TYPES.js";
-import { RECORRENCIA } from "../types/RECORRENCIA.js";
-import { evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
+import { ENTIDADE, EVENTO, REASON_TYPES, RECORRENCIA } from "../types/index.js";
+import { atualizarEstadoEntidade, evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -121,6 +118,11 @@ export function redimensionarCanteiro({entidade, dimensao, posicao}) {
   // OUTRAS CONDICOES DE CANTEIROS
   return results;
 }
+export function atualizarEstadoCanteiro({entidade, estado}) {
+  const results = atualizarEstadoEntidade({entidade, estado})
+  // OUTRAS CONDICOES DE CANTEIRO
+  return results;
+}
 
 // =====
 // REGRAS DE INFORMAÇÃO DE CANTEIRO
@@ -196,9 +198,9 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
 
   const estadoAtual = canteiro?.estadoAtual || {};
   Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
-    const caracteristica = estadoAtual[caracteristicaId];
+    const estadoCaracteristica = estadoAtual[caracteristicaId];
     // Valor Desconhecido
-    if (!caracteristica || typeof caracteristica.valor !== "number") {
+    if (!estadoCaracteristica || typeof estadoCaracteristica.valor !== "number") {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
@@ -209,37 +211,37 @@ export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
     }
 
     // Valor Não-Confiável
-    if (typeof caracteristica.confianca !== "number" || caracteristica.confianca < (faixaIdeal.confianca || 30)) {
+    if (typeof estadoCaracteristica.confianca !== "number" || estadoCaracteristica.confianca < (faixaIdeal.confianca || 30)) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: caracteristica.confianca ?? null
+        confianca: estadoCaracteristica.confianca ?? null
       });
       return;
     }
 
     // Valor Abaixo do ideal
-    if (caracteristica.valor < faixaIdeal.min) {
+    if (estadoCaracteristica.valor < faixaIdeal.min) {
       pendencias.push({
         tipoEventoId: EVENTO.MANEJO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.LOWER_BOUND,
-        valor: caracteristica.valor
+        valor: estadoCaracteristica.valor
       });
       return;
     }
 
     // Valor Acima do ideal
-    if (caracteristica.valor > faixaIdeal.max) {
+    if (estadoCaracteristica.valor > faixaIdeal.max) {
       pendencias.push({
         tipoEventoId: EVENTO.MANEJO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
         motivo: REASON_TYPES.UPPER_BOUND,
-        valor: caracteristica.valor
+        valor: estadoCaracteristica.valor
       });
       return;
     }

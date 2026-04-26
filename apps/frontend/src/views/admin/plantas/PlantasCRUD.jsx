@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Container } from "react-bootstrap";
 
 import { plantasService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
@@ -11,6 +11,10 @@ import { NoUser } from "../../../components/common/NoUser";
 
 import PlantaModal from "./PlantaModal";
 import { useCache } from "../../../hooks/useCache";
+import { VARIANTE } from "micro-agricultor";
+import { renderBadge } from "../../../utils/uiUtils";
+import { useMemo } from "react";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 
 export default function PlantasCRUD() {
@@ -19,16 +23,39 @@ export default function PlantasCRUD() {
 
   const [plantas, setPlantas] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  const [editando, setEditando] = useState(null);
+  const [showModal, setShowModal] = useState(false);
 
-  const { cacheEstadosPlanta, cacheEstagiosEspecie, reading } = useCache([
+  const [filtros, setFiltros] = useState({
+    estadoId: null,
+    especieId: null,
+    estagioId: null,
+    nome: ""
+  });
+  const plantasFiltradas = useMemo(() => {
+    if (!plantas?.length) return [];
+
+    return plantas.filter((p) => {
+      // filtro tipo select
+      if (filtros?.estadoId && p.estadoId !== filtros.estadoId) return false;
+      if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+      if (filtros?.estagioId && p.estagioId !== filtros.estagioId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [plantas, filtros]);
+
+  const { cacheEstadosPlanta, cacheEstagiosEspecie, cacheEspecies, cacheHortas, reading } = useCache([
     "estadosPlanta",
     "estagiosEspecie",
+    "especies",
+    "hortas"
   ]);
-
-  const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
-
-  const [showModal, setShowModal] = useState(false);
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
@@ -49,46 +76,80 @@ export default function PlantasCRUD() {
     masculino: false, // "a planta"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
 
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Nova planta</Button>
-        </Col>
-      </Row>
-
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {plantas}
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Horta", dataKey: "hortaNome",},
-              {rotulo: "Estado", dataKey: "estadoId", tagVariantList: cacheEstadosPlanta?.list,},
-              {rotulo: "Estágio", dataKey: "estagioId", tagVariantList: cacheEstagiosEspecie?.list,},
-            ]}
-            acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
-              { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: "secondary",
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+          {
+            key: "estadoId",
+            type: "select",
+            label: "Estado",
+            list: cacheEstadosPlanta?.list ?? [],
+            labelKey: "nome",
+            valueKey: "id",
+            placeholder: "Todos os estados"
+          },
+          {
+            key: "estagioId",
+            type: "select",
+            label: "Estágio",
+            list: cacheEstagiosEspecie?.list ?? [],
+            labelKey: "nome",
+            valueKey: "id",
+            placeholder: "Todos os estágios"
+          },
+          {
+            key: "especieId",
+            type: "select",
+            label: "Espécie",
+            list: cacheEspecies?.list ?? [],
+            labelKey: "nome",
+            valueKey: "id",
+            placeholder: "Todas espécies"
+          },
+        ]}
+      />
+      {loading || reading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {plantasFiltradas}
+        sort
+        linhaStyle={(row) => {
+          if (row.isDeleted)  { return { textDecoration: "line-through red 3px" }; }
+          if (row.isArchived) { return { textDecoration: "line-through dotted 3px" }; }
+          return {};
+        }}
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a, "nome", "estadoId", cacheEstadosPlanta?.map, true, true, "descricao")},
+          {rotulo: "Horta", dataKey: "hortaId", render: (a)=>cacheHortas?.map.get(a.hortaId)?.nome},
+          {rotulo: "Estágio", dataKey: "estagioId", render: (a)=>renderBadge(a, "estagioNome", "estagioId", cacheEstagiosEspecie?.map, true, false)},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant.id,
+          },
+        ]}
+      />}
 
       <PlantaModal
         key={editando?.id ?? `novo`}

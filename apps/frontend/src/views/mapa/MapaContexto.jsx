@@ -18,6 +18,9 @@ export const ACOES_MAPA = {
   MODAL_SHOW: "MODAL_SHOW",
   PAINEL_SHOW: "PAINEL_SHOW",
 
+  FILTER_SET: "FILTER_SET",
+  FILTER_RESET: "FILTER_RESET",
+
   // ================= UI SERVICES  =================
   // HEATMAP
   HEATMAP_SET: "HEATMAP_SET",
@@ -63,6 +66,10 @@ const estadoInicialMapa = {
     modal: null,
     painel: false,
   },
+  filter: {
+    planta: {},
+    canteiro: {},
+  }
 };
 
 /* ================= REDUCER ================= */
@@ -165,7 +172,23 @@ function reducerMapa(state, action) {
         painel: action.payload,
       }
   };
-/* 
+  case ACOES_MAPA.FILTER_SET:
+    return {
+      ...state,
+      filter: {
+        ...state.filter,
+        ...action.payload,
+      }
+  };
+  case ACOES_MAPA.FILTER_RESET:
+    return {
+      ...state,
+      filter: {
+        planta: {},
+        canteiro: {},
+      }
+  };
+  /* 
   case ACOES_MAPA.HEATMAP_SET:
     return {
       ...state,

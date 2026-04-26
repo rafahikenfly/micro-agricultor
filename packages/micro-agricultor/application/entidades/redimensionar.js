@@ -120,7 +120,7 @@ export async function redimensionar({
 
     // Resultado sem mutações
     if (!results.after) {
-      console.log(`${entidade.nome} (${entidade.id}) sem mutações`);
+      console.log(`Redimensionamento de ${entidade.nome} (${entidade.id}) sem mutações`);
       continue;
     }
     // Resultado com mutações

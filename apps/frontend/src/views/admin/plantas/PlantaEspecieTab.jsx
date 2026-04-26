@@ -2,25 +2,48 @@ import { useMemo } from "react";
 import { Form } from "react-bootstrap";
 import { mudarVariedade } from "micro-agricultor";
 
-import { handleSelectIdNome, renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
+import { handleSelectIdNome, optionsFromCacheList, renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import { useCache } from "../../../hooks/useCache";
 import Loading from "../../../components/Loading";
 
 export function PlantaEspecieTab ({form, setForm }) {
-  const {cacheEspecies, cacheVariedades, reading } = useCache(["especies", "variedades"])
+  const {cacheEspecies, cacheVariedades, cacheEstagiosEspecie, reading } = useCache([
+    "especies",
+    "variedades",
+    "estagiosEspecie"
+  ])
 
-  const variedadesDaEspecie = useMemo(() => {
+  // ==== Monta opções ====
+  const optionsVariedade = useMemo(() => {
+    // Lista vazia
     if (!form.especieId) return [];
-    return (cacheVariedades?.list.filter(v => v.especieId === form.especieId) ?? []);
+
+    // Obtem a lista
+    const variedades = (cacheVariedades?.list.filter(v => v.especieId === form.especieId));
+    if (!variedades) return [];
+
+    // Monta as opções
+    return variedades
+
   }, [cacheVariedades, form.especieId]);
-  const cicloDaEspecie = useMemo(() => {
+  const optionsEstagio = useMemo(() => {
+    // Lista Vazia
     if (!form.especieId) return [];
-    return (cacheEspecies?.list.find(e => e.id === form.especieId)?.ciclo ?? []);
-  }, [cacheEspecies, form.especieId]);
+
+    // Obtem o cache
+    const ciclo = cacheEspecies?.map.get(form.especieId)?.ciclo;
+    if (!ciclo) return [];
+
+    // Monta as opções
+    return optionsFromCacheList({
+      sourceList: ciclo,
+      cacheMap: cacheEstagiosEspecie?.map,
+      getId: (fase) => fase.estagioId,
+    });
+  }, [cacheEspecies, cacheEstagiosEspecie, form.especieId]);
 
   if (reading) return <Loading />
   if (!cacheEspecies || !cacheVariedades) return;
-
 
   return (
     <>
@@ -52,7 +75,7 @@ export function PlantaEspecieTab ({form, setForm }) {
             onChange={e => setForm (mudarVariedade(form, cacheVariedades.list.find(i => i.id === e.target.value)))}
           >
             {renderOptions({
-              list: variedadesDaEspecie,
+              list: optionsVariedade,
               loading: reading,
               placeholder: "Selecione a variedade da planta",
             })}
@@ -64,10 +87,8 @@ export function PlantaEspecieTab ({form, setForm }) {
             onChange={e => setForm({ ...form, estagioId: e.target.value })}
           >
             {renderOptions({
-              list: cicloDaEspecie,
+              list: optionsEstagio,
               loading: reading,
-              valueKey: "estagioId",
-              labelKey: "estagioNome",
               placeholder: "Selecione o estágio",
             })}
         </Form.Select>

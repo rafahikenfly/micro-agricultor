@@ -7,6 +7,7 @@ import { NoUser } from "../../../components/common/NoUser";
 import Loading from "../../../components/Loading";
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import { useCrudUI } from "../../../services/ui/crudUI";
+import { VARIANTE } from "micro-agricultor";
 
 
 export default function ModelosCVCRUD() {
@@ -60,18 +61,20 @@ export default function ModelosCVCRUD() {
         <Col>
           <ListaComAcoes
             dados = {cvModelos}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: "secondary",
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

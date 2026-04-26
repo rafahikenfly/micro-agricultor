@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Modal, Form, Button, Badge } from "react-bootstrap";
 import { validarEstado, VARIANTE } from "micro-agricultor";
 
-import { handleSaveForm, renderOptions, StandardInput } from "../../../utils/formUtils";
+import { handleSaveForm, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
 
 import BaseTab from "../../../components/common/BaseTab";
 
@@ -33,10 +33,11 @@ export default function EstadosCanteiroModal({ show, onSave, onClose, data = {},
             form={form}
             setForm={setForm}
           >
-            <StandardInput label="Cor da tag">
+
+            <StandardInput label="Tag">
               <Form.Select
-                value={form.tagVariant}
-                onChange={e => setForm({...form, tagVariant: e.target.value})}
+                value={form.variant}
+                onChange={e => setForm({...form, variant: e.target.value})}
                 required
               >
                 {renderOptions({
@@ -44,8 +45,25 @@ export default function EstadosCanteiroModal({ show, onSave, onClose, data = {},
                   placeholder: "Selecione a cor da tag",
                 })}
               </Form.Select>
-              <Badge bg={form.tagVariant}> </Badge>
+              <Badge bg={VARIANTE[form.variant]?.variant}> </Badge>
             </StandardInput>
+            <StandardCheckboxGroup label="Propriedades">
+              <Form.Check
+                label="Visível no mapa"
+                checked={form.propriedades.visivelNoMapa}
+                onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, visivelNoMapa: e.target.checked}})}
+              />
+              <Form.Check
+                label="Editável no mapa"
+                checked={form.propriedades.editavelNoMapa}
+                onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, editavelNoMapa: e.target.checked}})}
+              />
+              <Form.Check
+                label="Requer monitoramento"
+                checked={form.propriedades.requerMonitoramento}
+                onChange={(e)=>setForm({...form, propriedades: {...form.propriedades, requerMonitoramento: e.target.checked}})}
+              />
+            </StandardCheckboxGroup>
           </BaseTab>
         </Modal.Body>
 

@@ -1,4 +1,4 @@
-import { criarMutacao } from "../domain/mutacao.rules.js";
+import { criarMutacao } from "../domain/index.js";
 
 /**
  * Processa uma entidade utilizando um batch, passando uma função.
@@ -69,7 +69,9 @@ export function aplicarRegraPorBatch({
                 }),
                 user, b
               ));
-            else if (depois.tipo === "propriedade") batch.add((b) => 
+            else if (depois.tipo === "propriedade") {
+              console.log(depois)
+              batch.add((b) => 
               serviceMutacoes.batchAppend(
                 criarMutacao({
                   evento,
@@ -80,7 +82,7 @@ export function aplicarRegraPorBatch({
                   entidade,
                 }),
                 user, b
-              ));
+              ));}
             else {
               throw new Error(`Tipo de mutação desconhecido: ${depois.tipo}`);
             };

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { useEffect, useMemo, useState } from "react";
+import { Container } from "react-bootstrap";
 
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
@@ -11,6 +11,9 @@ import { NoUser } from "../../../components/common/NoUser";
 
 import EspecieModal from "./EspecieModal";
 import { especiesService } from "../../../services/crudService";
+import { VARIANTE } from "micro-agricultor";
+import { renderBadge } from "../../../utils/uiUtils";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 export default function EspeciesCRUD() {
   const { user } = useAuth();
@@ -21,9 +24,24 @@ export default function EspeciesCRUD() {
 
   const [especies, setEspecies] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: ""
+  });
+  const especiesFiltradas = useMemo(() => {
+    if (!especies?.length) return [];
+
+    return especies.filter((p) => {
+      // filtro tipo select
+      //ex: if (filtros?.estadoId && p.estadoId !== filtros.estadoId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [especies, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -46,46 +64,47 @@ export default function EspeciesCRUD() {
     masculino: false, // "a espécie"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
 
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Nova espécie</Button>
-        </Col>
-      </Row>
-
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {especies}
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome", },
-              {rotulo: "Categoria", dataKey: "categoriaId", tagVariantList: reading ? {} : cacheCategoriasEspecie?.list, width: "100px"},
-              {rotulo: "Estágios", dataKey: "ciclo", render: (a)=>a.ciclo.length, width: "50px"},
-            ]}
-            acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Duplicar", funcao: duplicar, variant: "outline-success"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
-              { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: "secondary",
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+        ]}
+      />
+      {loading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {especiesFiltradas}
+        sort
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a,"nome", "categoriaId", cacheCategoriasEspecie.map ?? {})},
+          {rotulo: "Estágios", dataKey: "ciclo", render: (a)=>a.ciclo.length, width: "50px"},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant.id,
+          },
+        ]}
+      />}
 
       <EspecieModal
         key={editando?.id ?? `novo`}

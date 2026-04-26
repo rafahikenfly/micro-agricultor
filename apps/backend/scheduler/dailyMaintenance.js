@@ -8,6 +8,7 @@ import { cacheService } from "../services/cache.js";
 
 
 const dailyTasks = [
+  { name: "plantStageInspector" },
 ];
 
 const hourlyTasks = [

@@ -1,11 +1,11 @@
 import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
 import { criarEvento } from "../../domain/evento.rules.js";
-import { desenharPlanta } from "../../domain/planta.rules.js";
+import { movimentarPlanta } from "../../domain/planta.rules.js";
 import { movimentarCanteiro } from "../../domain/canteiro.rules.js";
 import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
-  [ENTIDADE.planta.id]: desenharPlanta,
+  [ENTIDADE.planta.id]: movimentarPlanta,
   [ENTIDADE.canteiro.id]: movimentarCanteiro,
 }
 
@@ -116,7 +116,7 @@ export async function movimentar({
 
     // Resultado sem mutações
     if (!results.after) {
-      console.log(`${entidade.nome} (${entidade.id}) sem mutações`);
+      console.log(`Movimentação de ${entidade.nome} (${entidade.id}) sem mutações`);
       continue;
     }
     // Resultado com mutações

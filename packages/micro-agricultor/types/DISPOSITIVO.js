@@ -1,5 +1,5 @@
-import { VARIANTE } from "./VARIANT_TYPES.js";
+import { VARIANTE } from "./VARIANTE.js";
 
 export const DISPOSITIVO = {
-  SENSOR: { id: "SENSOR", nome: "Caixa de Sensores", tagVariant: VARIANTE.LIGHTBLUE.id, },
+  SENSOR: { id: "SENSOR", nome: "Caixa de Sensores", variant: VARIANTE.LIGHTBLUE.variant.id, },
 };

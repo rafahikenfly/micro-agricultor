@@ -13,7 +13,7 @@ const ModeloCVPadrao = {
 //        retrainOnExpire: true,
 //        expiresAt: null,
 //    },
-  tagVariant: "primary",
+  variant: "primary",
 }
 
 export const validarModeloCV = (dataObj = {}) => {

@@ -14,9 +14,9 @@ const manejoPadrao = {
   entradas: [],
   aplicavel: [],
   estadoDestinoId: "",
-  estadoDestinoNome: "",
   estadoOrigemId: "",
-  estadoOrigemNome: "",
+  estagioDestinoId: "",
+  estagioOrigemId: "",
   temEntradas: false,
   temEfeitos: false,
 };

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Badge, Button, Col, Container, Row } from "react-bootstrap";
 import EstagiosEspecieModal from "./EstagiosEspecieModal";
 import { VARIANTE } from "micro-agricultor";
 import { NoUser } from "../../../components/common/NoUser";
@@ -8,6 +8,7 @@ import { useCrudUI } from "../../../services/ui/crudUI";
 import { estagiosEspecieService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
+import { renderBadge } from "../../../utils/uiUtils";
 
 
 export default function EstagiosEspecieCRUD() {
@@ -60,19 +61,20 @@ export default function EstagiosEspecieCRUD() {
         <Col>
           <ListaComAcoes
             dados = {estagiosEspecie}
+            sort
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
+              {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a,"nome")},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: "secondary",
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

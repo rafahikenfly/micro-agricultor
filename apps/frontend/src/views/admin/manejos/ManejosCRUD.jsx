@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { ENTIDADE } from "micro-agricultor";
+import { ENTIDADE, VARIANTE } from "micro-agricultor";
 
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
@@ -11,6 +11,7 @@ import Loading from "../../../components/Loading";
 
 import ManejoModal from "./ManejoModal";
 import { manejosService } from "../../../services/crudService";
+import { renderBadgeGroup } from "../../../utils/uiUtils";
 
 export default function ManejosCRUD() {
   const { user } = useAuth();
@@ -62,19 +63,21 @@ export default function ManejosCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {manejos}
+            sort
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Aplicável à", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},              
+              {rotulo: "Nome", dataKey: "nome" },
+              {rotulo: "Aplicável à", dataKey: "aplicavel", render: (a)=>renderBadgeGroup(a, "aplicavel", ENTIDADE) }
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: "secondary",
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

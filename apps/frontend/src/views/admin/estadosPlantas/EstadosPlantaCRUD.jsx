@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Container } from "react-bootstrap";
 import { VARIANTE } from "micro-agricultor";
 
 import { estadosPlantaService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useCrudUI } from "../../../services/ui/crudUI";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import EstadoPlantaModal from "./EstadoPlantaModal";
+import { renderBadge } from "../../../utils/uiUtils";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
+import { useMemo } from "react";
 
 
 export default function EstadosPlantaCRUD() {
@@ -22,7 +24,23 @@ export default function EstadosPlantaCRUD() {
   const [loading, setLoading] = useState(true);
 
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: ""
+  });
+  const estadosFiltrados = useMemo(() => {
+    if (!estados_planta?.length) return [];
+
+    return estados_planta.filter((p) => {
+      // filtro tipo select
+      //ex: if (filtros?.estadoId && p.estadoId !== filtros.estadoId) return false;
+
+      // filtro tipo texto
+      //ex: const nome = filtros?.nome?.toLowerCase()
+      //ex: if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [estados_planta, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -45,44 +63,43 @@ export default function EstadosPlantaCRUD() {
     masculino: true, // "o estado de planta"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Novo Estado de Planta</Button>
-        </Col>
-      </Row>
-
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {estados_planta}
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
-            ]}
-            acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
-              { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: "secondary",
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[]}
+      />
+      {loading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {estadosFiltrados}
+        sort
+        linhaStyle={(row) => {
+          if (row.isDeleted)  { return { textDecoration: "line-through red 3px" }; }
+          if (row.isArchived) { return { textDecoration: "line-through dotted 3px" }; }
+          return {};
+        }}
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a,"nome")},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant.id,
+          },
+        ]}
+      />}
 
       <EstadoPlantaModal
         key={editando ? editando.id : `novo`}

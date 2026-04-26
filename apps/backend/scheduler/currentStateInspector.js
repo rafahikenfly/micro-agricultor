@@ -21,8 +21,10 @@ export async function currentStateInspector() {
 
   // Avalia as plantas, mutando o contexto (mapaTarefas), e inclui
   // todas as necessidades ao array de necessidades.
-  log(`[currentStateInspector]: ${cachePlantas.list.length} plantas para inspecionar...`);
+  log(`[currentStateInspector]: ${cachePlantas.list.length} plantas para inspecionar estado atual...`);
   for (const planta of cachePlantas.list) {
+    if (!planta.requerMonitoramento) continue;
+
     novasNecessidades.push(...getNecessidadesPlanta({
       planta,
       timestamp,
@@ -37,6 +39,7 @@ export async function currentStateInspector() {
   // todas as necessidades ao array de necessidades.
   log(`[currentStateInspector]: ${cacheCanteiros.list.length} canteiros para inspecionar`);
   for (const canteiro of cacheCanteiros.list) {
+    if (!canteiro.requerMonitoramento) continue;
     novasNecessidades.push(...getNecessidadesCanteiro({
       canteiro,
       plantas: cachePlantas.list,

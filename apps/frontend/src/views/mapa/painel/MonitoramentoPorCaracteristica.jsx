@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Form, Button, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import Loading from "../../../components/Loading";
-import { monitorar, VARIANT_TYPES } from "micro-agricultor";
+import { monitorar, VARIANTE } from "micro-agricultor";
 import { necessidadesService, entidadesService } from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { batchService } from "../../../services/batchService";
@@ -19,7 +19,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
   const { user } = useAuth();
   const { setShowPainel } = useMapaEngine();
   const { toastMessage } = useToast();
-  const { catalogoCaracteristicas, reading } = useCache(["caracteristicas"]);
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   const [form, setForm] = useState({});
   const [writing, setWriting] = useState(false);
@@ -67,7 +67,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
     if (totalCaracteristicasMonitoradas === 0) {
       toastMessage({
         body: "Selecione ao menos uma característica para atualizar.",
-        variant: VARIANT_TYPES.YELLOW,
+        variant: VARIANTE.YELLOW.variant,
       });
       return;
     }
@@ -77,7 +77,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o monitoramento. Tipo de entidade indefinido.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -87,7 +87,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
     if (!entidades || entidades.length === 0) {
       toastMessage({
         body: "Erro registrando o monitoramento. Nenhuma entidade selecionada.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -132,14 +132,14 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
       setForm({});
       toastMessage({
         body: `Registrado o monitoramento de ${totalCaracteristicasMonitoradas} ${pluralizar(totalCaracteristicasMonitoradas,"característica")} de ${entidades.length} ${pluralizar(totalCaracteristicasMonitoradas,tipoEntidadeId)}.`,
-        variant: VARIANT_TYPES.GREEN,
+        variant: VARIANTE.GREEN.variant,
       });
       setShowPainel(false);
     } catch (err) {
       console.error(err)
       toastMessage({
         body: `Erro ao registrar monitoramento.`,
-        variang: VARIANT_TYPES.RED,
+        variang: VARIANTE.RED.variant,
       });
     } finally {
       setWriting(false);
@@ -149,7 +149,7 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
   if (reading) return <Loading variant="overlay"/>
   return (
     <>
-      {(catalogoCaracteristicas?.list ?? []).filter(c => c.aplicavel?.[tipoEntidadeId] === true).map((caracteristica) => {
+      {(cacheCaracteristicas?.list ?? []).filter(c => c.aplicavel?.[tipoEntidadeId] === true).map((caracteristica) => {
         const item = form[caracteristica.id] ?? { valor: 0, atualizar: false, confianca: 100 };
         return (
           <StandardCard
@@ -166,12 +166,12 @@ export default function MonitoramentoPorCaracteristica({ entidades, tipoEntidade
               />
             }
           >
-            <StandardInput label="Valor" width="120px" unidade={caracteristica.unidade} unidadeWidth="80px">
+            <StandardInput label="Valor" width="120px" unidade={caracteristica.medida.unidade} unidadeWidth="80px">
               <Form.Control
                 type="number"
                 value={item.valor}
-                min={caracteristica.min || 0}
-                max={caracteristica.max || 1024}
+                min={caracteristica.medida?.min || 0}
+                max={caracteristica.medida?.max || 1024}
                 onChange={(e) =>
                   setForm({
                     ...form,

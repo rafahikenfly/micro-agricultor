@@ -6,12 +6,9 @@ import {
     Card
   } from "react-bootstrap";
   
-function ListaComAcoes ({colunas, sort, dados, acoes,}) {
+function ListaComAcoes ({linhaStyle, colunas, sort, dados, acoes,}) {
   /**
    * Renderiza uma lista a partir de um array de dados, com campos configuráveis e ações.
-   * - Um campo marcado como boolean renderiza um badge conforme o valor sim/não.
-   * - Um campo marcado como contar renderiza a contagem de uma coleção no campo de valor.
-   * - Um campo com tagVariantList renderiza um badge com a cor definida na prop tagVariant.
    * - Um campo marcado como toogle (passando uma propriedade condicionante), renderiza um botão condicionado.
    * @param colunas array de objetos do tipo: {
    *  rotulo: String,     rótulo da coluna
@@ -19,7 +16,7 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
    *  render?: function,  Função opcional, que recebe o dado como argumento, com o que deve ser renderizado.
    *  boolean?: Boolean,    //TODO: Padronizar no render
    *  toggle: string,       //TODO: Padronizar no render
-   *  tagVariantList: array //TODO: Padronizar no render
+   *  variantList: array //TODO: Padronizar no render
    * }
    * @param sort Boolean usar ou não o sort da lista
    * @param dados array com os dados a serem representados na lista
@@ -54,15 +51,15 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
 
 
   if (!Array.isArray(colunas)) {
-    console.error("ListaComacoes: colunas não é um array", colunas);
+    console.error("ListaComAcoes: colunas não é um array", colunas);
     return null;
   }
   if (!Array.isArray(dados)) {
-    console.error("ListaComacoes: dados não é um array", dados);
+    console.error("ListaComAcoes: dados não é um array", dados);
     return null;
   }
   if (!Array.isArray(acoes)) {
-    console.error("ListaComacoes: acoes não é um array", acoes);
+    console.error("ListaComAcoes: acoes não é um array", acoes);
     return null;
   }
 
@@ -86,7 +83,10 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
             <thead>
               <tr>
                 {colunas.map(col => (
-                  <th key={col.dataKey} style={{ width: col.width }} onClick={() => sort ? handleOrdenar(col.dataKey) : null}
+                  <th
+                    key={`header-${col.dataKey}`}
+                    style={{ width: col.width }}
+                    onClick={() => sort ? handleOrdenar(col.dataKey) : null}
                   >
                     {col.rotulo || "-"}
                     {ordem.orderKey === col.dataKey && (
@@ -96,64 +96,49 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
                     )}
                   </th>
                 ))}
-                <th> </th>
+                <th
+                  key="header-acoes"
+                  style={{width: acoes.length * 40}}
+                >
+                  {/* açoes */}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {dadosOrdenados.map((dado, dado_idx) => (
-                <React.Fragment key={dado.id ?? `dado-${dado_idx}`}>
-                  <tr>
+              {dadosOrdenados.map((row, row_idx) => (
+                <React.Fragment key={row.id ?? `dado-${row_idx}`}>
+                  <tr style={linhaStyle ? linhaStyle(row, row_idx) : {}}>
                     {colunas.map((col, col_idx) => {
-                      if (col.boolean) return (
-                        <td key = {`${col.dataKey}-${col_idx}`}>
-                          <Badge bg={dado[col.dataKey] ? "info" : "danger"}>{dado[col.dataKey] ? "Sim" : "Não"}</Badge>
-                        </td>
-                      )
-                      if (col.contar) return (
-                        <td key = {`${col.dataKey}-${col_idx}`}>{Object.values(dado[col.dataKey]).length}</td> //TODO e se for um array?
-                      )
-                      if (col?.tagVariantList?.length > 0) {
-                        const rawValue = dado[col.dataKey];
-                        let badges = [];
-                        if (typeof rawValue === "object") {
-                          // {id1:true, id2: true...} ==> [id1, id2...]}
-                          badges = Object.keys(rawValue).filter(key => rawValue[key] === true);
-                        }
-                        else if (typeof rawValue === "string") {
-                          badges = [rawValue];
-                        }                         return (
-                          <td key={`${col.dataKey}-${col_idx}`}>
-                            {badges.map((item, idx) => {
-                              const badge = col.tagVariantList.find(tv => tv.id === item);
-                              return (
-                                <Badge key={`${col.dataKey}-${col_idx}-${idx}`} bg={badge?.tagVariant || "dark"} className="me-1">
-                                  {badge?.nome || item}
-                                </Badge>
-                              );
-                            })}
-                          </td>
-                        )
-                      }
+                      // propriedade RENDER tem prioridade (uso indica o que renderizar)
+                      // se não tem nada, vai renderizar o dado de datakey
                       if(col.render) return (
-                        <td key = {`${col.dataKey}-${col_idx}`}>
-                          {col.render(dado)}
+                        <td
+                          key = {`${col.dataKey}-${col_idx}`}
+                          style={col.tdStyle ? col.tdStyle(row, row_idx) : {}}
+                        >
+                          {col.render(row, row_idx)}
                         </td>
                       )
                       return(
-                        <td key = {col_idx}>{dado[col.dataKey]}</td>
+                        <td
+                          key = {col_idx}
+                          style={col.tdStyle ? col.tdStyle(row, row_idx) : {}}
+                        >
+                          {row[col.dataKey]}
+                        </td>
                       )
                       })}
                     <td>
                     {acoes.map((acao, i) => {
                       if (acao.toggle) return (
                         <Button
-                        key = {dado[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
+                        key = {row[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
                         size="sm"
-                        variant= {dado[acao.toggle] ? `${acao?.variant}` : `outline-${acao?.variant}`}
+                        variant= {row[acao.toggle] ? `${acao?.variant}` : `outline-${acao?.variant}`}
                         className="me-1"
-                        onClick={dado[acao.toggle] ? () => acao.funcao(dado, dado_idx) : () => acao.funcaoFalse(dado, dado_idx)}
+                        onClick={row[acao.toggle] ? () => acao.funcao(row, row_idx) : () => acao.funcaoFalse(row, row_idx)}
                       >
-                        {dado[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
+                        {row[acao.toggle] ? acao.rotulo : acao.rotuloFalse}
                       </Button>
                       )
                       return (
@@ -162,7 +147,7 @@ function ListaComAcoes ({colunas, sort, dados, acoes,}) {
                         size="sm"
                         variant= {`outline-${acao?.variant}` || "primary"}
                         className="me-1"
-                        onClick={() => acao.funcao(dado, dado_idx)}
+                        onClick={() => acao.funcao(row, row_idx)}
                       >
                         {acao.rotulo}
                       </Button>

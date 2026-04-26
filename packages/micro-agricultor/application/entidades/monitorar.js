@@ -118,7 +118,9 @@ export async function monitorar({
     // ======
     // Necessidades
     // ======
-    // Atualiza a necessidade de monitoramento de cada característica da entidade
+    // Atualiza a necessidade de monitoramento de cada característica da entidade,
+    // Se existente. Se não existe a necessidade, não precisa criar, então passa para
+    // a proxima necessidade
     // TODO: para melhorar a performance, é possível recuperar até 10 ids com a mesma consulta usando o getByEntidadesArray do mesmo service. Tem que ver as implicações no resto da função.
     const necessidades = await services.necessidades.get([
       { field: "entidadeId", op: "==", value: entidade.id }
@@ -129,13 +131,20 @@ export async function monitorar({
 
     for (const caracteristicaId of Object.keys(medidasEntidade)) {
       await batch.commitIfNeeded();
-      // Recupera a necessidade
+
+      // Recupera a necessidade, se existente
       const necessidadeId = getNecessidadeKey({
         entidadeId: entidade.id,
         caracteristicaId,
         tipoEventoId: EVENTO.MONITORAMENTO.id,
       });
       const necessidade = necessidadesMap[necessidadeId];
+
+      // Verifica se há a necessidade. Casos em que não há a necessidade
+      if (!necessidade) {
+        console.warn(`${entidade.id} sem necessidade de monitoramento de caracteristica ${caracteristicaId}.`)
+        continue;
+      }
 
       // Atualiza a necessidade
       const necessidadeAtualizada = atenderNecessidade({

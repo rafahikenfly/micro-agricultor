@@ -18,7 +18,7 @@ const midiaPadrao = {
     storagePath: "",
   },
   contexto: {
-    tipoEntidadeId: "",     //ENTITY_TYPES.id
+    tipoEntidadeId: "",     //ENTIDADE.id
     entidadeId: "",         //string
     hortaId: "",            //string
     timestamp: Date.now(),  //epoch

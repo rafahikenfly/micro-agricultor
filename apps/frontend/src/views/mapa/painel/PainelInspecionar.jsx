@@ -6,12 +6,14 @@ import Evolucao from "../../../components/Evolucao";
 import { useCache } from "../../../hooks/useCache";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
 import { useMapaEngine } from "../MapaEngine";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
+import Loading from "../../../components/Loading";
 
-export default function PainelInspecionar({ selection, primaryType, caches, onConfirm, onCancel, }) {
+export default function PainelInspecionar({ selection, primaryType, onConfirm, onCancel, }) {
   if (!selection) return null;
-  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
+
   const { setShowModal } = useMapaEngine()
+  const { cacheCaracteristicas, cacheEntidades, reading } = useCache(["caracteristicas", "entidades"]);
 
   const [form, setForm] = useState({
 //    primaryType: "",
@@ -20,8 +22,8 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
 
   const caracteristica = (cacheCaracteristicas?.map?.get(form.caracteristicaId) ?? {});
 
-  const list = resolveSelection(selection, primaryType, caches[primaryType]);
-  const last = resolvePrimarySelection(selection,caches)
+  const list = resolveSelection(selection, primaryType, cacheEntidades?.[primaryType]);
+  const last = resolvePrimarySelection(selection,cacheEntidades)
   
   const handleConfirm = () => {
     const configInspecao = {
@@ -33,6 +35,7 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
     onConfirm(configInspecao);
   }
 
+  if (reading) return <Loading variant="overlay" />
   return (
     <>
       <StandardInput label="Característica" width="120px">
@@ -51,20 +54,20 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
       <div className="p-2 border rounded bg-light mb-3">
         <strong>Resumo da inspeção</strong>
         <div>Característica: {caracteristica?.nome ?? "-"}</div>
-        <div>Mínimo: {caracteristica?.min ?? "-"}</div>
-        <div>Máximo: {caracteristica?.max ?? "-"}</div>
-        <div>Unidade: {caracteristica?.unidade ?? "-"}</div>
+        <div>Mínimo: {caracteristica?.medida.min ?? "-"}</div>
+        <div>Máximo: {caracteristica?.medida.max ?? "-"}</div>
+        <div>Unidade: {caracteristica?.medida.unidade ?? "-"}</div>
       </div>
       <div className="d-grid gap-2">
         <Button
-          variant={VARIANT_TYPES.GREEN}
+          variant={VARIANTE.GREEN.variant}
           disabled={!form.caracteristicaId}
           onClick={handleConfirm}
         >
           Ativar Inspeção no Mapa
         </Button>
         <Button
-          variant={VARIANT_TYPES.RED}
+          variant={VARIANTE.RED.variant}
           onClick={onCancel}
         >
           Desativar Inspeção no Mapa
@@ -75,7 +78,7 @@ export default function PainelInspecionar({ selection, primaryType, caches, onCo
           caracteristicas = {[caracteristica] ?? []}
         />
         <Button
-          variant={VARIANT_TYPES.LIGHTBLUE}
+          variant={VARIANTE.LIGHTBLUE.variant}
           disabled={!primaryType}
           onClick={()=>setShowModal({
             tipo: "inspecionar",

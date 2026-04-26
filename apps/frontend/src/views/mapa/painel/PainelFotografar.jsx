@@ -1,4 +1,4 @@
-import { VARIANT_TYPES, validarMidia, MIME_TYPES, MIDIA } from "micro-agricultor";
+import { VARIANTE, validarMidia, MIME_TYPES, MIDIA } from "micro-agricultor";
 import CapturaImagemEntidade from "../../../components/CapturaImagemEntidade";
 import { getImageDimensions } from "../../../utils/blobUtils";
 import { storage } from "../../../firebase";
@@ -10,18 +10,21 @@ import { useMapaEngine } from "../MapaEngine";
 import { useAuth } from "../../../services/auth/authContext";
 import { cacheService } from "../../../services/cacheService";
 import { midiasService } from "../../../services/crudService";
+import { useCache } from "../../../hooks/useCache";
+import Loading from "../../../components/Loading";
 
-export default function PainelFotografar({ show, caches, onCancel}) {
+export default function PainelFotografar({ show, onCancel}) {
 
   const { user } = useAuth();
   const { toastMessage } = useToast();
   const { selection } = useMapaEngine();
+  const { cacheEntidades, reading } = useCache(["entidades"]);
 
-  const [ entidade, setEntidade ] = useState(resolvePrimarySelection(selection, caches))
+  const [ entidade, setEntidade ] = useState(resolvePrimarySelection(selection, cacheEntidades))
 
   useEffect(()=>{
-    setEntidade(resolvePrimarySelection(selection, caches))
-  },[selection, caches])
+    setEntidade(resolvePrimarySelection(selection, cacheEntidades))
+  },[selection, cacheEntidades])
 
   const handleCapturar = async ({ blob, previewUrl, descricao = ""}) => {
     try {
@@ -50,10 +53,10 @@ export default function PainelFotografar({ show, caches, onCancel}) {
         url,
       }});
       midiasService.create(novaMidia, user)
-      toastMessage({body: "Imagem salva.", variant: VARIANT_TYPES.GREEN})
+      toastMessage({body: "Imagem salva.", variant: VARIANTE.GREEN.variant})
       cacheService.clear("midias");
     } catch (err) {
-      toastMessage({body: "Falha ao salvar imagem.", variant: VARIANT_TYPES.RED})
+      toastMessage({body: "Falha ao salvar imagem.", variant: VARIANTE.RED.variant})
       console.error("Erro ao salvar imagem:", err);
     }
   }
@@ -64,6 +67,7 @@ export default function PainelFotografar({ show, caches, onCancel}) {
     return ref.getDownloadURL();
   }
   
+  if (reading) return <Loading variant="overlay" />
   return (
     <CapturaImagemEntidade
       ativa={show}

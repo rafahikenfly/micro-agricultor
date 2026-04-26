@@ -14,14 +14,12 @@ export default function UsuarioDadosTab({ form, setForm, }) {
           <Form.Control
             value={form.apelido}
             onChange={e => setForm({...form, apelido: e.target.value})}
-            required
           />
         </StandardInput>
         <StandardInput label = "email">
           <Form.Control
             value={form.email}
             onChange={e => setForm({...form, email: e.target.value})}
-            required
           />
         </StandardInput>
       </BaseTab>

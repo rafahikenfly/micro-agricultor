@@ -1,4 +1,4 @@
-import { EVENTO, VARIANT_TYPES } from "micro-agricultor";
+import { EVENTO, VARIANTE } from "micro-agricultor";
 import { useAuth } from "../../../services/auth/authContext";
 import { useToast } from "../../../services/toast/toastProvider";
 import { ManejarModal } from "./ManejarModal";
@@ -18,21 +18,21 @@ export default function MapaModals() {
         await crudService.update(crudService.getRefById(data.id), data, user);
         toastMessage({
           body: `${ENTIDADE.nome} atualizad${ENTIDADE.masculino ? "o" : "a"} com sucesso`,
-          variant: VARIANT_TYPES.GREEN,
+          variant: VARIANTE.GREEN.variant,
         });
       }
       else {
         await crudService.create(data, user);
         toastMessage({
           body: `${ENTIDADE.nome} criad${ENTIDADE.masculino ? "o" : "a"} com sucesso`,
-          variant: VARIANT_TYPES.GREEN,
+          variant: VARIANTE.GREEN.variant,
         });
       }
     } catch (err) {
       console.error(err,data,user);
       toastMessage({
         body: `Erro ao ${data.id ? "atualizar" : "criar"} ${ENTIDADE.masculino ? "o" : "a"} ${ENTIDADE.id}`,
-        variant: VARIANT_TYPES.RED
+        variant: VARIANTE.RED.variant
       });
     } finally {
       setShowModal(null);

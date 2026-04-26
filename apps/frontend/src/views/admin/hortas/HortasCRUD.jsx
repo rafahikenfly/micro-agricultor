@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
-import { hortaService } from "../../../services/crud/hortaService";
+import { hortasService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
-import Loading from "../../../components/common/DEPRECATED_Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 import HortaModal from "./HortaModal";
+import { VARIANTE } from "micro-agricultor";
+import Loading from "../../../components/Loading";
+import { calcularArea } from "../../../utils/geometryUtils";
 
 
 export default function HortasCRUD() {
@@ -29,7 +30,7 @@ export default function HortasCRUD() {
   useEffect(() => {
     setLoading(true);
 
-    const unsub = hortaService.subscribe((data) => {
+    const unsub = hortasService.subscribe((data) => {
       setHortas(data);
       setLoading(false); // só desliga quando os dados chegam
     });
@@ -39,7 +40,7 @@ export default function HortasCRUD() {
 
   /* ================= CRUD ================= */
   const { criar, editar, duplicar, atualizar, arquivar, desarquivar, apagarComConfirmacao, } = useCrudUI({
-    crudService: hortaService,
+    crudService: hortasService,
     nomeEntidade: "horta",
     masculino: false, // "a horta"
     user,
@@ -63,19 +64,21 @@ export default function HortasCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {hortas}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
+              {rotulo: "Área", dataKey: "area", render: (a)=>`${(calcularArea(a)/10000).toFixed(2)}m²`},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: "secondary",
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

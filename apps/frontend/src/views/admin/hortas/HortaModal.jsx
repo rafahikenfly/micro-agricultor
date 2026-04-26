@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Modal, Button, Form, Tabs, Tab } from "react-bootstrap";
-import { validarHorta, VARIANT_TYPES } from "micro-agricultor";
+import { validarHorta, VARIANTE } from "micro-agricultor";
 
 import { catalogosService } from "../../../services/catalogosService";
 import { useToast } from "../../../services/toast/toastProvider";
@@ -48,7 +48,7 @@ export default function HortaModal({ show, onClose, onSave, data}) {
       console.error("Erro ao carregar catálogos da horta:", err);
       toastMessage({
         body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.YELLOW
+        variant: VARIANTE.YELLOW.variant
       });
     })
     .finally(() => {

@@ -68,6 +68,12 @@ export const cacheService = {
       crud.modelosCVService,
       [{ field: "isDeleted", op: "==", value: false }],
     ),
+  getEstagiosEspecie: async () =>
+    await cache.get(
+      "estagiosEspecie",
+      crud.estagiosEspecieService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
 
   // DERIVED
   getEntidades() {

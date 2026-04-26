@@ -84,7 +84,7 @@ export const ManejarModal = ({show, data, onClose }) => {
     if (Object.keys(intervencoes).length === 0) {
       toastMessage({
         body: "Selecione ao menos uma entidade para manejar.",
-        variant: VARIANT_TYPES.YELLOW});
+        variant: VARIANTE.YELLOW.variant});
       return;
     }
 
@@ -94,7 +94,7 @@ export const ManejarModal = ({show, data, onClose }) => {
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o manejo",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -125,13 +125,13 @@ export const ManejarModal = ({show, data, onClose }) => {
       //Fecha modal
         toastMessage({
           body: `Manejo de ${entidades.length > 1 ? `${entidades.length} ${data.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
-          variant: VARIANT_TYPES.GREEN,
+          variant: VARIANTE.GREEN.variant,
         });
       } catch (err) {
         console.error(err)
         toastMessage({
           body: `Erro ao registrar manejo.`,
-          variant: VARIANT_TYPES.RED
+          variant: VARIANTE.RED.variant
         });
       } finally {
         setWriting(false);

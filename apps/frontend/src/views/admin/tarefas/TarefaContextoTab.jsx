@@ -34,8 +34,8 @@ export default function TarefaContextoTab({ formContexto, setFormContexto }) {
         <StandardArrayInput 
           form = {formContexto.entidadesId}
           setForm = {(entidadesId)=>setFormContexto({...formContexto, entidadesId})}
-          header = "Entidades vinculadas"
-          headerData = {novaEntidadeId}
+          inputLabel = "Entidades vinculadas"
+          inputData = {novaEntidadeId}
           colunas = {[
             {rotulo: "Id da Entidade", datakey: "a", render: (a)=>a},
             {rotulo: "Nome da Entidade", datakey: "a", render: (a)=>cachesEntidade[formContexto.tipoEntidadeId]?.map.get(a)?.nome ?? `[Não é ${formContexto.tipoEntidadeId}]`}

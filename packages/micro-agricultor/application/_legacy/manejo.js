@@ -3,14 +3,14 @@ import { manejarCanteiro, monitorarCanteiro } from "../domain/canteiro.rules.js"
 import { criarEfeitosDoEvento, criarEvento } from "../domain/evento.rules.js";
 import { atenderNecessidade, getNecessidadeKey } from "../domain/necessidade.rules.js";
 import { manejarPlanta, monitorarPlanta } from "../domain/planta.rules.js";
-import { ENTITY_TYPES } from "../types/ENTITY_TYPES.js";
+import { ENTIDADE } from "../types/ENTIDADE.js";
 import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { ORIGEM_TYPES } from "../types/ORIGEM.js";
 
 /**
  * Aplica manejo em múltiplas entidades
  * @param {Object} params
- * @param {ENTITY_TYPES} params.tipoEntidadeId 
+ * @param {ENTIDADE} params.tipoEntidadeId 
  * @param {uid, USER_TYPES} params.user 
  * @param {number} params.timestamp
  * @param {Array}  params.entidades 
@@ -69,7 +69,7 @@ export async function processarManejo({
     // Não uso map de regras aqui e sim o switch porque os argumentos das funções não é padronizado.
     // TODO: Avaliar se não dá para padronizar. O retorno das funções já está padronizado.
     switch (tipoEntidadeId) {
-      case ENTITY_TYPES.CANTEIRO:
+      case ENTIDADE.canteiro.id:
         ({ entidadeManejada, before, after } = manejarCanteiro({
           canteiro: entidade,
           manejo,
@@ -78,7 +78,7 @@ export async function processarManejo({
           timestamp,
         }));
         break;
-      case ENTITY_TYPES.PLANTA: 
+      case ENTIDADE.planta.id: 
         ({ entidadeManejada, before, after } = manejarPlanta({ //TODO: Arrumar o monitoramento de planta
           planta: entidade,
           intervencoes: intervencoesEntidade,

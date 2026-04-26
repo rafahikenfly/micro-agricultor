@@ -1,8 +1,8 @@
 import { Button, Card, Form, InputGroup, Row, Stack } from "react-bootstrap";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
-import { catalogosService } from "../services/catalogosService";
 import ListaComAcoes from "../components/common/ListaComAcoes";
-import Loading from "../components/Loading";
+import { VARIANTE } from "micro-agricultor";
+import { cacheService } from "../services/cacheService";
 
 export const handleSelectIdNome = (e, {
     list,
@@ -66,6 +66,23 @@ export const renderOptions = ({
     </>
   );
 };
+
+export const optionsFromCacheList = ({
+  sourceList = [],          // array base (define a ordem)
+  cacheMap,                 // Map(id -> entidade)
+  getId,                    // (item) => id a buscar no cache
+  mapItem = (e) => ({ id: e.id, nome: e.nome }),
+  filterNull = true,
+}) => {
+  const result = sourceList.map((item) => {
+    const id = getId(item);
+    const entity = cacheMap?.get(id);
+    if (!entity) return null;
+    return mapItem(entity, item);
+  });
+
+  return filterNull ? result.filter(Boolean) : result;
+}
 export function handleSelectWithRule(e, {
   list,
   setForm,
@@ -91,7 +108,7 @@ export function handleSelectWithRule(e, {
 export const handleSaveForm = async ({evt, onSave, form, transform = null, clearCache = null, onClear, clear=false}) => {
   evt.preventDefault();
   if (clearCache) {
-    catalogosService.clearCache(clearCache)
+    cacheService.clearCache(clearCache)
   }
   let data = {...form}
   if (transform) {
@@ -228,100 +245,115 @@ export const StandardBadgeGroup = ({children}) => {
  */
 export const StandardArrayInput = ({
   form,
-  map,
-  noHeader = false,
-  header = "Novo item do array",
-  headerButton = "Adicionar",
-  headerVariant = "success",
-  headerData,
-  headerDisabled,
+  setForm,
+  showInput = true,
+  inputLabel = "Novo item do array",
+  inputButtonLabel = "Adicionar",
+  inputButtonVariant = "success",
+  inputData,
+  inputButtonIsDisabled,
   colunas = [],
   acoes = [],
-  setForm,
   children}) => {
+
   const add = () => {
-    if (!headerData) return;
-    setForm([...(form ?? []), headerData]);
+    if (!inputData) return;
+    setForm([...(form ?? []), inputData]);
   };
+
   const remove =  (data, idx) => {
     form.splice(idx, 1)
     setForm(form)
   }
+
   const moveUp = (data, idx) => {
     if (idx <= 0) return;
-
     const novoArray = [...form];
     [novoArray[idx - 1], novoArray[idx]] =
       [novoArray[idx], novoArray[idx - 1]];
-  
     setForm(novoArray);
   };
+
   const moveDown = (data, idx) => {
-    if (idx >= efeitos.length - 1) return;
-  
+    if (idx >= form.length - 1) return;
     const novoArray = [...form];
     [novoArray[idx], novoArray[idx + 1]] =
       [novoArray[idx + 1], novoArray[idx]];
-  
     setForm(novoArray);
   };  
 
   if (!form) return <>Nenhum dado</>
   return (
     <>
-      {!noHeader && <StandardCard header={header}>
+      {showInput && <StandardCard header={inputLabel}>
         {children}
         <Button
-          variant={`outline-${headerVariant}`}
-          disabled = {headerDisabled}
+          variant={`outline-${inputButtonVariant}`}
+          disabled = {inputButtonIsDisabled}
           className="w-100 align-self-end"
           onClick={add}
         >
-          {headerButton}
+          {inputButtonLabel}
         </Button>
       </StandardCard>}
       <ListaComAcoes
-        dados={map ?? form}
+        dados={form}
         sort={false}
         colunas={colunas}
-        acoes={noHeader ? [] : [...acoes,
-          {rotulo: "▲", funcao: moveUp, variant: "outline-warning"},
-          {rotulo: "▼", funcao: moveDown, variant: "outline-warning"},
-          {rotulo: "Excluir", funcao: remove, variant: "danger"},
-        ]}
+        acoes={showInput ? [...acoes,
+          {rotulo: "▲", funcao: moveUp, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "▼", funcao: moveDown, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: remove, variant: VARIANTE.RED.variant.id},
+        ] : []}
       />
     </>
   )
 }
-export const StandardObjectInput = ({object, header, colunas = [], acoes = [], novoItem, onChange, children}) => {
+export const StandardObjectInput = ({
+  form = {},
+  setForm,
+  showInput = true,
+  inputLabel = "Novo item do objeto",
+  inputButtonLabel = "Adicionar",
+  inputButtonVariant = "success",
+  inputData,
+  inputKey,
+  inputField,
+  inputButtonIsDisabled,
+  colunas = [],
+  acoes = [],
+  children}) => {
+
   const update = ({}) => {
-    if (!novoItem) return;
-    onChange({...(object ?? {}), [novoItem.caracteristicaId]: novoItem});
+    if (!inputData) return;
+    setForm({...form, [inputKey]: inputData});
   };
+  const drop = (data, idx) => {
+    const key = data[inputField];
+    const novoObjeto = {...form};
+    delete novoObjeto[key];
 
-  const drop = (data) => {
-    const { caracteristicaId } = data;
-
-    const novoObjeto = { ...object };
-    delete novoObjeto[caracteristicaId];
-
-    onChange(novoObjeto);
-  };
+    setForm(novoObjeto)
+  }
   
   return (
     <>
-      <InputGroup className="mb-3">
-        <InputGroupText>{header}</InputGroupText>
-          {children}
-          <Button variant="outline-success" className="w-100 align-self-end" onClick={update}>
-            Atualizar
-          </Button>
-      </InputGroup>
+      {showInput && <StandardCard header={inputLabel}>
+        {children}
+        <Button
+          variant={`outline-${inputButtonVariant}`}
+          disabled = {inputButtonIsDisabled}
+          className="w-100 align-self-end"
+          onClick={update}
+        >
+          {inputButtonLabel}
+        </Button>
+      </StandardCard>}
       <ListaComAcoes
-        dados={Object.values(object)}
+        dados={Object.values(form)}
         colunas={colunas}
         acoes={[...acoes,
-          {rotulo: "Excluir", funcao: drop, variant: "danger"},
+          {rotulo: "X", funcao: drop, variant: VARIANTE.RED.variant.id},
         ]}
       />
     </>

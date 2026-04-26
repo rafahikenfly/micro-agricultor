@@ -109,7 +109,7 @@ function CalendarioConteudo () {
       console.error(err);
       toastMessage({
         body: "Erro ao carregar catálogos.",
-        variant: VARIANT_TYPES.RED
+        variant: VARIANTE.RED.variant
       });
     })
     .finally(() => {

@@ -85,6 +85,19 @@ export function useMapaEngine() {
       payload: painelConfig,
     })
   }
+
+  // ==== FILTER ==== //
+  const setFilter = (filterConfig) => {
+    dispatch({
+      type: ACOES_MAPA.FILTER_SET,
+      payload: filterConfig,
+    })
+  }
+  const resetFilter = () => {
+    dispatch({
+      type: ACOES_MAPA.FILTER_RESET,
+    })
+  }
 /*   // HEATMAP
   const heatmapSet = (caracteristica) => {
     dispatch({
@@ -121,7 +134,8 @@ export function useMapaEngine() {
   const previewSetup = state.preview
   const showModal = state.show.modal
   const showPainel = state.show.painel
-  
+  const filters = state.filter
+
 /*   const isHeatmapActive = (tipoEntidadeId) => {
     if (!tipoEntidadeId) return state.heatmap.active;
     return (
@@ -158,6 +172,10 @@ export function useMapaEngine() {
     setMapPreviewActive,
     previewActive,
     previewSetup,
+
+    setFilter,
+    resetFilter,
+    filters,
 
   };
 }

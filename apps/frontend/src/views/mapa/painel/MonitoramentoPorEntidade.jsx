@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Form, Button, } from "react-bootstrap";
-import { ENTIDADE, ENTITY_TYPES, monitorar, VARIANT_TYPES } from "micro-agricultor";
+import { monitorar, VARIANTE } from "micro-agricultor";
 import { useMapaEngine } from "../MapaEngine";
 import { useToast } from "../../../services/toast/toastProvider";
 import { useAuth } from "../../../services/auth/authContext";
@@ -12,18 +12,19 @@ import { necessidadesService, entidadesService } from "../../../services/crudSer
 
 import { renderOptions, StandardCard, StandardInput } from "../../../utils/formUtils";
 import Loading from "../../../components/Loading";
+import { pluralizar } from "../../../utils/uiUtils";
 
 export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, stringTimestamp }) { 
   if (!entidades || entidades.length === 0) return null
   const { user } = useAuth();
   const { setShowPainel } = useMapaEngine();
   const { toastMessage } = useToast();
-  const { catalogoCaracteristicas, reading } = useCache(["caracteristicas"]);
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   const [form, setForm] = useState({});
   const [writing, setWriting] = useState(false);
 
-  const caracteristica = catalogoCaracteristicas?.map?.get(form.caracteristicaId)
+  const caracteristica = cacheCaracteristicas?.map.get(form.caracteristicaId)
 
   const preparaMonitorar = async () => {
     
@@ -64,7 +65,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
     if (totalCaracteristicasMonitoradas === 0) {
       toastMessage({
         body: "Selecione ao menos uma característica para atualizar.",
-        variant: VARIANT_TYPES.YELLOW,
+        variant: VARIANTE.YELLOW.variant,
       });
       return;
     }
@@ -74,7 +75,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o monitoramento. Tipo de entidade indefinido.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -84,7 +85,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
     if (!entidades || entidades.length === 0) {
       toastMessage({
         body: "Erro registrando o monitoramento. Nenhuma entidade selecionada.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -130,14 +131,14 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
       setForm({});
       toastMessage({
         body: `Registrado o monitoramento de ${totalCaracteristicasMonitoradas} ${pluralizar(totalCaracteristicasMonitoradas,"característica")} de ${entidades.length} ${pluralizar(totalCaracteristicasMonitoradas,tipoEntidadeId)}.`,
-        variant: VARIANT_TYPES.GREEN,
+        variant: VARIANTE.GREEN.variant,
       });
       setShowPainel(false);
     } catch (err) {
       console.error(err)
       toastMessage({
         body: `Erro ao registrar monitoramento.`,
-        variang: VARIANT_TYPES.RED,
+        variang: VARIANTE.RED.variant,
       });
     } finally {
       setWriting(false);
@@ -153,14 +154,14 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
         onChange={(e) => setForm({...form, caracteristicaId: e.target.value})}
         >
         {renderOptions({
-            list: (catalogoCaracteristicas?.list ?? []).filter((c)=>c.aplicavel[tipoEntidadeId]),
+            list: (cacheCaracteristicas?.list ?? []).filter((c)=>c.aplicavel[tipoEntidadeId]),
             loading: reading,
             placeholder: "Selecione a característica",
         })}
         </Form.Select>
       </StandardInput>
 
-      {entidades.map((entidade) => {
+      {form.caracteristicaId && entidades.map((entidade) => {
         // Recupera valor atual do form, associando padrão se não tiver nada
         // TODO: recuperar valor atual se disponível
         const item = form?.[entidade.id] ?? { atualizar: false, valor: 0, confianca: 100 };
@@ -179,12 +180,15 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
               />
             }
           >
-            <StandardInput label="Valor" unidade={caracteristica?.unidade} unidadeWidth="80px">
+            <StandardInput
+              label="Valor"
+              unidade={caracteristica?.medida.unidade ?? "-"}
+              unidadeWidth="80px">
               <Form.Control
                 type="number"
                 value={item.valor}
-                min={entidade.min || 0}
-                max={entidade.max || 1024}
+                min={caracteristica?.medida.unidade.min || 0}
+                max={caracteristica?.medida.unidade.max || 1024}
                 onChange={(e) =>
                     setForm({
                     ...form,
@@ -218,7 +222,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
           </StandardCard>
         )
       })}
-      <Button
+      {form.caracteristicaId && <Button
         variant="success"
         className="mt-3 w-100"
         disabled={writing || !form.caracteristicaId}
@@ -227,7 +231,7 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
         {writing ? "Aplicando monitoramento..."
           : `Monitorar ${caracteristica?.nome}`
         }
-      </Button>
+      </Button>}
     </>
   );
 }

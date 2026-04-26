@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button, Card, Tabs, Tab } from "react-bootstrap";
-import { validarCaracteristica, ENTIDADE, VARIANTE } from "micro-agricultor";
+import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
+import { validarCaracteristica } from "micro-agricultor";
 
-import { handleSaveForm, StandardCheckboxGroup, StandardCard, StandardInput, renderOptions } from "../../../utils/formUtils";
-import BaseTab from "../../../components/common/BaseTab";
-import { ACUMULACAO } from "micro-agricultor/types/ACUMULACAO";
+import { handleSaveForm } from "../../../utils/formUtils";
+import CaracteristicaDados from "./CaracteristicaDados";
+import CaracteristicaMedida from "./CaracteristicaMedida";
+import CaracteristicaSensor from "./CaracteristicaSensor";
 
 
 export default function CaracteristicaModal({ show, onSave, onClose, data = {}, }) {
@@ -38,174 +39,22 @@ export default function CaracteristicaModal({ show, onSave, onClose, data = {}, 
             className="mb-3"
           >
             <Tab eventKey="dados" title="Característica">
-              <BaseTab
-                form={form}
-                setForm={setForm}
-              >
-                <StandardCheckboxGroup label="Aplicável a:">
-                  {Object.values(ENTIDADE).map((tipo) => (
-                    <Form.Check
-                      key={tipo.id}
-                      type="checkbox"
-                      label={tipo.nome}
-                      checked={!!form.aplicavel?.[tipo.id]}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          aplicavel: {
-                            ...form.aplicavel,
-                            [tipo.id]: e.target.checked
-                          }
-                        })
-                      }
-                    />
-                  ))}
-                </StandardCheckboxGroup>
-                <StandardInput label="Cor da tag">
-                  <Form.Select
-                    value={form.tagVariant}
-                    onChange={e => setForm({...form, tagVariant: e.target.value})}
-                    required
-                  >
-                    {renderOptions({
-                      list: Object.values(VARIANTE),
-                      placeholder: "Selecione a cor da tag",
-                    })}
-                  </Form.Select>
-                </StandardInput>
-              </BaseTab>
-            </Tab>
-            <Tab eventKey="evolucao" title="Evolução">
-              <StandardCard header="Confiança da informação">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <Card.Subtitle className="text-muted small">
-                      Modelo de obsolescência e validade da medida
-                    </Card.Subtitle>
-                  </div>
-                  <div>
-                    <Form.Check
-                      type="switch"
-                      label="Aplicar obsolescência da informação"
-                      className="ms-3"
-                      checked={!!form.aplicarObsolescencia}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          aplicarObsolescencia: e.target.checked
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-                <StandardInput
-                  label="Longevidade da informação"
-                  unidade="dias"
-                  info="Tempo em que a confiança de uma informação se reduz de 100% para 20%."
-                >
-                  <Form.Control
-                    type="number"
-                    value={form.longevidade}
-                    disabled={!form.aplicarObsolescencia}
-                    onChange={e => setForm({...form, longevidade: Number(e.target.value)})}
-                  />
-                </StandardInput>
-              </StandardCard>
-              <StandardCard header="Valor Físico">
-                <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div>
-                    <Card.Subtitle className="text-muted small">
-                      Comportamento e variação da grandeza
-                    </Card.Subtitle>
-                  </div>
-                  <div>
-                    <Form.Check
-                      type="switch"
-                      label="Aplicar variação com tempo"
-                      className="ms-3"
-                      checked={!!form.aplicarVariacao}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          aplicarVariacao: e.target.checked
-                        })
-                      }
-                    />
-                  </div>
-                </div>
-              <StandardInput label="Unidade">
-                <Form.Control
-                  value={form.unidade}
-                  onChange={e => setForm({...form, unidade: e.target.value})}
-                />
-              </StandardInput>
-              <StandardInput label="Faixa de valor">
-                <Form.Control
-                  type="number"
-                  value={form.min}
-                  onChange={e => setForm({...form, min: Number(e.target.value)})}
-                />
-                <Form.Control
-                  type="number"
-                  value={form.max}
-                  onChange={e => setForm({...form, max: Number(e.target.value)})}
-                />
-              </StandardInput>
-              <StandardInput label="Variação esperada" unidade="/dia">
-              <Form.Control
-                type="number"
-                value={form.variacaoDiaria}
-                disabled={!form.aplicarVariacao}
-                onChange={e => setForm({...form, variacaoDiaria: Number(e.target.value)})}
+              <CaracteristicaDados
+                form = {form}
+                setForm = {setForm}
               />
-              </StandardInput>
-              </StandardCard>
-              <StandardCard header="Sensoriamento">
-                <StandardInput
-                  label="Tempo de acumulação"
-                  unidade="minutos"
-                  info="Tempo de acumulação da informação de sensores (zero para desativado)."
-                >
-                  <Form.Control
-                    type="number"
-                    value={form.tempoAcumulacao/60000}
-                    onChange={e => setForm({...form, tempoAcumulacao: Number(e.target.value)*60000})}
-                  />
-                </StandardInput>
-                <StandardInput label="Tipo de Acumulação">
-                  <Form.Select
-                    value = {form.tipoAcumulacaoId}
-                    onChange={(e)=> setForm({...form, tipoAcumulacaoId: e.target.value})}
-                  >
-                    {renderOptions({
-                      list: Object.values(ACUMULACAO),
-                      placeholder: "Selecione o tipo de acumulação da característica"
-                    })}
-                  </Form.Select>
-                  <Form.Control
-                    type="number"
-                    value={form.limiteAcumulacao}
-                    onChange={(e)=> setForm({...form, limiteAcumulacao: Number(e.target.value)})}
-                  />
-
-                </StandardInput>
-              </StandardCard>
             </Tab>
-            <Tab eventKey="configuracoes" title="Outras configurações">
-              <StandardInput label="Resolução">
-                <Form.Control
-                  type="number"
-                  value={form.resolucao}
-                  onChange={e => setForm({...form, resolucao: Number(e.target.value)})}
-                />
-                </StandardInput>
-                <StandardInput label="Dimensões">
-                <Form.Control
-                  type="number"
-                  value={form.dimensoes}
-                  onChange={e => setForm({...form, dimensoes: Number(e.target.value)})}
-                />
-              </StandardInput>
+            <Tab eventKey="medida" title="Medida">
+              <CaracteristicaMedida
+                form = {form}
+                setForm = {setForm}
+              />
+            </Tab>
+            <Tab eventKey="sensor" title="Sensores">
+              <CaracteristicaSensor
+                form = {form}
+                setForm = {setForm}
+              />
             </Tab>
           </Tabs>
         </Modal.Body>

@@ -1,6 +1,6 @@
 import { Badge } from "react-bootstrap";
 import { groupByDay, unixToReadableString } from "../../utils/dateUtils";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 
 export function TarefaTimeline({
   tarefas = [],
@@ -84,7 +84,7 @@ export function TarefaTimeline({
                   {/* FOOTER */}
                   <div className="d-flex justify-content-between align-items-center mt-1">
                     {t.estado ? (
-                      <Badge bg={VARIANT_TYPES.RED}>
+                      <Badge bg={VARIANTE.RED.variant}>
                         {t.estado}
                       </Badge>
                     ) : (

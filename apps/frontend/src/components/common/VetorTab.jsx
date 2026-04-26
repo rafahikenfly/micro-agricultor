@@ -1,16 +1,16 @@
 import { Form, Row, Col } from "react-bootstrap";
-import { StandardInput } from "../../utils/formUtils";
+import { StandardCard, StandardInput } from "../../utils/formUtils";
 
 export default function VetorTab({
-  formVetor, setVetor
+  formVetor, setVetor, header
 }) {
   const update = (field, v) => {  setVetor({ ...formVetor, [field]: v  }); };
 
   return (
-    <>
+    <StandardCard header={header || "Dimensão"} >
       <Row className="g-2">
         <Col md={4}>
-          <StandardInput label="x">
+          <StandardInput label="x" width="40px" unidade="cm" unidadeWidth="50px">
             <Form.Control
               type="number"
               value={formVetor.x}
@@ -19,7 +19,7 @@ export default function VetorTab({
           </StandardInput>
         </Col>
         <Col md={4}>
-          <StandardInput label="y">
+          <StandardInput label="y" width="40px" unidade="cm" unidadeWidth="50px">
             <Form.Control
               type="number"
               value={formVetor.y}
@@ -28,7 +28,7 @@ export default function VetorTab({
           </StandardInput>
         </Col>
         <Col md={4}>
-          <StandardInput label="z">
+          <StandardInput label="z" width="40px" unidade="cm" unidadeWidth="50px">
             <Form.Control
               type="number"
               value={formVetor.z}
@@ -37,6 +37,6 @@ export default function VetorTab({
           </StandardInput>
         </Col>
       </Row>
-    </>
+    </StandardCard>
   );
 }

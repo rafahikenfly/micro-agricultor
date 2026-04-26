@@ -1,32 +1,22 @@
 import { Form, Row, Col } from "react-bootstrap";
 import { GEOMETRIA } from "micro-agricultor";
 
-import { renderOptions, StandardCard, StandardInput } from "../../utils/formUtils";
-
-import ListaArray from "./ListaArray";
+import { renderOptions, StandardArrayInput, StandardCard, StandardInput } from "../../utils/formUtils";
 
 export default function AparenciaTab({ formAparencia, setFormAparencia }) {
-  const formArray = formAparencia?.vertices ?? []
-  const arrayField = "vertices"
-  const onChangeField = (field, v) => { setFormAparencia({ ...formAparencia, [field]: v }); };
-  const onChangeArr = (novoArr) => onChangeField(arrayField,novoArr)
-  const onChangeArrElementProp = (idx, campo, val) => {
-    const novoArr = [...formArray];
+  const vertices = formAparencia?.vertices ?? []
+  const setVertices = (novoArr) => setFormAparencia({ ...formAparencia, vertices: novoArr });
+  const onChangeVertice = (idx, campo, val) => {
+    const novoArr = [...vertices];
     novoArr[idx] = { ...novoArr[idx], [campo]: Number(val) };
-    onChangeArr(novoArr);
+    setVertices(novoArr);
   };
-  const onAddArrElement = () => { onChangeArr([...formArray, { x: 0, y: 0 }]); };
-  const onRemoveArrElement = (idx) => {
-    const novoArr = formArray.filter((_, i) => i !== idx);
-    onChangeArr(novoArr);
-  };
-
 
   /* ====== SVG ====== */
   const padding = 10;
 
-  const xs = formArray.map(v => v.x);
-  const ys = formArray.map(v => v.y);
+  const xs = vertices.map(v => v.x);
+  const ys = vertices.map(v => v.y);
 
   const minX = Math.min(...xs, 0);
   const maxX = Math.max(...xs, 100);
@@ -40,7 +30,7 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
   const stroke = formAparencia.borda || "#000";
   const strokeWidth = formAparencia.espessura || 2;
 
-  const points = formArray
+  const points = vertices
     .map(v => `${v.x - minX + padding},${v.y - minY + padding}`)
     .join(" ");
 
@@ -87,7 +77,7 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
       case "polygon":
       default:
         return (
-          formArray.length >= 2 && (
+          vertices.length >= 2 && (
             <polygon
               points={points}
               fill={fill}
@@ -109,14 +99,14 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
               <Form.Control
                 type="color"
                 value={formAparencia.fundo}
-                onChange={e => onChangeField("fundo", e.target.value)}
+                onChange={e => setFormAparencia({...formAparencia, fundo: e.target.value})}
               />
             </StandardInput>
             <StandardInput label="Cor da borda">
               <Form.Control
                 type="color"
                 value={formAparencia.borda}
-                onChange={e => onChangeField("borda", e.target.value)}
+                onChange={e => setFormAparencia({...formAparencia, borda: e.target.value})}
               />
             </StandardInput>
             <StandardInput label="Espessura da borda">
@@ -124,7 +114,7 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
                 type="number"
                 min={1}
                 value={formAparencia.espessura}
-                onChange={e => onChangeField("espessura", Number(e.target.value))}
+                onChange={e => setFormAparencia({...formAparencia, espessura: Number(e.target.value)})}
               />
             </StandardInput>
           </Col>
@@ -155,7 +145,7 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
             <StandardInput label="Geometria" stacked>
               <Form.Select
                 value={formAparencia.geometria || ""}
-                onChange={e => onChangeField("geometria", e.target.value)}
+                onChange={e => setFormAparencia({...formAparencia, geometria: e.target.value})}
               >
                 {renderOptions({
                   list: Object.values(GEOMETRIA),
@@ -165,26 +155,26 @@ export default function AparenciaTab({ formAparencia, setFormAparencia }) {
             </StandardInput>
           </Col>
           {formAparencia.geometria === "polygon" && <Col md={6}>
-            <ListaArray
-              dados = {formArray}
+            <StandardArrayInput
+              form={vertices}
+              setForm={setVertices}
+              inputLabel="Novo ponto"
+              inputButtonLabel="Adicionar novo ponto"
+              inputData={{ x: 0, y: 0 }}
               colunas = {[
                 {rotulo: "x", render: (item, idx) => <Form.Control
                   type="number"
                   size="sm"
                   value={item.x}
-                  onChange={e => onChangeArrElementProp(idx, "x", e.target.value)}
+                  onChange={e => onChangeVertice(idx, "x", e.target.value)}
                 />},
                 {rotulo: "y", render: (item, idx) => <Form.Control
                   type="number"
                   size="sm"
                   value={item.y}
-                  onChange={e => onChangeArrElementProp(idx, "y", e.target.value)}
+                  onChange={e => onChangeVertice(idx, "y", e.target.value)}
                 />},
               ]}
-              onAdd={onAddArrElement}
-              addLabel="+ Adicionar ponto"
-              onRemove={onRemoveArrElement}
-              showIndex
             />
           </Col>}
         </Row>

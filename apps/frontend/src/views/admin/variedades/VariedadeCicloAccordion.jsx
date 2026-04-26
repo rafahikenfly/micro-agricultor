@@ -6,92 +6,62 @@ import RegrasTransicaoTab from "./RegrasTransicaoTab";
 import VetorTab from "../../../components/common/VetorTab";
 import { useCache } from "../../../hooks/useCache";
 
-export default function VariedadeCicloAccordion({ formCiclo, setFormCiclo }) {
-  const { cacheManejos, cacheCaracteristicas, reading } = useCache([
-    "manejos",
-    "caracteristicas"
+export default function VariedadeCicloAccordion({ formCiclo, setFormCiclo, especieId }) {
+  const { cacheEstagiosEspecie, cacheEspecies, reading } = useCache([
+    "especies",
+    "estagiosEspecie",
   ]);
+  if (!especieId) return null
   if (!formCiclo) return null
-
-  // Handlers
-  const atualizarRegrasObj = (idxCiclo, regras, key) => {
-    const novoCiclo = formCiclo.map((estagio, i) => {
-      if (i !== idxCiclo) return estagio;
-      return {
-        ...estagio,
-        [key]: { ...(estagio[key] ?? {}), ...regras }
-      };
-    });
-
-    setFormCiclo(novoCiclo);
-  }
-  const atualizarRegrasArr = (idxCiclo, regras, key) => {
-    const novoCiclo = formCiclo.map((estagio, i) => {
-      if (i !== idxCiclo) return estagio;
-      return {
-        ...estagio,
-        [key]: [ ...(estagio[key] ?? []), ...regras ]
-      };
-    });
-
-    setFormCiclo(novoCiclo);
-  }
-
+  const cicloEspecie = cacheEspecies?.map.get(especieId)?.ciclo
+  if (!cicloEspecie) return null
 
   return (
     <Accordion defaultActiveKey={null} className="mt-3">
-      {formCiclo.map((f, idx) => {
-        //console.log(idx,f)
+      {cicloEspecie.map((faseEspecie, idx) => {
+        const estagioNome = cacheEstagiosEspecie?.map.get(faseEspecie.estagioId)?.nome ?? "-";
+        const faseVariedade = formCiclo[idx] ?? {};
+        const setFaseVariedade = (faseVariedade) => setFormCiclo(
+          formCiclo.map((item, i) => (i === idx ? faseVariedade : item))
+        );
+
+        // Consolida tamanho do ciclo da variedade
+        while (formCiclo.length <= idx) { formCiclo.push({}); }
+        // TODO: Cortar o array se for maior!      
+
         return (
-        <Accordion.Item eventKey={`estagio-${idx}`} key={`estagio-${idx}`}>
-          <Accordion.Header>
-            {f.estagioNome}
-          </Accordion.Header>
+        <Accordion.Item eventKey={`fase-${idx}`} key={`fase-${idx}`}>
+          <Accordion.Header>{estagioNome}</Accordion.Header>
           <Accordion.Body>
             <VetorTab 
-              formVetor = {formCiclo[idx]?.dimensao ?? {}}
-              setVetor = {(dimensao) => {
-                const novoCiclo = formCiclo.map((item, i) => {
-                  if (i !== idx) return item;
-                  return { ...item, dimensao };
-                });
-                setFormCiclo(novoCiclo);
-              }}
+              header={`Dimensão mínima de ${estagioNome}`}
+              formVetor = {faseVariedade?.dimensao ?? {}}
+              setVetor = {(dimensao) => setFaseVariedade({...faseVariedade, dimensao}) }
             />
             <Tabs
               defaultActiveKey="ambiente"
               className="mb-3"
-              mountOnEnter
-              unmountOnExit
             >
               <Tab eventKey="ambiente" title="Ambiente">
                 <RegrasAmbienteTab
-                  formAmbiente={formCiclo[idx]?.ambiente ?? {}}
-                  idxCiclo={idx}
-                  setFormAmbiente={(a,b)=>atualizarRegrasObj(a,b,"ambiente")}
-                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.canteiro || a.aplicavel.horta)}
-                  loading={reading}
+                  header={`Condições ambientais ideais de ${estagioNome}`}
+                  formAmbiente={faseVariedade?.ambiente ?? {}}
+                  setFormAmbiente={(ambiente)=>setFaseVariedade({...faseVariedade, ambiente}) }
                 />
               </Tab>
 
               <Tab eventKey="tarefas" title="Tarefas">
                 <RegrasTarefasTab
-                  formTarefas={formCiclo[idx]?.tarefas ?? []}
-                  idxCiclo={idx}
-                  setFormTarefas={(a,b)=>atualizarRegrasArr(a,b,"tarefas")}
-                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.planta)}
-                  manejos={cacheManejos?.list.filter((a) => a.aplicavel.planta)}
-                  loading={reading}
+                  header={`Tarefas de manejo de ${estagioNome}`}
+                  formTarefas={faseVariedade?.tarefas ?? []}
+                  setFormTarefas={(tarefas)=>setFaseVariedade({...faseVariedade, tarefas}) }
                 />
               </Tab>
 
-              <Tab eventKey="transicoes" title="Transições">
+              <Tab eventKey="transicoes" title="Transição">
                 <RegrasTransicaoTab
-                  formTransicoes={formCiclo[idx]?.transicoes || {}}
-                  idxCiclo={idx}
-                  setFormTransicoes={(a,b)=>atualizarRegrasObj(a,b,"transicoes")}
-                  caracteristicas={cacheCaracteristicas?.list.filter((a) => a.aplicavel.planta)}
-                  loading={reading}
+                  formTransicao={faseVariedade?.transicao ?? []}
+                  setFormTransicao={(transicao)=>setFaseVariedade({...faseVariedade, transicao}) }
                 />
               </Tab>
             </Tabs>
@@ -101,83 +71,3 @@ export default function VariedadeCicloAccordion({ formCiclo, setFormCiclo }) {
     </Accordion>
   )
 }
-
-
-/**
-            <Form.Group className="mb-3">
-              <Form.Label className="fw-semibold">Dimensões da planta nesse estágio (cm)</Form.Label>
-
-              <div className="d-flex gap-3">
-
-                <InputGroup>
-                  <InputGroup.Text>X</InputGroup.Text>
-                  <Form.Control
-                    placeholder="X"
-                    value={form[idx]?.dimensao?.x ?? 0}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      const novoCiclo = formCiclo.map((item, i) => {
-                        if (i !== idx) return item;
-                        return {
-                          ...item,
-                          dimensao: {
-                            ...(item.dimensao || {}),
-                            x: value,
-                          }
-                        };
-                      });
-
-                      setFormCiclo(novoCiclo);
-                    }}
-                  />
-                </InputGroup>
-
-                <InputGroup>
-                  <InputGroup.Text>Y</InputGroup.Text>
-                  <Form.Control
-                    placeholder="Y"
-                    value={form[idx]?.dimensao?.y ?? 0}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      const novoCiclo = formCiclo.map((item, i) => {
-                        if (i !== idx) return item;
-                        return {
-                          ...item,
-                          dimensao: {
-                            ...(item.dimensao || {}),
-                            y: value,
-                          }
-                        };
-                      });
-
-                      setFormCiclo(novoCiclo);
-                    }}
-                  />
-                </InputGroup>
-
-                <InputGroup>
-                  <InputGroup.Text>Z</InputGroup.Text>
-                  <Form.Control
-                    placeholder="Z"
-                    value={form[idx]?.dimensao?.z ?? 0}
-                    onChange={(e) => {
-                      const value = Number(e.target.value);
-                      const novoCiclo = formCiclo.map((item, i) => {
-                        if (i !== idx) return item;
-                        return {
-                          ...item,
-                          dimensao: {
-                            ...(item.dimensao || {}),
-                            z: value,
-                          }
-                        };
-                      });
-
-                      setFormCiclo(novoCiclo);
-                    }}
-                  />
-                  </InputGroup>
-
-              </div>
-            </Form.Group>
- */

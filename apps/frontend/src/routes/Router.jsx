@@ -28,6 +28,7 @@ import DispositivosCRUD from "../views/admin/dispositivos/DispositivosCRUD";
 import ModelosCVCRUD from "../views/admin/modelosCV/ModelosCVCRUD";
 import EstagiosEspecieCRUD from "../views/admin/estagios/EstagiosEspecieCRUD";
 import UsuariosCRUD from "../views/admin/usuarios/UsuariosCRUD";
+import AppPerfil from "../views/AppPerfil";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -65,6 +66,9 @@ export default function Router() {
           </Route>
           <Route path="/calendario/:hortaId" element={<AppCalendario />}>
             <Route index element={<CalendarioCanvas />} />
+          </Route>
+          <Route path="/perfil/:uid" element={<AppPerfil />}>
+            <Route index element={<CalendarioVazio />} />
           </Route>
         </Route>
 

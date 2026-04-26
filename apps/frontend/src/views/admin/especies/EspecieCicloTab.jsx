@@ -1,89 +1,59 @@
 import { useState } from "react";
-import { Form, Button } from "react-bootstrap";
-import ListaComAcoes from "../../../components/common/ListaComAcoes";
-import { handleSelectIdNome, renderOptions, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
+import { Form, Badge } from "react-bootstrap";
+import { renderOptions, StandardArrayInput, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils";
 import { useCache } from "../../../hooks/useCache";
+import { VARIANTE } from "micro-agricultor";
 
-//TODO: USAR STANDARDINPUT
-export default function EspecieCicloTab({
-  ciclo = [],
-  setCiclo,
-}) {
-
+export default function EspecieCicloTab({ formCiclo, setFormCiclo, }) {
   const { cacheEstagiosEspecie, reading } = useCache([
     "estagiosEspecie",
   ]);
 
-  const [estagio, setEstagio] = useState({});
-  const [plantavel, setPlantavel] = useState("");
-  const [colhivel, setColhivel] = useState("");
-  const [instrucoes, setInstrucoes] = useState("");
-
-  const adicionar = () => {
-    const novoEstagio = [...ciclo, {
-      estagioId: estagio.id,
-      estagioNome: estagio.nome,
-      plantavel: plantavel,
-      colhivel: colhivel,
-      instrucoes: instrucoes,
-    }];
-    setEstagio("");
-    setPlantavel("");
-    setColhivel("");
-    setInstrucoes("");
-    setCiclo(novoEstagio)
-  };
-
-  const removerEstagio =  (data, idx) => {
-    const novoArray = [...ciclo];
-    novoArray.splice(idx, 1)
-    setCiclo(novoArray)
-  }
-
-  const moverEstagioParaCima = (data, idx) => {
-    if (idx <= 0) return;
-
-    const novoArray = [...ciclo];
-    [novoArray[idx - 1], novoArray[idx]] =
-      [novoArray[idx], novoArray[idx - 1]];
-  
-    setCiclo(novoArray);
-  };
-
-  const moverEstagioParaBaixo = (data, idx) => {
-    if (idx >= ciclo.length - 1) return;
-  
-    const novoArray = [...ciclo];
-    [novoArray[idx], novoArray[idx + 1]] =
-      [novoArray[idx + 1], novoArray[idx]];
-  
-    setCiclo(novoArray);
-  };
+  const [form, setForm] = useState({
+    estagioId: "",
+    plantavel: false,
+    colhivel: false,
+    instrucoes: ""
+  })
 
   const duplicarEstagio = (data, idx) => {
-    setEstagio(cacheEstagiosEspecie?.map.get(data.estagioId));
-    setPlantavel(data.plantavel);
-    setInstrucoes(data.instrucoes);
+    setForm({
+      ...data,
+      estagio: cacheEstagiosEspecie?.map.get(data.estagioId),
+    })
   }
 
+  const inputButtonIsDisabled = ()=>{
+    console.log("dis")
+    return form.estagioId === "";
+  }
   return (
-    <>
-      {/* Inserção */}
+    <StandardArrayInput
+      form = {formCiclo}
+      setForm={setFormCiclo}
+      inputLabel = "Incluir estágio no ciclo da espécie"
+      inputButtonLabel = "Incluir"
+      inputData = {form}
+      inputButtonIsDisabled = {form.estagioId === ""}
+      colunas={[
+        {rotulo: "Estágio", dataKey: "estagioId", render: (a)=> cacheEstagiosEspecie?.map.get(a.estagioId)?.nome ?? "-"},
+        {rotulo: "Plantável?", dataKey: "plantavel", render: (a)=> <Badge bg={a.plantavel ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a.plantavel ? "Sim" : "Não"}</Badge>},
+        {rotulo: "Colhível?", dataKey: "colhivel", render: (a)=> <Badge bg={a.colhivel ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a.colhivel ? "Sim" : "Não"}</Badge>},
+        {rotulo: "Instruções", dataKey: "instrucoes"},
+      ]}
+      acoes={[
+        {rotulo: "⧉", funcao: duplicarEstagio, variant: VARIANTE.GREEN.variant.id},
+      ]}
+    >
       <StandardInput label="Inserir estágio">
         <Form.Select
-          value={estagio.id ?? ""}
-          onChange={e => handleSelectIdNome(e,{
-            list: cacheEstagiosEspecie?.list,
-            setForm: setEstagio,
-            fieldId: "id",
-            fieldNome: "nome",
-          })}
+          value={form.estagioId ?? ""}
+          onChange={e => setForm({...form, estagioId: e.target.value})}
         >
         {renderOptions({
           list: cacheEstagiosEspecie?.list,
           loading: reading,
           placeholder: "Selecione o estágio",
-          nullOption: true,
         })}
         </Form.Select>
       </StandardInput>
@@ -91,43 +61,22 @@ export default function EspecieCicloTab({
         <Form.Control
           as="textarea"
           rows={3}
-          value={instrucoes}
-          onChange={(e) => setInstrucoes(e.target.value)}
+          value={form.instrucoes}
+          onChange={(e) => setForm({...form, instrucoes: e.target.value})}
         />
       </StandardInput>
       <StandardCheckboxGroup label="Propriedades">
         <Form.Check 
-          checked={plantavel}
+          checked={form.plantavel}
           label="Plantável"
-          onChange={e => setPlantavel(e.target.checked)}
+          onChange={e => setForm({...form, plantavel: e.target.checked})}
         />
         <Form.Check 
-          checked={colhivel}
+          checked={form.colhivel}
           label="Colhível"
-          onChange={e => setColhivel(e.target.checked)}
+          onChange={e => setForm({...form, colhivel: e.target.checked})}
         />
       </StandardCheckboxGroup>
-      <Button onClick={adicionar}>
-        Adicionar estágio ao ciclo
-      </Button>
-
-      {/* LISTA */}
-      <ListaComAcoes
-        dados={Object.values(ciclo)}
-        colunas={[
-          {rotulo: "Estágio", dataKey: "estagioNome"},
-          {rotulo: "Plantável?", dataKey: "plantavel", boolean: true},
-          {rotulo: "Colhível?", dataKey: "colhivel", boolean: true},
-          {rotulo: "Instruções", dataKey: "instrucoes"},
-        ]}
-        acoes={[
-          {rotulo: "▲", funcao: moverEstagioParaCima, variant: "outline-warning"},
-          {rotulo: "▼", funcao: moverEstagioParaBaixo, variant: "outline-warning"},
-          {rotulo: "Duplicar", funcao: duplicarEstagio, variant: "outline-success"},
-          {rotulo: "Excluir", funcao: removerEstagio, variant: "danger"},
-
-        ]}
-      />
-    </>
+    </StandardArrayInput>
   );
 }

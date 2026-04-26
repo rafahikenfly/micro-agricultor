@@ -61,6 +61,12 @@ export const modelosCVService = createCRUDService(firebaseAdapter, {
   useArchive: true,
 })
 
+export const estagiosEspecieService = createCRUDService(firebaseAdapter, {
+  collection: "estagios_planta", //TODO: RENOMEAR A COLEÇÃO
+  softDelete: true,
+  useArchive: true,
+})
+
 // ===== DERIVED =====
 export function entidadesService( tipoEntidadeId ) {
   switch (tipoEntidadeId) {

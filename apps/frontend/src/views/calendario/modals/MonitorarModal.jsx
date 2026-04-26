@@ -89,7 +89,7 @@ export const MonitorarModal = ({show, data, onClose}) => {
     if (Object.keys(medidas).length === 0) {
       toastMessage({
         body: "Selecione ao menos uma característica para atualizar.",
-        variant: VARIANT_TYPES.YELLOW});
+        variant: VARIANTE.YELLOW.variant});
       return;
     }
 
@@ -99,7 +99,7 @@ export const MonitorarModal = ({show, data, onClose}) => {
     if (!tipoEntidadeId) {
       toastMessage({
         body: "Erro registrando o monitoramento",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -137,13 +137,13 @@ export const MonitorarModal = ({show, data, onClose}) => {
       //Fecha modal
         toastMessage({
           body: `Monitoramento de ${entidades.length > 1 ? `${entidades.length} ${data.contexto.tipoEntidadeId}s`: entidades[0].nome} registrado com sucesso.`,
-          variant: VARIANT_TYPES.GREEN,
+          variant: VARIANTE.GREEN.variant,
         });
       } catch (err) {
         console.error(err)
         toastMessage({
           body: `Erro ao registrar monitoramento.`,
-          variant: VARIANT_TYPES.RED
+          variant: VARIANTE.RED.variant
         });
       } finally {
         setWriting(false);
@@ -192,12 +192,12 @@ export const MonitorarModal = ({show, data, onClose}) => {
             label="Valor"
             unidadeWidth="80px"
             unidade={reading ? "Carregando..."
-            : caracteristica?.unidade ?? "Valor"}
+            : caracteristica?.medida.unidade ?? "Valor"}
           >
             <Form.Control
               type="number"
-              min={caracteristica?.min ?? 0}
-              max={caracteristica?.max ?? 1024}
+              min={caracteristica?.medida.min ?? 0}
+              max={caracteristica?.medida.max ?? 1024}
               value={form[entidadeId]?.[caracteristica?.id]?.valor ?? ""}
               onChange={(e) => setForm({...form, [entidadeId]:
                 {...form[entidadeId], [caracteristica.id]: {

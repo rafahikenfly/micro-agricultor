@@ -1,5 +1,5 @@
 export function calcularArea(entidade) {
-  if (!entidade.dimensao) return 0;
+  if (!entidade.dimensao) entidade.dimensao={};
   if (!entidade.aparencia.geometria) return 0;
 
   const { y, x } = entidade.dimensao;

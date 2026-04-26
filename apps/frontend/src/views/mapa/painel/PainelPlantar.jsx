@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 import { Form, Button } from "react-bootstrap";
-import { handleSelectIdNome, renderOptions, StandardInput } from "../../../utils/formUtils";
+import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import { ISOToReadableString, toDateTimeLocal, } from "../../../utils/dateUtils";
-import { ENTITY_TYPES, getDimensaoVariedade } from "micro-agricultor";
+import { ENTIDADE, getDimensaoVariedade } from "micro-agricultor";
 import { useMapaEngine } from "../MapaEngine";
 import { useCache } from "../../../hooks/useCache";
 
 export default function PainelPlantar({ data = {}, onClose, onConfirm, onCancel }) {
   const { previewSetup } = useMapaEngine()
-  const { cacheEspecies, cacheVariedades, reading } = useCache([
+  const { cacheEspecies, cacheVariedades, cacheEstagiosEspecie, reading } = useCache([
     "especies",
     "variedades",
+    "estagiosEspecie"
   ]) 
   // Carrega a última configuração da ferramenta
   // Timestamp não é carregado
@@ -45,7 +46,7 @@ export default function PainelPlantar({ data = {}, onClose, onConfirm, onCancel 
     const timestamp = date.getTime();
     const toolState = {
       timestamp,
-      tipoEntidadeId: ENTITY_TYPES.PLANTA,
+      tipoEntidadeId: ENTIDADE.planta.id,
       grid,
       metadata: {
         especie,
@@ -95,27 +96,6 @@ export default function PainelPlantar({ data = {}, onClose, onConfirm, onCancel 
         </Form.Select>
       </StandardInput>
 
-      <StandardInput label="Técnica" width ="120px">
-        <Form.Select
-          value={tecnica?.estagioId || ""}
-          onChange={(e) => handleSelectIdNome(e,{
-            list: especie.ciclo.filter((c)=>c.plantavel),
-            idKey: "estagioId",
-            nomeKey: "estagioNome",
-            fieldId: "estagioId",
-            fieldNome: "estagioNome",
-            setForm: setTecnica,
-          })}
-        >
-          {especie?.ciclo && renderOptions({
-            list: especie.ciclo.filter((c)=>c.plantavel),
-            loading: reading,
-            placeholder: "Selecione a técnica de plantio",
-            valueKey: "estagioId",
-            labelKey: "estagioNome",
-          })}
-        </Form.Select>
-      </StandardInput>
       <StandardInput label="Variedade" width="120px">
         <Form.Select
           value={variedade?.id || ""}
@@ -130,6 +110,31 @@ export default function PainelPlantar({ data = {}, onClose, onConfirm, onCancel 
             loading: reading,
             placeholder: "Selecione a variedade",
           })}
+        </Form.Select>
+      </StandardInput>
+
+      <StandardInput label="Técnica" width ="120px">
+        <Form.Select
+          value={tecnica?.estagioId || ""}
+          onChange={(e) => {
+            const estagioIndex = e.target.value;
+            const estagioId = especie.ciclo[estagioIndex].estagioId
+            const estagio = cacheEstagiosEspecie?.map.get(estagioId)
+            setTecnica({
+              estagioId,
+              estagioIndex,
+              visivelNoMapa: estagio.propriedades?.visivelNoMapa ?? true,
+              estadoId: "HLRvq5eExZAiKSZOcnaF" //TODO: tirar de hardcode, colocar um selectbox
+            })
+          }}
+        >
+          <option value="" disabled>Selecione a técnica de plantio</option>
+          {(especie?.ciclo ?? []).map((c, idx) => {
+            if (c.plantavel) return (
+            <option key={idx} value={idx}>
+              {cacheEstagiosEspecie?.map.get(c.estagioId).nome ?? c.estagioId /**cacheEstagiosEspecie?.map( )?.nome*/}
+            </option>
+          )})}
         </Form.Select>
       </StandardInput>
 
@@ -179,8 +184,8 @@ export default function PainelPlantar({ data = {}, onClose, onConfirm, onCancel 
         <strong>Resumo do plantio</strong>
         <div>Data/Hora: {ISOToReadableString(stringTimestamp)}</div>
         <div>Espécie: {especie?.nome || "-"}</div>
-        <div>Técnica: {tecnica?.estagioNome || "-"}</div>
         <div>Variedade: {variedade?.nome || "-"}</div>
+        <div>Técnica: {cacheEstagiosEspecie?.map.get(tecnica?.estagioId)?.nome || "-"}</div>
         <div>Quantidade: {linhas * colunas || 0} plantas</div>
         <div>Layout: {linhas} x {colunas}</div>
         <div>Espaçamento: {espacamentoLinha} x {espacamentoColuna} cm</div>

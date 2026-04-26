@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import { Form,  } from "react-bootstrap";
-import InputGroupText from "react-bootstrap/esm/InputGroupText";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 
-import { handleSelectIdNome, renderOptions, StandardArrayInput, StandardObjectInput } from "../../../utils/formUtils";
+import { renderOptions, StandardArrayInput, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
+import { OPERADOR } from "micro-agricultor/types/OPERADOR";
 
 
-export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas, caracteristicas = [], manejos = [], loading }) {
+export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas, header = "Regras de manejo neste estágio" }) {
   if (!formTarefas) return null;
+
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   const [showModal, setShowModal] = useState(false);
   const [regraSelecionada, setRegraSelecionada] = useState(null);
@@ -36,51 +39,6 @@ export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas
     }
   }, [regraSelecionadaIdx, formTarefas]);
   
-  const adicionarRegra = () => {
-    if (!formRegra.caracteristicaId || !formRegra.operador) return;
-
-    const novaRegra = {
-      caracteristicaId: formRegra.caracteristicaId,
-      caracteristicaNome: formRegra.caracteristicaNome,
-      operador: formRegra.operador,
-      limite: Number(formRegra.limite),
-      manejos: formRegra.manejos,
-    };
-
-    const regrasAtuais = Array.isArray(formTarefas.regras)
-      ? formTarefas.regras
-      : [];
-
-    const novoData = [...regrasAtuais, novaRegra];
-    setFormTarefas("tarefas", novoData, idxCiclo);
-    setFormRegra({ caracteristicaId: "", caracteristicaNome: "", operador: "", limite: "", manejos: [] });
-  };
-
-  const excluirRegra = (dataRegra,idxRegra) => {
-    const regrasAtuais = Array.isArray(formTarefas.regras)
-    ? formTarefas.regras
-    : [];
-    
-    const novoData = regrasAtuais.filter((_, i) => i !== idxRegra);
-    setFormTarefas("tarefas", novoData, idxCiclo);
-  }
-
-  const atualizarManejosRegra = (manejos, idxRegra) => {
-    if (!Array.isArray(manejos)) return;
-
-    const regrasAtuais = Array.isArray(formTarefas.regras)
-      ? formTarefas.regras
-      : [];
-
-    const novoData = regrasAtuais.map((regra, i) =>
-      i === idxRegra
-        ? { ...regra, manejos }   // só substitui os manejos
-        : regra
-    );
-
-    setFormTarefas("tarefas", novoData, idxCiclo);
-    //    (manejos) => setForm(prev => ({ ...prev, manejos }))
-  };
   const showModalManejos = (regra, idxRegra) => {
     setRegraSelecionadaIdx(idxRegra)
     setShowModal(true);
@@ -105,58 +63,50 @@ export default function RegrasTarefasTab({ formTarefas, idxCiclo, setFormTarefas
   }
 
   //TODO: MODAL DE ASSOCIAÇÃO DE MANEJOS À REGRA
-  //TODO: OPERADOR_TYPES NO SHARED E ITERAR AQUI
   return (
-    <>
     <StandardArrayInput
       form={formTarefas ?? []}
-      header="Tarefa condicionada à característica"
-      headerData={formRegra}
-      setForm={(tarefas)=> setFormTarefas(idxCiclo, tarefas)}
+      inputLabel={header}
+      inputData={formRegra}
+      setForm={setFormTarefas}
       colunas={[
-        { rotulo: "Característica", dataKey: "caracteristicaNome" },
-        { rotulo: "Condição", dataKey: "operador" },
+        { rotulo: "Característica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? "-" },
+        { rotulo: "Condição", dataKey: "operador", render: (a)=>OPERADOR[a.operador]?.nome },
         { rotulo: "Limite", dataKey: "limite" }
       ]}
       acoes={[
-        { rotulo: "Associar Manejos", funcao: ()=>{}, variant: VARIANT_TYPES.GREY },
+        { rotulo: "Associar Manejos", funcao: ()=>{}, variant: VARIANTE.LIGHTBLUE.variant },
       ]}
       novoItem={formRegra}
     >
-      <Form.Select
-        value={formRegra.caracteristicaId}
-        onChange={e =>
-          handleSelectIdNome(e, {
-            list: caracteristicas,
-            setForm: setFormRegra,
-            fieldId: "caracteristicaId",
-            fieldNome: "caracteristicaNome"
-          })
-        }
-      >
-        {renderOptions({ list: caracteristicas, nullOption: true, loading })}
-      </Form.Select>
-
-      <Form.Select
-        value={formRegra.operador}
-        onChange={e => setFormRegra({ ...formRegra, operador: e.target.value })}
-        style={{ maxWidth: 110 }}
-      >
-        <option value="">Op</option>
-        <option value=">=">≥</option>
-        <option value="==">=</option>
-        <option value="<=">≤</option>
-      </Form.Select>
-
-      <InputGroupText>Limite</InputGroupText>
-      <Form.Control
-        type="number"
-        value={formRegra.limite}
-        onChange={e => setFormRegra({ ...formRegra, limite: Number(e.target.value) })}
-      />
-
+      <StandardInput label="Regra">
+        <Form.Select
+          value={formRegra.caracteristicaId}
+          onChange={e => setFormRegra({...formRegra, caracteristicaId: e.target.value})}
+        >
+          {renderOptions({
+            list: cacheCaracteristicas?.list,
+            placeholder: "Selecione a característica",
+            loading: reading
+          })}
+        </Form.Select>
+        <Form.Select
+          value={formRegra.operador}
+          onChange={e => setFormRegra({ ...formRegra, operador: e.target.value })}
+          style={{ maxWidth: 150 }}
+        >
+          {renderOptions({
+            list: Object.values(OPERADOR),
+            placeholder: "Operador"
+          })}
+        </Form.Select>
+        <Form.Control
+          type="number"
+          value={formRegra.limite}
+          onChange={e => setFormRegra({ ...formRegra, limite: Number(e.target.value) })}
+        />
+      </StandardInput>
     </StandardArrayInput>
-    </>
   );
 }
 /**

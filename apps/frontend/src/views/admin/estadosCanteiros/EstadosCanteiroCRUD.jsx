@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { useEffect, useState, useMemo } from "react";
+import { Container } from "react-bootstrap";
 import { VARIANTE } from "micro-agricultor";
 
 import { useAuth } from "../../../services/auth/authContext";
@@ -11,6 +11,8 @@ import { NoUser } from "../../../components/common/NoUser";
 
 import EstadosCanteiroModal from "./EstadoCanteiroModal";
 import { estadosCanteiroService } from "../../../services/crudService";
+import { renderBadge } from "../../../utils/uiUtils";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 
 export default function EstadosCanteiroCRUD() {
@@ -19,9 +21,24 @@ export default function EstadosCanteiroCRUD() {
 
   const [estados_canteiro, setEstados_canteiro] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: ""
+  });
+  const estadosFiltrados = useMemo(() => {
+    if (!estados_canteiro?.length) return [];
+
+    return estados_canteiro.filter((p) => {
+      // filtro tipo select
+      //ex: if (filtros?.estadoId && p.estadoId !== filtros.estadoId) return false;
+
+      // filtro tipo texto
+      //ex: const nome = filtros?.nome?.toLowerCase()
+      //ex: if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [estados_canteiro, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -44,45 +61,44 @@ export default function EstadosCanteiroCRUD() {
     masculino: true, // "o estado de canteiro"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Novo Estado de Canteiro</Button>
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[]}
+      />
 
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {estados_canteiro}
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Cor da Tag", dataKey: "tagVariant", tagVariantList: Object.values(VARIANTE)},
-              {rotulo: "Apagado",   dataKey: "isDeleted",  boolean: true},
-            ]}
-            acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
-              { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                funcao: desarquivar,
-                variant: "secondary",
-                rotuloFalse: "Arquivar",
-                funcaoFalse: arquivar,
-                variantFalse: "dark"
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      {loading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {estadosFiltrados}
+        sort
+        linhaStyle={(row) => {
+          if (row.isDeleted)  { return { textDecoration: "line-through red 3px" }; }
+          if (row.isArchived) { return { textDecoration: "line-through dotted 3px" }; }
+          return {};
+        }}
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a,"nome")},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant.id,
+          },
+        ]}
+      />}
 
       <EstadosCanteiroModal
         key={editando?.id ?? `novo`}

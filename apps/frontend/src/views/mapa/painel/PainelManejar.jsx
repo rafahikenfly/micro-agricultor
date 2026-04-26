@@ -3,7 +3,7 @@ import { renderOptions, StandardInput } from "../../../utils/formUtils";
 import { Button, Form, } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import { ISOToReadableString, toDateTimeLocal } from "../../../utils/dateUtils";
-import { manejar, VARIANT_TYPES } from "micro-agricultor";
+import { manejar, VARIANTE } from "micro-agricultor";
 import { useCache } from "../../../hooks/useCache";
 import { useToast } from "../../../services/toast/toastProvider";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
@@ -12,26 +12,27 @@ import { necessidadesService, entidadesService } from "../../../services/crudSer
 import { batchService } from "../../../services/batchService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 import { useMapaEngine } from "../MapaEngine";
+import Loading from "../../../components/Loading";
 
-export default function PainelManejar({selection, caches }) {
+export default function PainelManejar({selection }) {
   if (!selection) return null;
 
   const { user } = useAuth();
   const { setShowPainel } = useMapaEngine();
   const { toastMessage } = useToast();
+  const { cacheManejos, cacheEntidades, reading } = useCache(["manejos", "entidades"])
 
   const [primaryType, setPrimaryType] = useState(selection.primaryType());
   const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
   const [manejoSelecionado, setManejoSelecionado] = useState({})
 
-  const { cacheManejos, reading } = useCache(["manejos"]);
   const [writing, setWriting] = useState(false);
 
   useEffect(()=>setPrimaryType(selection.primaryType()), [selection]);
   
 
-  const list = resolveSelection(selection, primaryType, caches[primaryType]);
-  const last = resolvePrimarySelection(selection, caches);
+  const list = resolveSelection(selection, primaryType, cacheEntidades?.[primaryType]);
+  const last = resolvePrimarySelection(selection, cacheEntidades);
   const manejosAplicaveis = (cacheManejos?.list ?? []).filter(
     m => m.aplicavel?.[primaryType] === true
   );  
@@ -55,7 +56,7 @@ export default function PainelManejar({selection, caches }) {
     if (!primaryType) {
       toastMessage({
         body: "Erro registrando o monitoramento. Tipo de entidade indefinido.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -63,7 +64,7 @@ export default function PainelManejar({selection, caches }) {
     if (Object.keys(intervencoes).length === 0) {
       toastMessage({
         body: "Selecione ao menos um manejo para aplicar.",
-        variant: VARIANT_TYPES.YELLOW,
+        variant: VARIANTE.YELLOW.variant,
       });
       return;
     }
@@ -73,7 +74,7 @@ export default function PainelManejar({selection, caches }) {
     if (!list || list.length === 0) {
       toastMessage({
         body: "Erro registrando o manejo. Nenhuma entidade selecionada.",
-        variant: VARIANT_TYPES.RED,
+        variant: VARIANTE.RED.variant,
       })
       return;
     }
@@ -120,20 +121,21 @@ export default function PainelManejar({selection, caches }) {
       setManejoSelecionado({});
       toastMessage({
         body: `Registrado o manejo ${manejoSelecionado.nome} em ${list.length} ${pluralizar(list.length,primaryType)}.`,
-        variant: VARIANT_TYPES.GREEN,
+        variant: VARIANTE.GREEN.variant,
       });
       setShowPainel(false);
     } catch (err) {
       console.error(err)
       toastMessage({
         body: `Erro ao registrar monitoramento.`,
-        variang: VARIANT_TYPES.RED,
+        variang: VARIANTE.RED.variant,
       });
     } finally {
       setWriting(false);
     }
   }
 
+  if (reading) return <Loading variant="overlay" />
   return (
     <>
     <StandardInput label="Manejo" width="120px">

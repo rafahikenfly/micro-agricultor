@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState } from "react";
 import { AppToastConfirmacao, AppToastMensagem } from "../../components/common/toast";
+import { VARIANTE } from "micro-agricultor";
 
 // Contexto
 const ToastContext = createContext();
@@ -12,13 +13,13 @@ export function ToastProvider({ children }) {
     show: false,
     confirmacao: false,
     body: "",
-    variant: "info",
+    variant: VARIANTE.LIGHTBLUE.variant,
     onConfirm: null,
     onCancel: null,
   });
 
   // Disparar uma mensagem simples
-  const toastMessage = ({body, variant = "info"}) => {
+  const toastMessage = ({body, variant = VARIANTE.LIGHTBLUE.variant}) => {
     setToast({
       show: true,
       confirmacao: false,
@@ -30,7 +31,7 @@ export function ToastProvider({ children }) {
   };
 
   // Disparar uma confirmação
-  const toastConfirm = ({body, onConfirm, onCancel = null, variant = "warning"}) => {
+  const toastConfirm = ({body, onConfirm, onCancel = null, variant = VARIANTE.YELLOW.variant}) => {
     setToast({
       show: true,
       confirmacao: true,

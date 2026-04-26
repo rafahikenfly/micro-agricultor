@@ -18,15 +18,9 @@ export async function mediaTaskInspector() {
     return
   }
 
-  const modelos = (await cacheService
-    .getModelosCV())
-    .list
-  const plantas = (await cacheService
-    .getPlantas())
-    .map
-  const canteiros = (await cacheService
-    .getCanteiros())
-    .map
+  const modelos = (await cacheService.getModelosCV()).list
+  const plantas = (await cacheService.getPlantas()).map
+  const canteiros = (await cacheService.getCanteiros()).map
 
   const mapas = {
     planta: plantas,

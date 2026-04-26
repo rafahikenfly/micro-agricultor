@@ -11,7 +11,6 @@ export default function HortaMembrosTab({ formMembros, setFormMembros, usuarios,
    <StandardArrayInput
     form = {formMembros}
     setForm = {setFormMembros}
-    map = {usuarios.filter((m)=>formMembros.some(membro => membro === m.id))}
     colunas = {[
         {rotulo: "Nome", dataKey: "nome" },        
     ]}

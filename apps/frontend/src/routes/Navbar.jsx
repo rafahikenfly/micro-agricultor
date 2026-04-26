@@ -2,8 +2,7 @@ import { useState, useEffect } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { Container, Nav, Navbar, Dropdown } from "react-bootstrap";
 import { useAuth } from "../services/auth/authContext";
-import { hortaService } from "../services/crud/hortaService";
-import { usuariosService } from "../services/crud/usuariosService";
+import { hortasService, usuariosService } from "../services/crudService";
 import Loading from "../components/Loading";
 
 export default function AppNavbar() {
@@ -21,7 +20,7 @@ export default function AppNavbar() {
   
       setLoading(true);
   
-      const unsub = hortaService.subscribe((data) => {
+      const unsub = hortasService.subscribe((data) => {
         setHortas(data);
         setLoading(false); // só desliga quando os dados chegam
       },

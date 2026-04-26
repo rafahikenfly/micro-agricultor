@@ -7,6 +7,8 @@ import { useCrudUI } from "../../../services/ui/crudUI";
 import { NoUser } from "../../../components/common/NoUser";
 import { useAuth } from "../../../services/auth/authContext";
 import Loading from "../../../components/Loading";
+import { VARIANTE } from "micro-agricultor";
+import { renderBadge } from "../../../utils/uiUtils";
 
 export default function CategoriasCRUD() {
   const { user } = useAuth();
@@ -58,19 +60,20 @@ export default function CategoriasCRUD() {
         <Col>
           <ListaComAcoes
             dados = {categorias}
+            sort
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
+              {rotulo: "Nome", dataKey: "nome", render: (a)=> renderBadge (a, "nome")},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
-                variant: "secondary",
-                rotuloFalse: "Arquivar",
                 funcaoFalse: arquivar,
-                variantFalse: "dark"
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

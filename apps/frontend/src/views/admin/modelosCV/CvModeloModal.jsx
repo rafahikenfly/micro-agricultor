@@ -44,8 +44,8 @@ export default function CvModeloModal({ show, onSave, onClose, data = {}, }) {
               </Tab>
               <Tab eventKey="classes" title="Classes">
                 <CvModeloClassesTab
-                  form={form}
-                  setForm={setForm}
+                  formClasses={form.classes}
+                  setFormClasses={(classes)=>setForm({...form, classes})}
                 />
               </Tab>
             </Tabs>

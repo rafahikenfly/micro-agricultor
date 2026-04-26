@@ -30,12 +30,12 @@ export default function ManejoEntradasTab({
       <StandardArrayInput
         form={formEntradas ?? []}
         setForm={(entradas)=>setFormEntradas(entradas)}
-        header="Nova entrada"
-        headerData={formNovaEntrada}
-        headerDisabled={!headerEnabled()}
+        inputLabel="Nova entrada"
+        inputData={formNovaEntrada}
+        inputButtonIsDisabled={!headerEnabled()}
         colunas={[
           { rotulo: "Tipo", dataKey: "tipoEntradaNome" },
-          { rotulo: "Obrigatório", dataKey: "obrigatorio", boolean: true },
+          { rotulo: "Obrigatório", dataKey: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a[col.dataKey] ? "Sim" : "Não"}</Badge> },
         ]}
         acoes={[]}
       >

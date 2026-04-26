@@ -5,8 +5,14 @@ import { getMouseInMapSpace, pointNearBorder } from "../../../utils/coordinatesU
 import SVGEntidade from "../../../services/svg/SVGEntidade";
 
 export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn}) {
+  // Não renderiza se tem propriedade de invisibilidade
+  if (!planta.visivelNoMapa) return null
+  // Não renderiza se é a entidade sendo movida
+  if (drag.isDragging
+    && drag.type === "mover"
+    && drag.entidade?.id === planta.id) return null;
 
-  const { selection, activeTool, setMapDrag, setShowModal, setToolState } = useMapaEngine();
+  const { selection, activeTool, setMapDrag, setShowModal } = useMapaEngine();
   const key = `${ENTIDADE.planta.id}:${planta.id}`;
   const selecionado = selection.isSelected(key);
   const primaria = selection.isPrimary(key);
@@ -76,10 +82,6 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
     }
     evt.target.style.cursor = getCursor(direction);
   }
-  // Não renderiza se é a entidade sendo movida
-  if (drag.isDragging
-    && drag.type === "mover"
-    && drag.entidade?.id === planta.id) return null;
   return (
     <SVGEntidade 
       entidade={planta}

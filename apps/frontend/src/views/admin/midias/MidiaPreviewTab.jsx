@@ -3,7 +3,7 @@ import { Alert, Button, ButtonGroup } from "react-bootstrap";
 
 import { storage } from "../../../firebase";
 import { useToast } from "../../../services/toast/toastProvider";
-import { MIME_TYPES, VARIANT_TYPES } from "micro-agricultor";
+import { MIME_TYPES, VARIANTE } from "micro-agricultor";
 import { getImageDimensions } from "../../../utils/blobUtils";
 import CapturaImagemEntidade from "../../../components/CapturaImagemEntidade";
 
@@ -99,9 +99,9 @@ export default function MidiaPreviewTab({ midia, setForm }) {
                   largura,
                   altura
               }});
-              toastMessage({body: "Imagem salva.", variant: VARIANT_TYPES.GREEN})
+              toastMessage({body: "Imagem salva.", variant: VARIANTE.GREEN.variant})
             } catch (err) {
-              toastMessage({body: "Falha ao salvar imagem.", variant: VARIANT_TYPES.RED})
+              toastMessage({body: "Falha ao salvar imagem.", variant: VARIANTE.RED.variant})
               console.error("Erro ao salvar imagem:", err);
             }
           }}

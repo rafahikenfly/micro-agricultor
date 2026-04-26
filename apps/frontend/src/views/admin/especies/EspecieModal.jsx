@@ -54,8 +54,8 @@ export default function EspecieModal({ show, onSave, onClose, data }) {
             </Tab>
             <Tab eventKey="ciclo" title="Ciclo">
               <EspecieCicloTab
-                ciclo={form.ciclo}
-                setCiclo={ciclo => setForm({ ...form, ciclo })}
+                formCiclo={form.ciclo}
+                setFormCiclo={ciclo => setForm({ ...form, ciclo })}
               />
             </Tab>
             <Tab eventKey="aparencia" title="Aparência Padrão">

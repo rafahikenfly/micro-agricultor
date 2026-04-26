@@ -13,6 +13,7 @@ import PainelManejar from "./PainelManejar";
 import { pluralizar } from "../../../utils/uiUtils";
 import PainelDesenhar from "./PainelDesenhar";
 import PainelPlantar from "./PainelPlantar";
+import ModalFiltrar from "../modals/ModalFiltrar";
 
 export default function MapaPainel() {
   const {
@@ -136,10 +137,6 @@ export default function MapaPainel() {
             selection={selection}
             primary={selection.primary}
             primaryType={selection.primaryType()}
-            caches={{
-              [ENTIDADE.planta.id]: cachePlantas,
-              [ENTIDADE.canteiro.id]: cacheCanteiros,
-            }}
             reading={reading}
             onConfirm={TOOL_ONCONFIRM[activeTool]}
             onCancel={() => {resetToolState(); resetTool()}}

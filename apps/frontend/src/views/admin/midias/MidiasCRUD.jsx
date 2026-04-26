@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
@@ -64,18 +64,20 @@ export default function MidiasCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {midias}
+            sort
             colunas = {[
               {rotulo: "Nome", dataKey: "nome",},
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: VARIANT_TYPES.YELLOW},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: VARIANT_TYPES.RED},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: VARIANT_TYPES.GREY,
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

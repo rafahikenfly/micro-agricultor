@@ -106,7 +106,7 @@ export async function derivar({
     });
 
     // Resultado 
-    console.log(`${results.entidade.nome} implantado(a).`);
+    console.log(`${results.entidade.nome} derivado(a).`);
     entidadesKeySet.add(`${tipoEntidadeId}:${results.entidade.id}`);
     commitEvento = true;
   }
@@ -120,6 +120,6 @@ export async function derivar({
   // Commit final
   await batch.commit();
 
-  console.log(`Implantação de ${tipoEntidadeId}s concluído.`)
+  console.log(`Derivação de ${tipoEntidadeId}s concluído.`)
   return;
 }

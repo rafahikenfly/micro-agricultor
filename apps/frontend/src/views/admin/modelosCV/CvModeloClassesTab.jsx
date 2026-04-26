@@ -1,36 +1,29 @@
-import { Form, FormControl } from "react-bootstrap";
-import BaseTab from "../../../components/common/BaseTab";
-import ListaArray from "../../../components/common/ListaArray";
+import { Form } from "react-bootstrap";
+import { StandardArrayInput } from "../../../utils/formUtils";
 
-export default function CvModeloClassesTab({ form, setForm, }) {
-  const formArray = form?.classes ?? []
-  const arrayField = "classes"
-  const onChangeField = (field, v) => { setForm({ ...form, [field]: v }); };
-  const onChangeArr = (novoArr) => onChangeField(arrayField,novoArr)
-  const onChangeArrElement = (idx, val) => {
-    const novoArr = [...formArray];
+export default function CvModeloClassesTab({ formClasses, setFormClasses, }) {
+  const classes = formClasses?.classes ?? []
+  const setClasses = (novoArr) => setFormClasses({...formClasses, classes: novoArr})
+  const onChangeClasse = (idx, val) => {
+    const novoArr = [...classes];
     novoArr[idx] = val;
-    onChangeArr(novoArr);
+    setClasses(novoArr);
   };
-  const onAddArrElement = () => { onChangeArr([...formArray, ""]); };
-  const onRemoveArrElement = (idx) => {
-    const novoArr = formArray.filter((_, i) => i !== idx);
-    onChangeArr(novoArr);
-  };
+
   return (
-    <ListaArray
-        dados={formArray}
-        colunas={[
-          {rotulo: "Classe", render: (item, idx) => <Form.Control
-            size="sm"
-            value={item}
-            onChange={e => onChangeArrElement(idx, e.target.value)}
-          />}
-        ]}
-        onAdd={onAddArrElement}
-        addLabel="Adicionar Classe"
-        onRemove={onRemoveArrElement}
-        showIndex
+    <StandardArrayInput
+      form={formClasses}
+      setForm={setFormClasses}
+      inputLabel="Nova classe"
+      inputButtonLabel="Adicionar nova classe"
+      inputData={{ id: "" }}
+      colunas = {[
+        {rotulo: "Id", render: (item, idx) => <Form.Control
+          size="sm"
+          value={item.id}
+          onChange={e => onChangeClasse(idx, "id", e.target.value)}
+        />},
+      ]}
     />
   )
 }

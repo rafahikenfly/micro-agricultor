@@ -1,10 +1,11 @@
-import { createCacheService } from "micro-agricultor";
+import { createCacheService, ENTIDADE } from "micro-agricultor";
 import * as crud from "./crudService.js";
 import * as hist from "./historyService.js"
 
 const cache = createCacheService();
 
 export const cacheService = {
+  clearCache: cache.clearCache,
   // CRUD
   getPlantas: async () =>
     await cache.get(
@@ -111,7 +112,19 @@ export const cacheService = {
       [],
       {field: "persistedAt", direction: "desc"}
     ),
+  // DERIVED
+  getEntidades: async () => {
+    const [plantas, canteiros, hortas] = await Promise.all([
+      cacheService.getPlantas(),
+      cacheService.getCanteiros(),
+      cacheService.getHortas(),
+    ]);
 
-  //CLEAR
-  clear: (key) => cache.clearCache(key),
+    return {
+      [ENTIDADE.planta.id]: plantas,
+      [ENTIDADE.canteiro.id]: canteiros,
+      [ENTIDADE.horta.id]: hortas,
+    };
+  },
+
 };

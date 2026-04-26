@@ -1,35 +1,27 @@
- //TODO: ESSE ARQUIVO PRECISA SER RENOMEADO PARA tables.rules.js
-
+import { VARIANTE } from "../types/VARIANTE.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 
 const estadoPadrao = {
     nome: "Novo Estado",
     descricao: "",
-    tagVariant: "dark",
+    propriedades: {
+      visivelNoMapa: true,
+      editavelNoMapa: true,
+      requerMonitoramento: true,
+    },
+    variant: VARIANTE.BLACK.variant,
 };
 
 const estagioPadrao = {
     nome: "Novo Estágio",
     descricao: "",
-    tagVariant: "dark",
+    variant: VARIANTE.BLACK.variant,
 };
 
 const categoriaPadrao = {
     nome: "Nova Categoria",
     descricao: "",
-    tagVariant: "dark",
-};
-
-const caracteristicaPadrao = {
-    nome: "Nova Característica",
-    descricao: "",
-    unidade: "",
-    longevidade: 10,
-    resolucao: 100,
-    aplicavel: {},
-    tempoAcumulacao: 0,
-    tipoAcumulacaoId: "",
-    limiteAcumulacao: 0,
+    variant: VARIANTE.BLACK.variant,
 };
 
 export const validarEstado = (dataObj = {}) => {
@@ -44,9 +36,5 @@ export const validarEstagio = (dataObj = {}) => {
 
 export const validarCategoria = (dataObj = {}) => {
     const valid = mergeComValidacao(categoriaPadrao, dataObj);
-    return valid;
-}
-export const validarCaracteristica = (dataObj = {}) => {
-    const valid = mergeComValidacao(caracteristicaPadrao, dataObj);
     return valid;
 }

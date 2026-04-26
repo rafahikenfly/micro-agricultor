@@ -5,17 +5,24 @@ import { toDateTimeLocal } from "../../../utils/dateUtils";
 import MonitoramentoPorCaracteristica from "./MonitoramentoPorCaracteristica";
 import MonitoramentoPorEntidade from "./MonitoramentoPorEntidade";
 import { resolveSelection } from "../../../utils/catalogUtils";
+import Loading from "../../../components/Loading";
+import { useCache } from "../../../hooks/useCache";
 
 
-export default function PainelMonitorar({ selection, caches }) {
+export default function PainelMonitorar({ selection }) {
   if (!selection) return null;
+  
+  const { cacheEntidades, reading } = useCache(["entidades"]);
   
   const [primaryType, setPrimaryType] = useState(selection.primaryType());
   const [stringTimestamp, setStringTimestamp] = useState(toDateTimeLocal(new Date()));
-  const list = resolveSelection(selection, primaryType, caches[primaryType]);
+
+  
+  const list = resolveSelection(selection, primaryType, cacheEntidades?.[primaryType]);
   
   useEffect(()=>setPrimaryType(selection.primaryType()), [selection]);
 
+  if (reading) return <Loading variant="overlay" />
   return (
     <>
       <StandardInput label="Data/hora" width="120px">

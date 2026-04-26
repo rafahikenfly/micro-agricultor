@@ -1,4 +1,4 @@
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 import { useToast } from "../toast/toastProvider";
 
 // TODO: mover para HOOKS
@@ -11,12 +11,10 @@ export function useCrudUI({
   
     // estados
     editando,
-    registroParaExcluir,
 
     // setters
     setEditando,
     setShowModal,
-    setRegistroParaExcluir, 
   }) {
   const { toastMessage, toastConfirm } = useToast();  
     if (!crudService) {
@@ -80,22 +78,20 @@ export function useCrudUI({
       }
     };
   
-    const apagar = async () => {
-      if (!registroParaExcluir) return;
+    const apagar = async (id) => {
+      if (!id) return;
       try {
-        await crudService.remove(crudService.getRefById(registroParaExcluir.id), user);
+        await crudService.remove(crudService.getRefById(id), user);
         toastMessage({
           body: `${nomeCapitalizado} removid${masculino ? "o" : "a"} com sucesso`,
-          variant: VARIANT_TYPES.GREEN,
+          variant: VARIANTE.GREEN.variant,
         });
       } catch (err) {
         console.error(err);
         toastMessage({
           body: `Erro ao remover ${masculino ? "o" : "a"} ${nomeEntidade}`,
-          variant: VARIANT_TYPES.RED,
+          variant: VARIANTE.RED.variant,
         });
-      } finally {
-        cancelarExclusao();
       }
     };
   
@@ -117,7 +113,7 @@ export function useCrudUI({
   
     const desarquivar = async (data) => {
       try {
-        await crudService.restore(crudService.getRefById(data.id), user);
+        await crudService.unarchive(crudService.getRefById(data.id), user);
         toastMessage({
           body: `${nomeCapitalizado} desarquivad${masculino === "o" ? "o" : "a"} com sucesso`,
           variant: "success",
@@ -132,17 +128,16 @@ export function useCrudUI({
     };
   
     const apagarComConfirmacao = (data) => {
-      setRegistroParaExcluir(data);
       toastConfirm({
         body: `Confirma a exclusão do ${nomeEntidade} ${data.nome}?`,
-        onConfirm: apagar,
+        onConfirm: () => apagar(data.id),
         onCancel: cancelarExclusao,
         variant: "danger",
       });
     };
     
     const cancelarExclusao = () => {
-      setRegistroParaExcluir(null);
+      // NADA
     };
 
 

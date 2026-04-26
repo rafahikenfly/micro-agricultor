@@ -1,6 +1,6 @@
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useMapaEngine } from "../MapaEngine";
-import { VARIANT_TYPES } from "micro-agricultor";
+import { VARIANTE } from "micro-agricultor";
 
 export default function MapaSidebar() {
 
@@ -12,6 +12,9 @@ export default function MapaSidebar() {
     setMapDragActive,
     setMapPreviewActive,
     setShowPainel,
+    filter,
+    setFilter,
+    setShowModal,
   } = useMapaEngine();
 
   // TODO: KNOWN BUGS e APRIMORAMENTOS
@@ -25,8 +28,17 @@ export default function MapaSidebar() {
   // 6. Heatmap/inspeção não está programada e tem uns artefatos espalhados.
 
   const tools = [
-    {id: "selecionar",
-      icon: "[]",
+    {
+      id: "filtrar",
+      icon: "⚙️",
+      text: "Filtrar entidades exibidas",
+      onClick: ()=> setShowModal({
+        tipo: "filtrar",
+      })
+    },
+    {
+      id: "selecionar",
+      icon: "⛶",
       text: "Selecionar",
       onClick: activeTool === "selecionar" ? resetTool : ()=>{
         setTool("selecionar");
@@ -100,7 +112,7 @@ export default function MapaSidebar() {
     },
     {
       id: "inspecionar",
-      icon: "🗺",
+      icon: "📈",
       text: "Inspecionar características",
       onClick: activeTool ===  "inspecionar" ? resetTool : () => {
         setMapDragActive(false);
@@ -134,7 +146,7 @@ export default function MapaSidebar() {
             overlay={<Tooltip>{tool.text}</Tooltip>}
         >
             <Button
-            variant={activeTool === tool.id ? VARIANT_TYPES.GREEN : VARIANT_TYPES.WHITE}
+            variant={activeTool === tool.id ? VARIANTE.GREEN.variant : VARIANTE.WHITE}
             className="mb-2 d-flex align-items-center justify-content-center"
             style={{
                 width: "40px",

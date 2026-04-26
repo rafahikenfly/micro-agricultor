@@ -1,34 +1,31 @@
-export const ENTITY_TYPES = {
-    CANTEIRO: "canteiro",
-    HORTA: "horta",
-    PLANTA: "planta",
-}
+import { VARIANTE } from "./index.js";
+
 export const ENTIDADE = {
-  [ENTITY_TYPES.CANTEIRO]: {
+  canteiro: {
     id: "canteiro",
     nome: "Canteiro",
     masculino: true,
-    tagVariant: "warning",
+    variant: VARIANTE.YELLOW.id,
     desenhavel: true,
     monitoravel: true,
     manejavel: true,
     inspecionavel: true,
   },
-  [ENTITY_TYPES.PLANTA]: {
+  planta: {
     id: "planta",
     nome: "Planta",
     masculino: false,
-    tagVariant: "success",
+    variant: VARIANTE.GREEN.id,
     desenhavel: true,
     monitoravel: true,
     manejavel: true,
     inspecionavel: true,
   },
-  [ENTITY_TYPES.HORTA]: {
+  horta: {
     id: "horta",
     nome: "Horta",
     masculino: false,
-    tagVariant: "primary",
+    variant: VARIANTE.GREY.id,
     desenhavel: false,
     monitoravel: true,
     manejavel: false,

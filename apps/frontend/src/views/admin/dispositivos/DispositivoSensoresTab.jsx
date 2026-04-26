@@ -30,8 +30,8 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
     <StandardArrayInput
         form={formSensores}
         setForm={setFormSensores}
-        header="Incluir sensor"
-        headerData={form} //TODO
+        inputLabel="Incluir sensor"
+        inputData={form}
         colunas={[
           {rotulo: "Entidade", dataKey: "entidadeId", render: (a)=>cacheCanteiros?.map.get(a.entidadeId)?.nome ?? `id: ${a.entidadeId}`},
           {rotulo: "Tipo", dataKey: "tipoSensorId", render: (a)=>SENSOR[a.tipoSensorId]?.nome ?? `id: ${a.tipoSensorId}`},

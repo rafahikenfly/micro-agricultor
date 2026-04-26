@@ -10,10 +10,10 @@ export default function UsuarioAcessosTab({ formAcesso, setFormAcesso }) {
     >
       {Object.values(AMBIENTE).map((a)=> (
         <Form.Check
+          key={`acesso-${a.id}`}
           type="checkbox"
-          id={`acesso-${a.id}`}
           label={a.nome}
-          checked={!!formAcesso?.[a.id]}
+          checked={!!formAcesso[a.id]}
           onChange={(e) => setFormAcesso({...formAcesso, [a.id]: e.target.checked})}
         />
       ))}

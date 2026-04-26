@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
-import { VARIANT_TYPES, VARIANTE, ENTIDADE } from "micro-agricultor";
+import { VARIANTE, ENTIDADE } from "micro-agricultor";
 
 
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
@@ -8,12 +8,12 @@ import Loading from "../../../components/Loading";
 import { NoUser } from "../../../components/common/NoUser";
 
 
-import { caracteristicasService } from "../../../services/crud/caracteristicasService";
+import { caracteristicasService } from "../../../services/crudService";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { useAuth } from "../../../services/auth/authContext";
-import { useToast } from "../../../services/toast/toastProvider";
 
 import CaracteristicaModal from "./CaracteristicaModal";
+import { renderBadge, renderBadgeGroup } from "../../../utils/uiUtils";
 
 export default function CaracteristicasCRUD() {
   const { user } = useAuth();
@@ -65,20 +65,21 @@ export default function CaracteristicasCRUD() {
           {loading && <Loading variant="overlay" />}
           <ListaComAcoes
             dados = {caracteristicas}
+            sort
             colunas = {[
-              {rotulo: "Nome", dataKey: "nome", render: (a)=>a.nome},
-              {rotulo: "Aplicável a", dataKey: "aplicavel", tagVariantList: Object.values(ENTIDADE)},
+              {rotulo: "Nome", dataKey: "nome", render: (a)=> renderBadge (a, "nome")},
+              {rotulo: "Aplicável à", dataKey: "aplicavel", render: (a)=>renderBadgeGroup(a, "aplicavel", ENTIDADE) }
             ]}
             acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: VARIANT_TYPES.YELLOW},
-              {rotulo: "Duplicar", funcao: duplicar, variant: VARIANT_TYPES.LIGHTBLUE},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: VARIANT_TYPES.RED},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
               { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
+                rotulo: "💤",
+                rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: VARIANT_TYPES.GREY,
+                variant: VARIANTE.GREY.variant.id,
               },
             ]}
           />

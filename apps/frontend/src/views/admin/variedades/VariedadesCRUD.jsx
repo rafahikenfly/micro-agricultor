@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 
 import { variedadesService } from "../../../services/crudService";
@@ -11,6 +11,9 @@ import { NoUser } from "../../../components/common/NoUser";
 
 import VariedadeModal from "./VariedadeModal";
 import { useCache } from "../../../hooks/useCache";
+import { VARIANTE } from "micro-agricultor";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
+import { renderBadge } from "../../../utils/uiUtils";
 
 
 export default function VariedadesCRUD() {
@@ -21,9 +24,25 @@ export default function VariedadesCRUD() {
 
   const [variedades, setVariedades] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: "",
+    especieId: "",
+  });
+  const variedadesFiltradas = useMemo(() => {
+    if (!variedades?.length) return [];
+
+    return variedades.filter((p) => {
+      // filtro tipo select
+      ex: if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [variedades, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -47,44 +66,57 @@ export default function VariedadesCRUD() {
     masculino: false, // "a variedade"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
 
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Nova variedade</Button>
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+          {
+            key: "especieId",
+            type: "select",
+            label: "Espécie",
+            list: cacheEspecies?.list ?? [],
+            labelKey: "nome",
+            valueKey: "id",
+            placeholder: "Todas espécies"
+          },
+        ]}
+      />
 
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {variedades}
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome" },
-              {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId)?.nome ?? "-" },
-            ]}
-            acoes = {[
-              {rotulo: "Editar", funcao: editar, variant: "warning"},
-              {rotulo: "Excluir", funcao: apagarComConfirmacao, variant: "danger"},
-              { toggle: "isArchived",
-                rotulo: "Desarquivar",
-                rotuloFalse: "Arquivar",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: "secondary",
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      {loading || reading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {variedadesFiltradas}
+        sort
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome", render: (a) => a.nome },
+          {rotulo: "Espécie", dataKey: "especieId", render: (a) => cacheEspecies?.map.get(a.especieId)?.nome ?? "-" },
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant.id,
+          },
+        ]}
+      />}
 
       <VariedadeModal
         key={editando?.id ?? `novo`}

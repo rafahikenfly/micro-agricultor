@@ -43,10 +43,10 @@ export default function VariedadeModal({ show, onSave, onClose, data }) {
             className="mb-3"
           >
             <Tab eventKey="dados" title="Variedade">
-                <VariedadeDadosTab
-                  form={form}
-                  setForm={setForm}
-                />
+              <VariedadeDadosTab
+                form={form}
+                setForm={setForm}
+              />
             </Tab>
             <Tab eventKey="aparencia" title="Aparência">
               <AparenciaTab
@@ -58,6 +58,7 @@ export default function VariedadeModal({ show, onSave, onClose, data }) {
               <VariedadeCicloAccordion
                 formCiclo={form.ciclo}
                 setFormCiclo={(ciclo) => setForm({...form, ciclo})}
+                especieId={form.especieId}
               />
             </Tab>
           </Tabs>

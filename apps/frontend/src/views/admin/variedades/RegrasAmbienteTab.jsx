@@ -1,62 +1,64 @@
 import { useState } from "react";
 import { Form } from "react-bootstrap";
-import InputGroupText from "react-bootstrap/esm/InputGroupText";
 
-import { handleSelectIdNome, renderOptions, StandardObjectInput } from "../../../utils/formUtils";
+import { renderOptions, StandardObjectInput, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
 
-export default function RegrasAmbienteTab({ formAmbiente, idxCiclo, caracteristicas = [], loading, setFormAmbiente }) {
+export default function RegrasAmbienteTab({ formAmbiente = {}, setFormAmbiente, header = "Condições ambientais neste estágio" }) {
   if (!formAmbiente) return null;
+
+  const { cacheCaracteristicas, reading } = useCache(["caracteristicas"]);
 
   const [formRegra, setFormRegra] = useState({
     caracteristicaId: "",
-    caracteristicaNome: "",
     min: 0,
     max: 0,
   });
 
-  /*TODO: ARRUMAR O STANDARDOBJECTINPUT PARA OUTROS CONTEXTOS (USA CARACTERISTICAID HARDCODED*/
   return (
     <StandardObjectInput
-      object={formAmbiente ?? {}}
-      header="Condição"
+      form={formAmbiente}
+      setForm={setFormAmbiente}
+      inputLabel={header}
+      inputData={formRegra}
+      inputKey={formRegra.caracteristicaId}
+      inputField="caracteristicaId"
       colunas={[
-        { rotulo: "Característica", dataKey: "caracteristicaNome" },
+        { rotulo: "Característica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? "-" },
         { rotulo: "Mínimo", dataKey: "min" },
         { rotulo: "Máximo", dataKey: "max" }
       ]}
       acoes={[]}
-      novoItem={formRegra}
-      onChange={(ambiente)=>setFormAmbiente(idxCiclo, ambiente)}
     >
-      <Form.Select
-        value={formRegra.caracteristicaId}
-        onChange={e =>
-          handleSelectIdNome(e, {
-            list: caracteristicas,
-            setForm: setFormRegra,
-            fieldId: "caracteristicaId",
-            fieldNome: "caracteristicaNome"
-          })
-        }
+      <StandardInput label = "Característica" width={"180px"}>
+
+        <Form.Select
+          value={formRegra.caracteristicaId}
+          onChange={(e) => setFormRegra({...formRegra, caracteristicaId: e.target.value})}
+        >
+          {renderOptions({
+            list: cacheCaracteristicas?.list.filter((a) => a.aplicavel.canteiro),
+            placeholder: "Selecione a característica",
+            loading: reading,
+          })}
+        </Form.Select>
+      </StandardInput>
+      <StandardInput
+        label="Faixa ideal (Mín/Máx)"
+        width={"180px"}
+        unidade={cacheCaracteristicas?.map.get(formRegra.caracteristicaId)?.medida.unidade ?? "-"}
       >
-        {renderOptions({
-          list: caracteristicas,
-          nullOption: true,
-          loading
-        })}
-      </Form.Select>
-      <InputGroupText>Min</InputGroupText>
-      <Form.Control
-        type="number"
-        value={formRegra.min}
-        onChange={(e) => setFormRegra({ ...formRegra, min: Number(e.target.value) })}
-      />
-      <InputGroupText>Max</InputGroupText>
-      <Form.Control
-        type="number"
-        value={formRegra.max}
-        onChange={(e) => setFormRegra({ ...formRegra, max: Number(e.target.value) })}
-      />
+        <Form.Control
+          type="number"
+          value={formRegra.min}
+          onChange={(e) => setFormRegra({ ...formRegra, min: Number(e.target.value) })}
+        />
+        <Form.Control
+          type="number"
+          value={formRegra.max}
+          onChange={(e) => setFormRegra({ ...formRegra, max: Number(e.target.value) })}
+        />
+      </StandardInput>
     </StandardObjectInput>
   );
 }

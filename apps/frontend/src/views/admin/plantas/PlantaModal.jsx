@@ -77,7 +77,7 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
       
         <Modal.Footer>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" type="submit">Salvar</Button>
+          <Button variant="success" type="submit" disabled={!onSave}>Salvar</Button>
         </Modal.Footer>
       </Form>
     </Modal>

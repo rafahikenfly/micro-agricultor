@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button } from "react-bootstrap";
+import { Modal, Form, Button, Badge } from "react-bootstrap";
 import { validarEstagio, VARIANTE } from "micro-agricultor";
-import { handleSaveForm, renderOptions } from "../../../utils/formUtils";
+import { handleSaveForm, renderOptions, StandardInput } from "../../../utils/formUtils";
 
 export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, }) {
     const [form, setForm] = useState(validarEstagio(data))
@@ -19,6 +19,7 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
     return (
     <Modal show onHide={onClose} size="lg">
       <Form onSubmit={(evt)=>handleSaveForm({
+          evt,
           onSave,
           form,
           setForm,
@@ -49,11 +50,10 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
               />
             </Form.Group>
 
-            <Form.Group className="mb-3">
+            <StandardInput label="Tag">
               <Form.Select
-                value={form.tagVariant}
-                onChange={e => setForm({...form, tagVariant: e.target.value})}
-                label="Cor da Tag"
+                value={form.variant}
+                onChange={e => setForm({...form, variant: e.target.value})}
                 required
               >
                 {renderOptions({
@@ -61,7 +61,8 @@ export default function EstagioEspecieModal({ show, onSave, onClose, data = {}, 
                   placeholder: "Selecione a cor da tag",
                 })}
               </Form.Select>
-            </Form.Group>
+              <Badge bg={VARIANTE[form.variant]?.variant}> </Badge>
+            </StandardInput>
           </Modal.Body>
           
           <Modal.Footer>

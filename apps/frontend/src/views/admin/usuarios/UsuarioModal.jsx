@@ -3,6 +3,7 @@ import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
 import { validarUsuario } from "micro-agricultor";
 import UsuarioDadosTab from "./UsuarioDadosTab";
 import UsuarioAcessosTab from "./UsuarioAcessosTab";
+import { handleSaveForm } from "../../../utils/formUtils";
 
 export default function UsuarioModal({ show, onSave, onClose, data = {}, }) {
     if (!show) return null;
@@ -21,7 +22,7 @@ export default function UsuarioModal({ show, onSave, onClose, data = {}, }) {
           evt,
           onSave,
           form,
-          transform: validarVariedade,
+          transform: validarUsuario,
           clear: true,
           onClear: setForm(validarUsuario({})),
           clearCache: "usuarios"
