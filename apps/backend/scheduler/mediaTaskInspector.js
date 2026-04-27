@@ -4,7 +4,7 @@ import { log } from "../core/logger/index.js";
 import { executarModeloPython } from "../core/python/index.js";
 
 export async function mediaTaskInspector() {
-  console.log("Iniciando inspeção de tarefas de mídia...")
+  log("[mediaTaskInspector]: Iniciando inspeção de tarefas de mídia...")
   const user = { uid: "mediaTaskInspector", nome: ORIGEM.BACKEND.id };
 
   // Obtem as imagens pendentes de processamento
@@ -14,7 +14,7 @@ export async function mediaTaskInspector() {
     .filter((m) => m.estado === ESTADO_TAREFA.PENDENTE.id);
 
   if (!imagensPendentes.length) {
-    log("Nenhuma imagem pendente processamento");
+    log("[mediaTaskInspector]: Nenhuma imagem pendente processamento");
     return
   }
 
@@ -117,5 +117,5 @@ export async function mediaTaskInspector() {
   await batch.commit();
 
 
-  console.log("Inspeção de tarefas de mídia concluída.")
+  log("[mediaTaskInspector]: Inspeção de tarefas de mídia concluída.")
 }

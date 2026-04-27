@@ -1,6 +1,6 @@
 import { useAuth } from "./authContext";
 import AppLogin from "../../views/AppLogin";
-import Loading from "../../components/common/DEPRECATED_Loading";
+import Loading from "../../components/Loading";
 
 // TODO: mover para HOOKS
 

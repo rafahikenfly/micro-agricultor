@@ -192,12 +192,12 @@ export const MonitorarModal = ({show, data, onClose}) => {
             label="Valor"
             unidadeWidth="80px"
             unidade={reading ? "Carregando..."
-            : caracteristica?.medida.unidade ?? "Valor"}
+            : caracteristica?.medida?.unidade ?? "Valor"}
           >
             <Form.Control
               type="number"
-              min={caracteristica?.medida.min ?? 0}
-              max={caracteristica?.medida.max ?? 1024}
+              min={caracteristica?.medida?.min ?? 0}
+              max={caracteristica?.medida?.max ?? 1024}
               value={form[entidadeId]?.[caracteristica?.id]?.valor ?? ""}
               onChange={(e) => setForm({...form, [entidadeId]:
                 {...form[entidadeId], [caracteristica.id]: {

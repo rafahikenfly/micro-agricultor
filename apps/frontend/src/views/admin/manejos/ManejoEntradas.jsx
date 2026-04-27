@@ -35,7 +35,7 @@ export default function ManejoEntradasTab({
         inputButtonIsDisabled={!headerEnabled()}
         colunas={[
           { rotulo: "Tipo", dataKey: "tipoEntradaNome" },
-          { rotulo: "Obrigatório", dataKey: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a[col.dataKey] ? "Sim" : "Não"}</Badge> },
+          { rotulo: "Obrigatório", dataKey: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant : VARIANTE.RED.variant}>{a[col.dataKey] ? "Sim" : "Não"}</Badge> },
         ]}
         acoes={[]}
       >

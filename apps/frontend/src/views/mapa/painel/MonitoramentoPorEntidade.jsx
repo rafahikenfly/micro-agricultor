@@ -182,13 +182,13 @@ export default function MonitoramentoPorEntidade({ entidades, tipoEntidadeId, st
           >
             <StandardInput
               label="Valor"
-              unidade={caracteristica?.medida.unidade ?? "-"}
+              unidade={caracteristica?.medida?.unidade ?? "-"}
               unidadeWidth="80px">
               <Form.Control
                 type="number"
                 value={item.valor}
-                min={caracteristica?.medida.unidade.min || 0}
-                max={caracteristica?.medida.unidade.max || 1024}
+                min={caracteristica?.medida?.unidade.min || 0}
+                max={caracteristica?.medida?.unidade.max || 1024}
                 onChange={(e) =>
                     setForm({
                     ...form,

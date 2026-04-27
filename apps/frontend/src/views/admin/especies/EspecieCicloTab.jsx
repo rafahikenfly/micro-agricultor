@@ -37,12 +37,12 @@ export default function EspecieCicloTab({ formCiclo, setFormCiclo, }) {
       inputButtonIsDisabled = {form.estagioId === ""}
       colunas={[
         {rotulo: "Estágio", dataKey: "estagioId", render: (a)=> cacheEstagiosEspecie?.map.get(a.estagioId)?.nome ?? "-"},
-        {rotulo: "Plantável?", dataKey: "plantavel", render: (a)=> <Badge bg={a.plantavel ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a.plantavel ? "Sim" : "Não"}</Badge>},
-        {rotulo: "Colhível?", dataKey: "colhivel", render: (a)=> <Badge bg={a.colhivel ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a.colhivel ? "Sim" : "Não"}</Badge>},
+        {rotulo: "Plantável?", dataKey: "plantavel", render: (a)=> <Badge bg={a.plantavel ? VARIANTE.LIGHTBLUE.variant : VARIANTE.RED.variant}>{a.plantavel ? "Sim" : "Não"}</Badge>},
+        {rotulo: "Colhível?", dataKey: "colhivel", render: (a)=> <Badge bg={a.colhivel ? VARIANTE.LIGHTBLUE.variant : VARIANTE.RED.variant}>{a.colhivel ? "Sim" : "Não"}</Badge>},
         {rotulo: "Instruções", dataKey: "instrucoes"},
       ]}
       acoes={[
-        {rotulo: "⧉", funcao: duplicarEstagio, variant: VARIANTE.GREEN.variant.id},
+        {rotulo: "⧉", funcao: duplicarEstagio, variant: VARIANTE.GREEN.variant},
       ]}
     >
       <StandardInput label="Inserir estágio">

@@ -62,7 +62,7 @@ export default function EntradasTab({ value = [], onChange}) {
         campos={[
           {rotulo: "Nome", data: "nome"},
           {rotulo: "Tipo", data: "tipo"},
-          {rotulo: "Obrigatório", data: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant.id : VARIANTE.RED.variant.id}>{a[col.dataKey] ? "Sim" : "Não"}</Badge>},
+          {rotulo: "Obrigatório", data: "obrigatorio", render: (a)=> <Badge bg={a.obrigatorio ? VARIANTE.LIGHTBLUE.variant : VARIANTE.RED.variant}>{a[col.dataKey] ? "Sim" : "Não"}</Badge>},
         ]}
         acoes={[
           {rotulo: "Excluir", funcao: remover, variant: "danger"},

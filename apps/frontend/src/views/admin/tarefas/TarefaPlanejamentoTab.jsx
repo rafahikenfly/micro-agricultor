@@ -55,7 +55,7 @@ export default function TarefaPlanejamentoTab({ formPlanejamento, setFormPlaneja
             type="datetime-local"
             value={toDateTimeLocal(new Date(formPlanejamento.recorrencia.expiraEm))}
             onChange={(e)=> setFormPlanejamento({ ...formPlanejamento,
-              recorrencia: {...formPlanejamento.recorrencia, expiraEm: new Date(e.target.value).getTime}
+              recorrencia: {...formPlanejamento.recorrencia, expiraEm: new Date(e.target.value).getTime()}
             })}
           />
         </StandardInput>

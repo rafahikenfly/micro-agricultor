@@ -109,6 +109,11 @@ export const usuariosCVService = createCRUDService(firebaseAdapter, {
   useArchive: true,
 })
 
+export const relatoriosService = createCRUDService(firebaseAdapter, {
+  collection: "relatorios",
+  softDelete: true,
+  useArchive: true,
+})
 
 // ===== DERIVED =====
 export const entidadesService = (tipoEntidadeId) => {

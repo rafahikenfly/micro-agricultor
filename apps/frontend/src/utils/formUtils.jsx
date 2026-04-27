@@ -1,4 +1,4 @@
-import { Button, Card, Form, InputGroup, Row, Stack } from "react-bootstrap";
+import { Button, Card, Form, InputGroup, Modal, Row, Stack } from "react-bootstrap";
 import InputGroupText from "react-bootstrap/esm/InputGroupText";
 import ListaComAcoes from "../components/common/ListaComAcoes";
 import { VARIANTE } from "micro-agricultor";
@@ -23,7 +23,7 @@ export const handleSelectIdNome = (e, {
   }));
 };
 export const renderOptions = ({
-  list,
+  list = [],
   loading = false,
   placeholder = "Selecione",
   valueKey = "id",
@@ -301,9 +301,9 @@ export const StandardArrayInput = ({
         sort={false}
         colunas={colunas}
         acoes={showInput ? [...acoes,
-          {rotulo: "▲", funcao: moveUp, variant: VARIANTE.GREY.variant.id},
-          {rotulo: "▼", funcao: moveDown, variant: VARIANTE.GREY.variant.id},
-          {rotulo: "🗑️", funcao: remove, variant: VARIANTE.RED.variant.id},
+          {rotulo: "▲", funcao: moveUp, variant: VARIANTE.GREY.variant},
+          {rotulo: "▼", funcao: moveDown, variant: VARIANTE.GREY.variant},
+          {rotulo: "🗑️", funcao: remove, variant: VARIANTE.RED.variant},
         ] : []}
       />
     </>
@@ -353,9 +353,23 @@ export const StandardObjectInput = ({
         dados={Object.values(form)}
         colunas={colunas}
         acoes={[...acoes,
-          {rotulo: "X", funcao: drop, variant: VARIANTE.RED.variant.id},
+          {rotulo: "X", funcao: drop, variant: VARIANTE.RED.variant},
         ]}
       />
     </>
+  )
+}
+
+export const StandardModalFooter = ({onClose, onSave, type = "submit"}) => {
+  if (onSave) return (
+    <Modal.Footer>
+      <Button variant={VARIANTE.GREY.variant} onClick={onClose}>Cancelar</Button>
+      <Button variant={VARIANTE.GREEN.variant} type={type} disabled={!onSave}>Salvar</Button>
+    </Modal.Footer> 
+  )
+  return (
+    <Modal.Footer>
+      <Button variant={VARIANTE.DARKBLUE.variant} onClick={onClose}>Ok</Button>
+    </Modal.Footer> 
   )
 }

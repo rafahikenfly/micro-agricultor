@@ -12,5 +12,8 @@ admin.initializeApp({
 
 export const db = admin.firestore();
 export const storage = admin.storage();
+export const FieldValue = admin.firestore.FieldValue;
 export const timestamp = admin.firestore.FieldValue.serverTimestamp;
 export const increment = admin.firestore.FieldValue.increment;
+
+

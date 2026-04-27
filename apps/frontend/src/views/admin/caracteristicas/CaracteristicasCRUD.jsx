@@ -71,15 +71,15 @@ export default function CaracteristicasCRUD() {
               {rotulo: "Aplicável à", dataKey: "aplicavel", render: (a)=>renderBadgeGroup(a, "aplicavel", ENTIDADE) }
             ]}
             acoes = {[
-              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant.id},
-              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant.id},
-              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant.id},
+              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
+              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
+              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
               { toggle: "isArchived",
                 rotulo: "💤",
                 rotuloFalse: "⚡",
                 funcao: desarquivar,
                 funcaoFalse: arquivar,
-                variant: VARIANTE.GREY.variant.id,
+                variant: VARIANTE.GREY.variant,
               },
             ]}
           />

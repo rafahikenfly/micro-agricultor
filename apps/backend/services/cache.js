@@ -74,6 +74,12 @@ export const cacheService = {
       crud.estagiosEspecieService,
       [{ field: "isDeleted", op: "==", value: false }],
     ),
+  getRelatorios: async () =>
+    await cache.get(
+      "relatorios",
+      crud.relatoriosService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
 
   // DERIVED
   getEntidades() {

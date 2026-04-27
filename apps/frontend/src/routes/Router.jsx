@@ -29,6 +29,10 @@ import ModelosCVCRUD from "../views/admin/modelosCV/ModelosCVCRUD";
 import EstagiosEspecieCRUD from "../views/admin/estagios/EstagiosEspecieCRUD";
 import UsuariosCRUD from "../views/admin/usuarios/UsuariosCRUD";
 import AppPerfil from "../views/AppPerfil";
+import AppAnalise from "../views/AppAnalise";
+import EvolucaoCaracteristica from "../views/analise/relatorios/EvolucaoCaracteristica";
+import Solicitar from "../views/analise/Solicitar";
+import Inferencia from "../views/analise/relatorios/Inferencia";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -70,12 +74,13 @@ export default function Router() {
           <Route path="/perfil/:uid" element={<AppPerfil />}>
             <Route index element={<CalendarioVazio />} />
           </Route>
+          <Route path="analise" element={<AppAnalise />}>
+            <Route path="solicitar" element={<Solicitar />} />
+            <Route path="evolucaoCaracteristica" element={<EvolucaoCaracteristica />} />
+            <Route path="inferencia" element={<Inferencia />} />
+          </Route>
+
         </Route>
-
-
-{/*
-        <Route path="/calendario/*" element={<AppCalendario />} />
-*/}
       </Routes>
     </BrowserRouter>
   );

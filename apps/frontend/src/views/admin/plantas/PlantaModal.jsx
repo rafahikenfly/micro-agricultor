@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
-import { validarPlanta } from "micro-agricultor";
+import { validarPlanta, VARIANTE } from "micro-agricultor";
 
 
 import AparenciaTab from "../../../components/common/AparenciaTab";
 import { EntidadeEstadoAtualTab } from "../../../components/common/EntidadeEstadoAtualTab";
 
-import { handleSaveForm } from "../../../utils/formUtils";
+import { handleSaveForm, StandardModalFooter } from "../../../utils/formUtils";
 
 import { PlantaLocalizacaoTab } from "./PlantaLocalizacaoTab";
 import { PlantaEspecieTab } from "./PlantaEspecieTab";
@@ -74,11 +74,7 @@ export default function PlantaModal({ show, onSave, onClose, data}) {
             </Tab>
           </Tabs>
         </Modal.Body>
-      
-        <Modal.Footer>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button variant="success" type="submit" disabled={!onSave}>Salvar</Button>
-        </Modal.Footer>
+        <StandardModalFooter onClose={onClose} onSave={onSave} type="submit"/>
       </Form>
     </Modal>
   )

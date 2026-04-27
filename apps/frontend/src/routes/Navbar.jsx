@@ -79,6 +79,9 @@ export default function AppNavbar() {
           <Nav.Link as={NavLink} to="/calendario">
             Calendário
           </Nav.Link>
+          <Nav.Link as={NavLink} to="/analise">
+            Análise
+          </Nav.Link>
           <Nav.Link as={NavLink} to="/admin">
             Admin
           </Nav.Link>

@@ -54,9 +54,9 @@ export default function PainelInspecionar({ selection, primaryType, onConfirm, o
       <div className="p-2 border rounded bg-light mb-3">
         <strong>Resumo da inspeção</strong>
         <div>Característica: {caracteristica?.nome ?? "-"}</div>
-        <div>Mínimo: {caracteristica?.medida.min ?? "-"}</div>
-        <div>Máximo: {caracteristica?.medida.max ?? "-"}</div>
-        <div>Unidade: {caracteristica?.medida.unidade ?? "-"}</div>
+        <div>Mínimo: {caracteristica?.medida?.min ?? "-"}</div>
+        <div>Máximo: {caracteristica?.medida?.max ?? "-"}</div>
+        <div>Unidade: {caracteristica?.medida?.unidade ?? "-"}</div>
       </div>
       <div className="d-grid gap-2">
         <Button

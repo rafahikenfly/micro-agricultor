@@ -117,9 +117,10 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
           }
           // Edição
           setShowModal({
-          tipo: ENTIDADE.planta.id,
-          data: planta
-        });}
+            tipo: ENTIDADE.planta.id,
+            data: planta
+          });
+        }
       }}
     />
   )

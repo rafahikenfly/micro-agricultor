@@ -49,7 +49,10 @@ export default function MapaModals() {
         <CanteiroModal
           show={true}
           data={showModal.data}
-          onSave={(data)=>salvar(data, canteirosService, ENTIDADE[showModal.tipoEntidadeId])}
+          onSave={showModal.data.editavelNoMapa ? 
+            (data)=>salvar(data, canteirosService, ENTIDADE[showModal.tipoEntidadeId]) : 
+            false
+          }
           onClose={() => setShowModal(null)}
         />
       );
@@ -59,9 +62,9 @@ export default function MapaModals() {
         <PlantaModal
           show={true}
           data={showModal.data}
-          onSave={data.editavelNoMapa ? 
+          onSave={showModal.data.editavelNoMapa ? 
             (data)=>salvar(data, plantasService, ENTIDADE[showModal.tipoEntidadeId]) :
-            null
+            false
           }
           onClose={() => setShowModal(null)}
         />
