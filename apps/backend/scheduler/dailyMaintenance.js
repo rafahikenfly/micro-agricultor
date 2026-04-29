@@ -15,6 +15,7 @@ const hourlyTasks = [
   { name: "currentStateInspector" },
   { name: "taskStateInspector"},
   { name: "mediaTaskInspector" },
+  { name: "reportTaskInspector" },
 ];
 
 async function runTasks(tasks, label) {
