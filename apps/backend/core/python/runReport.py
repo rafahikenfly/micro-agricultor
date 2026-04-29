@@ -4,24 +4,24 @@ import uuid
 import os
 
 from gerarPlot import gerarPlot
+import traceback
 
 app = FastAPI()
 
 @app.post("/report")
 def runReport(data: dict):
+    
     try:
-        db_path = data["db_path"]
         caracteristica_ids = data["caracteristica_ids"]
         entidade_ids = data["entidade_ids"]
         data_inicio = data.get("data_inicio")
         data_fim = data.get("data_fim")
 
-        # 📁 gera nome único
+        # gera nome único
         file_name = f"relatorio_{uuid.uuid4()}.png"
         output_path = os.path.join("/tmp", file_name)
 
-        gerarPlot(
-            db_path=db_path,
+        isPlotted = gerarPlot(
             caracteristica_ids=caracteristica_ids,
             entidade_ids=entidade_ids,
             data_inicio=data_inicio,
@@ -29,15 +29,17 @@ def runReport(data: dict):
             output_path=output_path
         )
 
-        return {
-            "outputPath": output_path
-        }
+
+        if isPlotted:
+            return output_path
+        else:
+            return False
 
     except Exception as e:
         return {
-            "error": str(e)
-        }
-
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }    
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

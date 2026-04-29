@@ -1,5 +1,4 @@
 import fs from "fs";
-export * from "./store.js";
 
 const LOG_FILE = "backend.log"
 

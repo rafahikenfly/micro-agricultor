@@ -2,6 +2,9 @@ import { ESTADO_TAREFA, ORIGEM } from "micro-agricultor";
 import { batchService, cacheService, relatoriosService } from "../services/index.js";
 import { log } from "../core/logger/index.js";
 import { gerarRelatorioPython } from "../core/python/index.js";
+import { bucket } from "../infra/firebase.js";
+import fs from "fs";
+
 
 export async function reportTaskInspector() {
   log("[reportTaskInspector]: Iniciando inspeção de relatórios...");
@@ -22,7 +25,6 @@ export async function reportTaskInspector() {
   // =========
   let batch = batchService.create();
   for (const relatorio of relatoriosPendentes) {
-    console.log(relatorio)
     await batch.commitIfNeeded();
 
     const { caracteristicasId, plantasId, canteirosId } = relatorio.contexto;
@@ -31,23 +33,40 @@ export async function reportTaskInspector() {
     try {
       const entidadesIds = [...plantasId, ...canteirosId]
       const outputPath = await gerarRelatorioPython({
-        db_path: "sensores.db",
         caracteristica_ids: caracteristicasId,
         entidade_ids: entidadesIds,
         data_inicio: relatorio.inicio,
         data_fim: relatorio.fim
       });
-      // Upload do resultado para storage (Firestore Storage ou bucket)
-      const fileName = `relatorios/${relatorio.id}_${timestamp}.png`;
-      const fileUrl = "teste"//await firestore.uploadFile(outputPath, fileName);
 
-      // Atualiza resultado do relatório
+      if (!outputPath) {
+        log(`[reportTaskInspector]: Relatório ${relatorio.id} sem dados.`)
+        continue;
+      }
+      const destination = `relatorios/${relatorio.id}_${timestamp}.png`
+
+      // Sobe o arquivo, torna público (mais simples pro frontend) e limpa o arquivo temporário
+      await bucket.upload(outputPath, {
+        destination,
+        metadata: {
+          contentType: "image/png",
+        },
+      });
+
+      const file = bucket.file(destination);
+      await file.makePublic();
+      fs.unlinkSync(outputPath);
+
+      // Atualiza relatório
+      relatorio.estado = relatorio.resultado
+        ? ESTADO_TAREFA.FEITO.id
+        : ESTADO_TAREFA.ERRO.id;
+      const fileUrl = `https://storage.googleapis.com/${bucket.name}/${destination}`;
       relatorio.resultado = {
         url: fileUrl,
         geradoEm: timestamp,
       };
-      console.log("a",relatorio)
-
+      log(`[reportTaskInspector]: Enviado para ${fileUrl}`);
     } catch (err) {
       log(`[reportTaskInspector]: Erro ao gerar relatório ${relatorio.id}`, err);
     }

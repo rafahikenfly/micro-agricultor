@@ -1,4 +1,4 @@
-import { Container } from "react-bootstrap"
+import { Button, Container } from "react-bootstrap"
 import ListaToolbar from "../../../components/listas/ListaToolbar";
 import Loading from "../../../components/Loading";
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { useEffect } from "react";
 import { renderBadge } from "../../../utils/uiUtils";
 import { VARIANTE } from "micro-agricultor";
+import { unixToReadableString } from "../../../utils/dateUtils";
 
 export default function EvolucaoCaracteristica ({}) {
   const [relatorios, setRelatorios] = useState([]);
@@ -28,18 +29,35 @@ export default function EvolucaoCaracteristica ({}) {
     
           return true;
         });
-      }, [relatorios, filtros]);
-      /* ================= CARREGAR DADOS ================= */
-      useEffect(() => {
-        setLoading(true);
-    
-        const unsub = relatoriosService.subscribe((data) => {
-          setRelatorios(data);
-          setLoading(false); // só desliga quando os dados chegam
-        });
-    
-        return unsub;
-      }, []);
+  }, [relatorios, filtros]);
+  /* ================= CARREGAR DADOS ================= */
+  useEffect(() => {
+    setLoading(true);
+
+    const unsub = relatoriosService.subscribe((data) => {
+      setRelatorios(data);
+      setLoading(false); // só desliga quando os dados chegam
+    });
+
+    return unsub;
+  }, []);
+
+  const renderResultado = (relatorio) => {
+    if (!relatorio.resultado) {
+      return "Não processado";
+    }
+
+    return (
+      <Button
+        onClick={() => window.open(relatorio.resultado.url, "_blank")}
+          size="sm"
+          variant= {`outline-${VARIANTE.LIGHTBLUE.variant}`}
+          className="me-1"
+      >
+        {unixToReadableString(relatorio.resultado.geradoEm) ?? "-"}
+      </Button>
+    );
+  }
   return (
     <Container fluid>
       <ListaToolbar
@@ -59,9 +77,11 @@ export default function EvolucaoCaracteristica ({}) {
         }}
         colunas = {[
           {rotulo: "Nome", dataKey: "nome", render: (a)=>renderBadge(a,"nome")},
+          {rotulo: "Resultado", dataKey: "resultado", render: renderResultado}
         ]}
         acoes = {[
-          {rotulo: "Abrir", funcao: ()=>{console.log("TODO")}, variant:VARIANTE.YELLOW.variant},
+          // TODO: APAGAR, ARQUIVAR?
+//          {rotulo: "Abrir", funcao: ()=>{console.log("TODO")}, variant:VARIANTE.YELLOW.variant},
         ]}
       />}
 

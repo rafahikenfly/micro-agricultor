@@ -1,17 +1,22 @@
 import sqlite3
+import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from pathlib import Path
 from collections import defaultdict
 from typing import List, Optional
 
 
 def gerarPlot(
-    db_path: str,
-    caracteristica_ids: List[int],
-    entidade_ids: List[int],
+    caracteristica_ids: List[str],
+    entidade_ids: List[str],
     data_inicio = None,
     data_fim = None,
     output_path: str = "plot.png"
 ):
+    
+    base_dir = Path(__file__).resolve().parent
+    db_path = (base_dir.parents[1] / "sensores.db").resolve()
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
@@ -26,7 +31,6 @@ def gerarPlot(
           AND entidade_id IN ({eid_placeholders})
     """
 
-
     params = caracteristica_ids + entidade_ids
 
     # Filtro de data opcional
@@ -40,17 +44,13 @@ def gerarPlot(
 
     query += " ORDER BY data_hora"
 
-    print (query)
-    print (params)
-
     cursor.execute(query, params)
     dados = cursor.fetchall()
 
     conn.close()
 
     if not dados:
-        print("⚠️ Nenhum dado encontrado com os filtros informados.")
-        return
+        return False
 
     # Agrupar por (caracteristica_id, entidade_id)
     grupos = defaultdict(list)
@@ -83,3 +83,5 @@ def gerarPlot(
     plt.show()
 
     plt.close()
+
+    return True

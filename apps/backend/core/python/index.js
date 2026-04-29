@@ -27,11 +27,8 @@ export async function executarModeloPython(imagemPath, modelPath) {
 }
 
 export async function gerarRelatorioPython(args) {
-  console.log(`Rodando relatório com args:`, args);
-
   try {
-    console.log("PAYLOAD:", JSON.stringify(args, null, 2));
-    const res = await fetch("http://localhost:8000/report", {
+    const result = await fetch("http://localhost:8000/report", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -39,17 +36,19 @@ export async function gerarRelatorioPython(args) {
       body: JSON.stringify(args),
     });
 
-    if (!res.ok) {
-      throw new Error(`Erro HTTP ${res.status}`);
+    // Erro no HTTP
+    if (!result.ok) {
+      throw new Error(`Erro HTTP ${result.status}`);
     }
 
-    const data = await res.json();
+    const data = await result.json();
 
+    // Erro de execução
     if (data.error) {
       throw new Error(data.error);
     }
 
-    return data.outputPath;
+    return data
 
   } catch (err) {
     console.error("Erro ao executar script Python:", err);
