@@ -1,5 +1,5 @@
 export async function executarModeloPython(imagemPath, modelPath) {
-  console.log(`Rodando o modelo ${modelPath} em ${imagemPath}`);
+  console.log(`[executarModeloPython] Rodando o modelo ${modelPath} em ${imagemPath}`);
   //return; //TODO: serviço em python
   
   try {
@@ -14,14 +14,20 @@ export async function executarModeloPython(imagemPath, modelPath) {
       }),
     });
 
+    // Erro no HTTP
     if (!res.ok) {
-      throw new Error(`Erro HTTP ${res.status}`);
+      throw new Error(`[executarModeloPython] Erro HTTP ${res.status}`);
     }
 
-    return await res.json();
+    const data = await res.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    return data
 
   } catch (err) {
-    console.error("Erro ao executar modelo Python:", err);
+    console.error("[executarModeloPython] Erro ao executar modelo Python:", err);
     throw err; // importante pra teu controle de tentativas
   }
 }
@@ -38,7 +44,7 @@ export async function gerarRelatorioPython(args) {
 
     // Erro no HTTP
     if (!result.ok) {
-      throw new Error(`Erro HTTP ${result.status}`);
+      throw new Error(`[gerarRelatorioPython] Erro HTTP ${result.status}`);
     }
 
     const data = await result.json();
@@ -51,7 +57,7 @@ export async function gerarRelatorioPython(args) {
     return data
 
   } catch (err) {
-    console.error("Erro ao executar script Python:", err);
+    console.error("[gerarRelatorioPython] Erro ao executar script Python:", err);
     throw err;
   }
 }

@@ -1,14 +1,9 @@
-from fastapi import FastAPI
-import uvicorn
 import uuid
 import os
 
-from gerarPlot import gerarPlot
+from utils import gerarPlot
 import traceback
 
-app = FastAPI()
-
-@app.post("/report")
 def runReport(data: dict):
     
     try:
@@ -39,7 +34,4 @@ def runReport(data: dict):
         return {
             "error": str(e),
             "trace": traceback.format_exc()
-        }    
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+        }
