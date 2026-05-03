@@ -1,33 +1,32 @@
-import { Form, } from "react-bootstrap";
-import { StandardInput } from "../../../utils/formUtils";
+import { Accordion, Form, } from "react-bootstrap";
+import { StandardCard, StandardInput } from "../../../utils/formUtils";
+import { useCache } from "../../../hooks/useCache";
+import Loading from "../../../components/Loading";
 
 
-// TODO: resultados: {}, // bounding boxes, labels, etc.
 export default function MidiaInferencia({ formInferencia, setFormInferencia }) {
+
+  const { cacheModelosCV, reading } = useCache(["modelosCV"])
   if (!formInferencia) return <>Visão computacional não concluída</>
+  if (reading) return <Loading />
   return (
     <>
-      <StandardInput label="Id do Modelo">
-        <Form.Control
-          value={formInferencia.modeloId}
-          onChange={(e)=> setFormInferencia({ ...formInferencia, modeloId: e.target.value})}
-        />
-      </StandardInput>
-      <StandardInput label="Versão do Modelo">
-        <Form.Control
-          value={formInferencia.modeloVersao}
-          onChange={(e)=> setFormInferencia({ ...formInferencia, modeloVersao: e.target.value})}
-        />
-      </StandardInput>
-      <StandardInput label="Confiança média" unidade="%">
-        <Form.Control
-          type="number"
-          value={formInferencia.confiancaMedia}
-          onChange={(e)=> setFormInferencia({ ...formInferencia, confiancaMedia: e.target.value })}
-        />
-      </StandardInput>
-      <div>TODO RESULTADOS</div>
-      <div>TODO AGENTE</div>
+      {Object.entries(formInferencia.resultados).map(([modelId,result])=>(
+        <StandardCard header={cacheModelosCV?.map.get(modelId)?.nome ?? modelId}>
+          {Object.entries(result).map(([classeId,detections])=>(
+            <StandardInput label={classeId}>
+              <Form.Control
+                value={detections.count}
+                disabled
+              />
+              <Form.Control
+                value={`${(detections.confidence * 100).toFixed(2)}%`}
+                disabled
+              />
+            </StandardInput>
+          ))}
+        </StandardCard>
+      ))}
     </>
   );
 }

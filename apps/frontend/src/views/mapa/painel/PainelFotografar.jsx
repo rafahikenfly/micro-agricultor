@@ -54,7 +54,7 @@ export default function PainelFotografar({ show, onCancel}) {
       }});
       midiasService.create(novaMidia, user)
       toastMessage({body: "Imagem salva.", variant: VARIANTE.GREEN.variant})
-      cacheService.clear("midias");
+      cacheService.clearCache("midias");
     } catch (err) {
       toastMessage({body: "Falha ao salvar imagem.", variant: VARIANTE.RED.variant})
       console.error("Erro ao salvar imagem:", err);

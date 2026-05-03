@@ -13,7 +13,6 @@ import VariedadeModal from "./VariedadeModal";
 import { useCache } from "../../../hooks/useCache";
 import { VARIANTE } from "micro-agricultor";
 import ListaToolbar from "../../../components/listas/ListaToolbar";
-import { renderBadge } from "../../../utils/uiUtils";
 
 
 export default function VariedadesCRUD() {
@@ -34,7 +33,7 @@ export default function VariedadesCRUD() {
 
     return variedades.filter((p) => {
       // filtro tipo select
-      ex: if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+      if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
 
       // filtro tipo texto
       const nome = filtros?.nome?.toLowerCase()

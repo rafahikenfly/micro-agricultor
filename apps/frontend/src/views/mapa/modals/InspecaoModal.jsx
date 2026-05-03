@@ -10,6 +10,7 @@ import Tarefas from "../../../components/Tarefas";
 import Eventos from "../../../components/Eventos";
 
 export default function InspecaoModal({ show, onSave, onClose, data }) {
+  if (!data) return;
   const { cacheCaracteristicas, reading } = useCache(["caracteristicas"])
   // Controle de tab
   const [tab, setTab] = useState("dados");

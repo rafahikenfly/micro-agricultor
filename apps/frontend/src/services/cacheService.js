@@ -112,6 +112,12 @@ export const cacheService = {
       [],
       {field: "persistedAt", direction: "desc"}
     ),
+  getModelosCV: async () =>
+    await cache.get(
+      "modelosCV",
+      crud.modelosCVService,
+      [{ field: "isDeleted", op: "==", value: false }],
+    ),
   // DERIVED
   getEntidades: async () => {
     const [plantas, canteiros, hortas] = await Promise.all([

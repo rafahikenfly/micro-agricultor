@@ -7,18 +7,18 @@ export default function TarefaExecucaoTab({ formExecucao, setFormExecucao }) {
   if (!formExecucao) return <>Tarefa não iniciada</>
   return (
     <>
-      <StandardInput label="Adquirido em">
+      <StandardInput label="Adquirida em">
         <Form.Control
           type="datetime-local"
-          value={toDateTimeLocal(new Date(formExecucao.adquiridoEm))}
-          onChange={(e)=> setFormExecucao({ ...formExecucao, adquiridoEm: new Date(e.target.value).getTime()})}
+          value={toDateTimeLocal(new Date(formExecucao.adquiridaEm))}
+          onChange={(e)=> setFormExecucao({ ...formExecucao, adquiridaEm: new Date(e.target.value).getTime()})}
         />
       </StandardInput>
-      <StandardInput label="Adquirido até">
+      <StandardInput label="Adquirida até">
         <Form.Control
           type="datetime-local"
-          value={toDateTimeLocal(new Date(formExecucao.adquiridoAte))}
-          onChange={(e)=> setFormExecucao({ ...formExecucao, adquiridoAte: new Date(e.target.value).getTime()})}
+          value={toDateTimeLocal(new Date(formExecucao.adquiridaAte))}
+          onChange={(e)=> setFormExecucao({ ...formExecucao, adquiridaAte: new Date(e.target.value).getTime()})}
         />
       </StandardInput>
       <StandardInput label="Inicado em">

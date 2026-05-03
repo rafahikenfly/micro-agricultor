@@ -72,6 +72,7 @@ export default function MapaModals() {
     case "inspecionar":
       return (
         <InspecaoModal
+          data={showModal.data}
           show={true}
           onClose={() => setShowModal(null)}
         />

@@ -8,27 +8,43 @@ import Loading from "../../../components/Loading";
 import ListaComAcoes from "../../../components/common/ListaComAcoes";
 import { useCrudUI } from "../../../services/ui/crudUI";
 import { VARIANTE } from "micro-agricultor";
+import { useMemo } from "react";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 
 export default function ModelosCVCRUD() {
   const { user } = useAuth();
   if (!user) return <NoUser />
 
-  const [cvModelos, setCvModelos] = useState([]);
+  const [modelosCv, setModelosCv] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: "",
+  });
+  const modelosFiltrados = useMemo(() => {
+    if (!modelosCv?.length) return [];
+
+    return modelosCv.filter((p) => {
+      // filtro tipo select
+      //ex: if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [modelosCv, filtros]);
 
   const [showModal, setShowModal] = useState(false);
-  const [showToast, setShowToast] = useState({});
 
   /* ================= CARREGAR DADOS ================= */
   useEffect(() => {
     setLoading(true);
 
     const unsub = modelosCVService.subscribe((data) => {
-      setCvModelos(data);
+      setModelosCv(data);
       setLoading(false); // só desliga quando os dados chegam
     });
 
@@ -42,45 +58,46 @@ export default function ModelosCVCRUD() {
     masculino: true, // "o modelo"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
   /* ================= RENDER ================= */
-  if (loading) return <Loading variant="inline"/>
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Novo Modelo de Visão Computacional</Button>
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+        ]}
+      />
 
-      <Row>
-        <Col>
-          <ListaComAcoes
-            dados = {cvModelos}
-            sort
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-            ]}
-            acoes = {[
-              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
-              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
-              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
-              { toggle: "isArchived",
-                rotulo: "💤",
-                rotuloFalse: "⚡",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: VARIANTE.GREY.variant,
-              },
-            ]}
-          />
-        </Col>
-      </Row>
-
+      {loading ? <Loading variant="overlay" /> :
+      <ListaComAcoes
+        dados = {modelosFiltrados}
+        sort
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome",},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant,
+          },
+        ]}
+      />}
       <CvModeloModal
         key={editando?.id ?? `novo`}
         show={showModal}

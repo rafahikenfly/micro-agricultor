@@ -1,16 +1,15 @@
-export async function executarModeloPython(imagemPath, modelPath) {
-  console.log(`[executarModeloPython] Rodando o modelo ${modelPath} em ${imagemPath}`);
-  //return; //TODO: serviço em python
+export async function executarModeloPython(imagePath, modelPath) {
+  console.log(`[executarModeloPython] Rodando o modelo ${modelPath} em ${imagePath}`);
   
   try {
-    const res = await fetch("http://localhost:8000/infer", {
+    const res = await fetch("http://localhost:8000/infer/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        imagem: imagemPath,
-        model: modelPath,
+        imagePath,
+        modelPath,
       }),
     });
 
@@ -23,7 +22,6 @@ export async function executarModeloPython(imagemPath, modelPath) {
     if (data.error) {
       throw new Error(data.error);
     }
-
     return data
 
   } catch (err) {
@@ -34,7 +32,7 @@ export async function executarModeloPython(imagemPath, modelPath) {
 
 export async function gerarRelatorioPython(args) {
   try {
-    const result = await fetch("http://localhost:8000/report", {
+    const result = await fetch("http://localhost:8000/report/", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

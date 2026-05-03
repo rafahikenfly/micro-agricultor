@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# python
+.venv
+data
+
 # sql
 sensores.db
 sensores.sb-shm

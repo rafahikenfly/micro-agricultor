@@ -8,6 +8,7 @@ const ModeloCVPadrao = {
     especialista: false,
     especialidadeKey: "",
     especialidadeValue: "",
+    path: "",
 //    trainingPolicy: {
 //        minSamples: null,
 //        retrainOnExpire: true,

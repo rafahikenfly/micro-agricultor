@@ -39,8 +39,7 @@ const midiaPadrao = {
   //}
   inferencia: null
 // processada: false,
-// modelosId: [],
-// resultados: {}, // bounding boxes, labels, etc.
+// resultados: {}, // métricas com modelo como chave
 // confiancaMedia: null,
 }
 

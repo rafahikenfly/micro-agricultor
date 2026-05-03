@@ -315,7 +315,7 @@ export const StandardObjectInput = ({
   showInput = true,
   inputLabel = "Novo item do objeto",
   inputButtonLabel = "Adicionar",
-  inputButtonVariant = "success",
+  inputButtonVariant = VARIANTE.GREEN.variant,
   inputData,
   inputKey,
   inputField,
