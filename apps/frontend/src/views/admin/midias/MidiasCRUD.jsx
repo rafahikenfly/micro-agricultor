@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { VARIANTE } from "micro-agricultor";
 
@@ -13,6 +13,7 @@ import { useAuth } from "../../../services/auth/authContext";
 
 import MidiaModal from "./MidiaModal";
 import { midiasService } from "../../../services/crudService";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 export default function MidiasCRUD() {
   const { user } = useAuth();
@@ -20,9 +21,24 @@ export default function MidiasCRUD() {
 
   const [midias, setMidias] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: "",
+  });
+  const midiasFiltradas = useMemo(() => {
+    if (!midias?.length) return [];
+
+    return midias.filter((p) => {
+      // filtro tipo select
+      //if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [midias, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -45,44 +61,46 @@ export default function MidiasCRUD() {
     masculino: false, // "a mídia"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Nova Mídia</Button>
-        </Col>
-      </Row>
-
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {midias}
-            sort
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-            ]}
-            acoes = {[
-              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
-              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
-              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
-              { toggle: "isArchived",
-                rotulo: "💤",
-                rotuloFalse: "⚡",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: VARIANTE.GREY.variant,
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+        ]}
+      />
+      
+      {loading && <Loading variant="overlay" />}
+      <ListaComAcoes
+        dados = {midiasFiltradas}
+        sort
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome",},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant,
+          },
+        ]}
+      />
 
       <MidiaModal
         key={editando?.id ?? `novo`}

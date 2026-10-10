@@ -1,6 +1,7 @@
-import { ENTIDADE, EVENTO, REASON_TYPES, RECORRENCIA } from "../types/index.js";
+import { ENTIDADE, EVENTO, MOTIVO, RECORRENCIA } from "../types/index.js";
 import { atualizarEstadoEntidade, evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
+import { getRegrasPlanta } from "./planta.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
 
@@ -127,121 +128,127 @@ export function atualizarEstadoCanteiro({entidade, estado}) {
 // =====
 // REGRAS DE INFORMAÇÃO DE CANTEIRO
 // =====
-// ** UNDER REVIEW **
-export const getCaracteristicasRelevantesCanteiro = ({plantas, mapaVariedades}) => {
-  //const caracteristicasSet = new Set();
-  const caracteristicasRelevantes = {};
+/**
+ * Consolida as regras de ambiente aplicáveis a um canteiro com base
+ * nas plantas presentes e suas respectivas variedades e estágios.
+ *
+ * A função percorre todas as plantas do canteiro e calcula a interseção
+ * das faixas de ambiente (min, max, confiança) para cada característica,
+ * garantindo um conjunto de condições compatíveis com todas as plantas.
+ *
+ * Diferente de {@link getRegrasPlanta}, esta função considera apenas
+ * regras de ambiente, ignorando tarefas e transições.
+ *
+ * @function getRegrasCanteiro
+ *
+ * @param {Object} params
+ * @param {Object} params.canteiro - Objeto canteiro.
+ * @param {number|string} params.canteiro.id - ID do cantiero.
+ *  * @param {Array<Object>} params.plantas - Lista de plantas do canteiro.
+ * @param {number|string} params.plantas[].variedadeId - ID da variedade da planta.
+ * @param {number} params.plantas[].estagioIndex - Índice do estágio atual no ciclo.
+ *
+ * @param {Map<number|string, Variedade>} params.mapaVariedades - Mapa de variedades indexado por ID.
+ *
+ * @returns {{ [caracteristicaId: string]: FaixaAmbiente }}
+ * Mapa de faixas de ambiente consolidadas por caracteristicaId, no formato:
+ * {
+ *   caracteristicaId: {
+ *     min: number,
+ *     max: number,
+ *     confianca: number
+ *   }
+ * }
+ *
+ * A consolidação é feita por:
+ * - min: maior valor mínimo entre as plantas (interseção inferior)
+ * - max: menor valor máximo entre as plantas (interseção superior)
+ * - confianca: menor nível de confiança entre as plantas
+ *
+ * Retorna objeto vazio ({}) caso não haja plantas válidas ou regras aplicáveis.
+ *
+ * @typedef {Object} FaixaAmbiente
+ * @property {number} min - Limite inferior da faixa consolidada.
+ * @property {number} max - Limite superior da faixa consolidada.
+ * @property {number} confianca - Nível de confiança da faixa consolidada.
+ */
+export const getRegrasCanteiro = ({canteiro, plantas, mapaVariedades}) => {
+  const mapaRegras = {};
 
   // para cada planta
   plantas.forEach(planta => {
-    const variedade = mapaVariedades.get(planta.variedadeId);
-    if (!variedade || !Array.isArray(variedade.ciclo)) return;
+    if (planta.canteiroId !== canteiro.id) return;
 
-    // para cada fase do ciclo da variedade
-    variedade.ciclo.forEach(fase => {
-      
-      // ambiente => chaves do objeto
-      // TODO: Compatibilizar com plantas! Aqui vem um objeto caracteristicaID: {min, max, confianca}
-      // mas nas plantas vem um objeto caracteristicaId: [{op, limite}]
-      if (fase.ambiente && typeof fase.ambiente === "object") {
-        Object.entries(fase.ambiente).forEach(([caracteristicaId, faixa]) => {
-          if (!caracteristicasRelevantes[caracteristicaId]) {
-            caracteristicasRelevantes[caracteristicaId] = { ...faixa }
-          } else {
-            // interseção das faixas
-            caracteristicasRelevantes[caracteristicaId].min =
-              Math.max(caracteristicasRelevantes[caracteristicaId].min, faixa.min)
-
-            caracteristicasRelevantes[caracteristicaId].max =
-              Math.min(caracteristicasRelevantes[caracteristicaId].max, faixa.max)
-          }
-        })
+    const regrasPlanta = getRegrasPlanta({planta, mapaVariedades})
+    // Para cada regra
+    Object.entries(regrasPlanta).forEach(([caracteristicaId,regras])=>{
+      if (!mapaRegras[caracteristicaId]) {
+        mapaRegras[caracteristicaId] = {...regras.ambiente};
       }
-
-      // transicao => chaves do objeto
-      // não pega para canteiros, só plantas
-      // if (fase.transicao && typeof fase.transicao === "object") {
-      //   Object.keys(fase.transicao).forEach(id => {
-      //     caracteristicasSet.add(id);
-      //   });
-      // }
-
-      // tarefas => array
-      // não pega para canteiros, só plantas
-      // if (Array.isArray(fase.tarefas)) {
-      //   fase.tarefas.forEach(tarefa => {
-      //     if (tarefa?.caracteristicaId) {
-      //       caracteristicasSet.add(tarefa.caracteristicaId);
-      //     }
-      //   });
-      // }
-
-    });
+      else { // interseção das faixas
+        mapaRegras[caracteristicaId].min =
+          Math.max(mapaRegras[caracteristicaId].ambiente.min, regras.ambiente.min)
+        mapaRegras[caracteristicaId].max =
+          Math.min(mapaRegras[caracteristicaId].ambiente.max, regras.ambiente.max)
+        mapaRegras[caracteristicaId].confianca =
+          Math.min(mapaRegras[caracteristicaId].ambiente.confianca, regras.ambiente.confianca)
+      }
+    })
   });
 
-  return caracteristicasRelevantes;
-  //return Array.from(caracteristicasSet);
+  return mapaRegras;
 }
-/**
- * Retorna as pendências de um canteiro.
- * A diferença entre uma pendência e uma necessidade é apenas que ela não tem um
- * tipoEventoId e um array de entidades associado.
- * @param {object} params
- * @param {canteiro} canteiro
- * @param {array} arrCaracteristicaIds
- * @param {object} faixaIdeal {[caracteristicaId]: {min, max}}
- * @returns [ {tipoEntidadeId, alvos, caracteristicaId, motivo} ]
- */
 // ** UNDER REVIEW **
-export function getPendenciasCanteiro({canteiro, mapaCaracteristicas}) {
+export function getPendenciasCanteiro({canteiro, mapaRegras}) {
   const pendencias = [];
 
-  const estadoAtual = canteiro?.estadoAtual || {};
-  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, faixaIdeal]) => {
-    const estadoCaracteristica = estadoAtual[caracteristicaId];
+  Object.entries(mapaRegras).forEach(([caracteristicaId, regra]) => {
+    const estadoAtual = canteiro.estadoAtual?.[caracteristicaId];
     // Valor Desconhecido
-    if (!estadoCaracteristica || typeof estadoCaracteristica.valor !== "number") {
+    if (!estadoAtual || typeof estadoAtual.valor !== "number") {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
-        motivo: REASON_TYPES.NO_VALUE
+        motivo: MOTIVO.SEM_DADOS.id
       });
       return;
     }
 
     // Valor Não-Confiável
-    if (typeof estadoCaracteristica.confianca !== "number" || estadoCaracteristica.confianca < (faixaIdeal.confianca || 30)) {
+    if (typeof estadoAtual.confianca !== "number"
+     || estadoAtual.confianca < (regra.ambiente.confianca
+     || 30)) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
-        motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: estadoCaracteristica.confianca ?? null
+        motivo: MOTIVO.BAIXA_CONFIANCA.id,
+        confianca: estadoAtual.confianca ?? null
       });
       return;
     }
 
     // Valor Abaixo do ideal
-    if (estadoCaracteristica.valor < faixaIdeal.min) {
+    if (estadoAtual.valor < regra.ambiente.min) {
       pendencias.push({
         tipoEventoId: EVENTO.MANEJO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
-        motivo: REASON_TYPES.LOWER_BOUND,
-        valor: estadoCaracteristica.valor
+        motivo: MOTIVO.CARENCIA.id,
+        valor: estadoAtual.valor
       });
       return;
     }
 
     // Valor Acima do ideal
-    if (estadoCaracteristica.valor > faixaIdeal.max) {
+    if (estadoAtual.valor > regra.ambine.max) {
       pendencias.push({
         tipoEventoId: EVENTO.MANEJO.id,
         tipoEntidadeId: ENTIDADE.canteiro.id,
         caracteristicaId,
-        motivo: REASON_TYPES.UPPER_BOUND,
-        valor: estadoCaracteristica.valor
+        motivo: MOTIVO.EXCESSO.id,
+        valor: estadoAtual.valor
       });
       return;
     }
@@ -263,8 +270,8 @@ export const getNecessidadesCanteiro = ({
   
   // Obtem as pendências (necessidades candidatas)
   const plantasArr = plantas.filter((p)=> p.canteiroId === entidadeId)
-  const arrCaracteristicaIds = getCaracteristicasRelevantesCanteiro({plantas: plantasArr, mapaVariedades})
-  const pendencias = getPendenciasCanteiro({canteiro, mapaCaracteristicas: arrCaracteristicaIds});
+  const mapaRegras = getRegrasCanteiro({plantas: plantasArr, mapaVariedades})
+  const pendencias = getPendenciasCanteiro({canteiro, mapaRegras});
   const necessidades = [];
 
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro

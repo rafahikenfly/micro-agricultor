@@ -11,7 +11,7 @@ const necessidadePadrao = {
   entidadeId: "",
   caracteristicaId: "",
   tipoEventoId: "",
-  motivo: "",           // REASON_TYPES
+  motivo: "",           // MOTIVO
   estadoAtual: {
     valor: null,
     confianca: null,

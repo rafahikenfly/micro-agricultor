@@ -12,6 +12,8 @@ import TarefaModal from "./TarefaModal";
 import { tarefasService } from "../../../services/crudService";
 import { ESTADO_TAREFA, RECORRENCIA, VARIANTE } from "micro-agricultor";
 import { ISOToReadableString } from "../../../utils/dateUtils";
+import { useMemo } from "react";
+import ListaToolbar from "../../../components/listas/ListaToolbar";
 
 
 export default function TarefasCRUD() {
@@ -20,9 +22,24 @@ export default function TarefasCRUD() {
 
   const [tarefas, setTarefas] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [editando, setEditando] = useState(null);
-  const [registroParaExcluir, setRegistroParaExcluir] = useState(null);
+  const [filtros, setFiltros] = useState({
+    nome: "",
+  });
+  const tarefasFiltradas = useMemo(() => {
+    if (!tarefas?.length) return [];
+
+    return tarefas.filter((p) => {
+      // filtro tipo select
+      //if (filtros?.especieId && p.especieId !== filtros.especieId) return false;
+
+      // filtro tipo texto
+      const nome = filtros?.nome?.toLowerCase()
+      if (nome && !p.nome?.toLowerCase().includes(nome)) return false;
+
+      return true;
+    });
+  }, [tarefas, filtros]);
 
   const [showModal, setShowModal] = useState(false);
 
@@ -45,49 +62,51 @@ export default function TarefasCRUD() {
     masculino: false, // "a tarefa"
     user,
     editando,
-    registroParaExcluir,
     setEditando,
     setShowModal,
-    setRegistroParaExcluir,
   });
 
   /* ================= RENDER ================= */
   return (
     <Container fluid>
-      <Row className="mb-3">
-        <Col>
-          <Button variant="outline-success" onClick={criar}>+ Nova tarefa</Button>
-        </Col>
-      </Row>
+      <ListaToolbar
+        onNovo={criar}
+        filtros={filtros}
+        setFiltros={setFiltros}
+        configFiltros={[
+          {
+            key: "nome",
+            type: "text",
+            label: "Nome",
+            placeholder: "Nome"
+          },
+        ]}
+      />
 
-      <Row>
-        <Col style={{ position: "relative" }}>
-          {loading && <Loading variant="overlay" />}
-          <ListaComAcoes
-            dados = {tarefas}
-            sort
-            colunas = {[
-              {rotulo: "Nome", dataKey: "nome",},
-              {rotulo: "Estado", dataKey: "estado", render: (a) => ESTADO_TAREFA[a.estado]?.nome ?? "-"},
-              {rotulo: "Vencimento", dataKey: "planejamento", render: (a) => ISOToReadableString(a.planejamento.venceEm)},
-              {rotulo: "Recorrência", dataKey: "recorrencia", render: (a) => RECORRENCIA[a.planejamento.recorrencia?.tipoRecorrenciaId]?.nome ?? "-"},
-              {rotulo: "Execuções", dataKey: "execucoes", render: (a) => a.planejamento.recorrencia?.execucoes ?? 0},
-            ]}
-            acoes = {[
-              {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
-              {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
-              {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
-              { toggle: "isArchived",
-                rotulo: "💤",
-                rotuloFalse: "⚡",
-                funcao: desarquivar,
-                funcaoFalse: arquivar,
-                variant: VARIANTE.GREY.variant,
-              },
-            ]}
-          />
-        </Col>
-      </Row>
+      {loading && <Loading variant="overlay" />}
+      <ListaComAcoes
+        dados = {tarefasFiltradas}
+        sort
+        colunas = {[
+          {rotulo: "Nome", dataKey: "nome",},
+          {rotulo: "Estado", dataKey: "estado", render: (a) => ESTADO_TAREFA[a.estado]?.nome ?? "-"},
+          {rotulo: "Vencimento", dataKey: "planejamento", render: (a) => ISOToReadableString(a.planejamento.venceEm)},
+          {rotulo: "Recorrência", dataKey: "recorrencia", render: (a) => RECORRENCIA[a.planejamento.recorrencia?.tipoRecorrenciaId]?.nome ?? "-"},
+          {rotulo: "Execuções", dataKey: "execucoes", render: (a) => a.planejamento.recorrencia?.execucoes ?? 0},
+        ]}
+        acoes = {[
+          {rotulo: "📝", funcao: editar, variant:VARIANTE.YELLOW.variant},
+          {rotulo: "⧉", funcao: duplicar, variant: VARIANTE.GREY.variant},
+          {rotulo: "🗑️", funcao: apagarComConfirmacao, variant: VARIANTE.RED.variant},
+          { toggle: "isArchived",
+            rotulo: "💤",
+            rotuloFalse: "⚡",
+            funcao: desarquivar,
+            funcaoFalse: arquivar,
+            variant: VARIANTE.GREY.variant,
+          },
+        ]}
+      />
 
       <TarefaModal
         key={editando?.id ?? `novo`}

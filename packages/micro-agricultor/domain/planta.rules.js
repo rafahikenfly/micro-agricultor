@@ -1,4 +1,4 @@
-import { REASON_TYPES, ENTIDADE, EVENTO, RECORRENCIA } from "../types/index.js";
+import { ENTIDADE, EVENTO, RECORRENCIA, MOTIVO, OPERADOR } from "../types/index.js";
 import { atualizarEstadoEntidade, evoluirEntidade, manejarEntidade, monitorarEntidade, movimentarEntidade, redimensionarEntidade, } from "./entidade.rules.js";
 import { getNecessidadeKey } from "./necessidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -283,119 +283,232 @@ export function mudarVariedade(planta, novaVariedade) {
 // =====
 // REGRAS DE INFORMAÇÃO DE PLANTA
 // =====
-// ** UNDER REVIEW **
-export const getCaracteristicasRelevantesPlanta = ({planta, mapaVariedades}) => {
-  //const caracteristicasSet = new Set();
-  const caracteristicasRelevantes = {};
+/**
+ * Consolida as regras aplicáveis a uma planta com base na sua variedade
+ * e no estágio atual dentro do ciclo da variedade.
+ *
+ * A função agrega três tipos de regras:
+ * - Regras de ambiente (faixas min/max com confiança)
+ * - Regras de tarefas (ações de manejo)
+ * - Regras de transição (condições para próxima fase)
+ *
+ * @function getRegrasPlanta
+ *
+ * @param {Object} params
+ * @param {Object} params.planta - Objeto da planta atual.
+ * @param {number|string} params.planta.variedadeId - ID da variedade da planta.
+ * @param {number} params.planta.estagioIndex - Índice do estágio atual no ciclo da variedade.
+ *
+ * @param {Map<number|string, Variedade>} params.mapaVariedades - Mapa de variedades indexado por ID.
+ *
+ * @returns {Object<string, RegraConsolidada>} Mapa de regras por caracteristicaId, no formato
+ * {
+ *    caracteristicaId: {
+ *      ambiente: {
+ *        min: ...
+ *        max: ...
+ *        confianca: ...
+ *      },
+ *      eventos: []
+ *    }
+ * }
+ * Retorna objeto vazio caso não haja variedade, ciclo ou fase válida.
+ *
+ * @typedef {Object} Variedade
+ * @property {Array<Fase>} ciclo - Lista de fases do ciclo da variedade.
+ *
+ * @typedef {Object} Fase
+ * @property {Object<string, RegraAmbiente>} [ambiente] - Regras de ambiente por caracteristicaId.
+ * @property {Array<RegraTarefa>} [tarefas] - Lista de regras de tarefas.
+ * @property {Object<string, RegraTransicao>} [transicao] - Regras de transição para a próxima fase.
+ *
+ * @typedef {Object} RegraAmbiente
+ * @property {string} caracteristicaId
+ * @property {number} [min]
+ * @property {number} [max]
+ * @property {number} [confianca]
+ *
+ * @typedef {Object} RegraTarefa
+ * @property {string} caracteristicaId
+ * @property {string} operador
+ * @property {number} limite
+ * @property {Array<any>} [manejos]
+ *
+ * @typedef {Object} RegraTransicao
+ * @property {string} caracteristicaId
+ * @property {string} operador
+ * @property {number} limite
+ *
+ * @typedef {Object} RegraConsolidada
+ * @property {number} [min] - Valor mínimo do estágio da planta.
+ * @property {number} [max] - Valor máximo do estágio da planta.
+ * @property {number} [confianca] - Nível de confiança do estágio da planta.
+ * @property {Array<Object>} regras - Lista de regras associadas (tarefas e transições).
+ */
+export const getRegrasPlanta = ({planta, mapaVariedades}) => {
+  const mapaRegras = {};
 
-  // para cada planta
+  // Obtém a variedade. Se não a variedade não existe no mapa (ex: foi deletada),
+  // não há regras da planta.
   const variedade = mapaVariedades.get(planta.variedadeId);
-  if (!variedade || !Array.isArray(variedade.ciclo)) return;
+  if (!variedade || !Array.isArray(variedade.ciclo)) return {};
 
-  // para cada fase do ciclo da variedade
-  variedade.ciclo.forEach(fase => {
+  // Analisa a fase do ciclo da variedade em que a planta se encontra
+  // e consolida todas as regras existentes. Caso não haja cadastro do
+  // ciclo da variedade, não há regras da planta
+  const fase = variedade.ciclo[planta.estagioIndex]
+  if (!fase) return {}
     
-    // ambiente => chaves do objeto são caracteristicaId, com objeto {min, max, confianca}
-    // Para plantas, não usa isso só canteiros
-    // TODO: Compatibilizar com canteiros
-    
-    // tarefas => chaves do objeto são caracteristicaId, com array [{op, limite}]
-    if (fase.tarefas && Array.isArray(fase.tarefas)) {
-      fase.tarefas.forEach(tarefa => {
-        const {caracteristicaId, ...pendencia} = tarefa;
-        if (!caracteristicasRelevantes[caracteristicaId]) caracteristicasRelevantes[caracteristicaId] = [];
-        caracteristicasRelevantes[caracteristicaId].push(pendencia)
+  // Regras de Ambiente => Objeto tipo {caracteristicaId: {caracteristicaId, min, max, confianca}}
+  // Só há uma faixa para cada caracteristicaId.
+  if (fase.ambiente && typeof fase.ambiente === "object") {
+    Object.values(fase.ambiente).forEach((ambiente) => {
+      if (!mapaRegras[ambiente.caracteristicaId]) {
+        mapaRegras[ambiente.caracteristicaId] = { ambiente, eventos: []}
+      }
+      else {
+        mapaRegras[ambiente.caracteristicaId] = {...mapaRegras[ambiente.caracteristicaId], ambiente}
+      }
+    })
+  }
+      
+  // Eventos de Tarefas => array tipo [{caracteristicaId, regra}...]
+  // Obj regra é {caracteristicaId, operador, limite, manejos []}
+  if (fase.tarefas && Array.isArray(fase.tarefas)) {
+    fase.tarefas.forEach(tarefa => {
+      if (!mapaRegras[tarefa.caracteristicaId]) {
+        mapaRegras[tarefa.caracteristicaId] = { eventos: [] };
+      }
+      mapaRegras[tarefa.caracteristicaId].eventos.push({
+        tipoEventoId: EVENTO.MANEJO.id,
+        ...tarefa
       });
-    }
-    // transicao => chaves do objeto
-    // TODO: NÃO É UM SET, MAS UM OBJETO
-    if (fase.transicao && typeof fase.transicao === "object") {
-      Object.entries(fase.transicao).forEach(([caracteristicaId, limite]) => {
-        if (!caracteristicasRelevantes[caracteristicaId]) {
-          caracteristicasRelevantes[caracteristicaId] = { ...limite }
-        }
+    });
+  }
+
+  // Eventos de transicao => objeto {caracteristicaId: {regra}}
+  // Obj regra é {caracteristicaId, operador, limite}
+  const proximaFase = variedade.ciclo[planta.estagioIndex + 1]
+  if (!proximaFase) return mapaRegras;
+
+  if (proximaFase.transicao && typeof proximaFase.transicao === "object") {
+    Object.values(proximaFase.transicao).forEach((regra) => {
+      if (!mapaRegras[regra.caracteristicaId]) {
+        mapaRegras[regra.caracteristicaId] = { eventos: [] };
+      }
+      mapaRegras[regra.caracteristicaId].eventos.push({
+        tipoEventoId: EVENTO.TRANSICAO.id,
+        ...regra
       });
-    };
+    });
+  };
 
-  });
-
-  return caracteristicasRelevantes;
-//  return Array.from(caracteristicasSet); //TODO: isso aqui tem que retornar igual o canteiro
+  return mapaRegras;
 }
 // ** UNDER REVIEW **
-export function getPendenciasPlanta({planta, mapaCaracteristicas}) {
+// Verificar se está aplicando corretamente todo tipo de regra
+// (ambiente, transicao e tarefa)
+export function getPendenciasPlanta({planta, mapaRegras}) {
   const pendencias = [];
 
-  const estadoAtual = planta?.estadoAtual || {};
+  // mapaRegras é um objeto do tipo:
+  // {caracteristicaId: {
+  //    ambiente: {},
+  //    eventos: [] 
+  //  }
+  // }
+  Object.entries(mapaRegras).forEach((caracteristicaId, params) => {
+    const estadoAtual = (planta?.estadoAtual || {})[caracteristicaId];
 
-  Object.entries(mapaCaracteristicas).forEach(([caracteristicaId, tarefas]) => {
-    const estadoAtualCaracteristica = estadoAtual[caracteristicaId];
-
-    // Valor Desconhecido ou inválido
-    if (!estadoAtualCaracteristica || typeof estadoAtualCaracteristica.valor !== "number") {
+    // Valor desconhecido ou inválido
+    if (!estadoAtual                            // Desconhecido
+      || typeof estadoAtual.valor !== "number"  // Valor inválido
+      || estadoAtual.confianca !== "number"     // Confiança inválida
+    ) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
         caracteristicaId,
-        motivo: REASON_TYPES.NO_VALUE,
+        motivo: MOTIVO.SEM_DADOS.id,
       });
-      return;
+      return;                                   // Como não tem valor, não processo os parametros
     }
 
-    // Valor Não-Confiável
-    if (typeof estadoAtualCaracteristica.confianca !== "number" || estadoAtualCaracteristica.confianca < 30) { //TODO: HARDCODED
+    // Confianca abaixo do limite mínimo
+    if (estadoAtual.confianca < params.confianca) {
       pendencias.push({
         tipoEventoId: EVENTO.MONITORAMENTO.id,
         tipoEntidadeId: ENTIDADE.planta.id,
         caracteristicaId,
-        motivo: REASON_TYPES.LOW_CONFIDENCE,
-        confianca: estadoAtualCaracteristica.confianca ?? null
+        motivo: MOTIVO.BAIXA_CONFIANCA.id,
+        confianca: estadoAtual.confianca ?? null
       });
     }
 
-    // Valor Fora do parâmetro
-    tarefas.forEach ((tarefa) => {
-      switch (tarefa.operador) {
-        case "==":
-          if (estadoAtualCaracteristica.valor == tarefa.limite) {
+    // Valor abaixo do limite mínimo
+    if (estadoAtual.valor < params.valor) {
+      pendencias.push({
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
+        caracteristicaId,
+        motivo: MOTIVO.CARENCIA.id,
+        confianca: estadoAtual.confianca ?? null
+      });
+    }
+    // Valor acima do limite máximo
+    if (estadoAtual.valor < params.valor) {
+      pendencias.push({
+        tipoEventoId: EVENTO.MONITORAMENTO.id,
+        tipoEntidadeId: ENTIDADE.planta.id,
+        caracteristicaId,
+        motivo: MOTIVO.EXCESSO.id,
+        confianca: estadoAtual.confianca ?? null
+      });
+    }
+
+    // Verifica as regras
+    if (params.regras) for (const regra in params.regras) {
+      switch (regra.operador) {
+        case OPERADOR.EQUAL.id:
+          if (estadoAtual.valor == regra.limite) {
             pendencias.push({
-              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEventoId: regra.tipoEventoId ?? EVENTO.MANEJO.id,
               tipoEntidadeId: ENTIDADE.planta.id,
               caracteristicaId,
-              motivo: REASON_TYPES.UPPER_BOUND, //TODO
-              valor: estadoAtualCaracteristica.valor
+              motivo: MOTIVO.IGUAL.id,
+              valor: estadoAtual.valor
             });
           }
           break;
-        case "<=":
-          if (estadoAtualCaracteristica.valor <= tarefa.limite) {
+        case OPERADOR.LOWER.id:
+          if (estadoAtual.valor <= regra.limite) {
             pendencias.push({
-              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEventoId: regra.tipoEventoId ?? EVENTO.MANEJO.id,
               tipoEntidadeId: ENTIDADE.planta.id,
               caracteristicaId,
-              motivo: REASON_TYPES.UPPER_BOUND, //TODO
-              valor: estadoAtualCaracteristica.valor
+              motivo: MOTIVO.ABAIXO.id,
+              valor: estadoAtual.valor
             });
           }
           break;
-        case ">=":
-          if (estadoAtualCaracteristica.valor >= tarefa.limite) {
+        case OPERADOR.GREATER.id:
+          if (estadoAtual.valor >= regra.limite) {
             pendencias.push({
-              tipoEventoId: EVENTO.MANEJO.id,
+              tipoEventoId: regra.tipoEventoId ?? EVENTO.MANEJO.id,
               tipoEntidadeId: ENTIDADE.planta.id,
               caracteristicaId,
-              motivo: REASON_TYPES.UPPER_BOUND, //TODO
-              valor: estadoAtualCaracteristica.valor
+              motivo: MOTIVO.ACIMA.id,
+              valor: estadoAtual.valor
             });
           }
           break;
       
         default:
-          console.warn("erro") //TODO
+          console.warn("[getPendenciasPlanta]: Erro ao processar regra", planta.variedadeId, regra)
           break;
-      }
-    });
-    return;
+        }
+      return;
+    }
   });
 
   return pendencias;
@@ -466,8 +579,8 @@ export const getNecessidadesPlanta = ({
   const entidadeNome = planta.nome
   
   // Obtem as pendências (necessidades candidatas)
-  const arrCaracteristicaIds = getCaracteristicasRelevantesPlanta({planta, mapaVariedades})
-  const pendencias = getPendenciasPlanta({planta, mapaCaracteristicas: arrCaracteristicaIds});
+  const mapaRegras = getRegrasPlanta({planta, mapaVariedades})
+  const pendencias = getPendenciasPlanta({planta, mapaRegras});
   const necessidades = [];
   
   // TODO: Todo o resto desta função é compartilhado entre planta e canteiro

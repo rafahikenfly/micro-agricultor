@@ -59,5 +59,12 @@ export const EVENTO = {
     categoria: "visão computacional",
     geraNecessidade: true
   },  
+  TRANSICAO: {
+    id: "TRANSICAO",
+    nome: "Transição de Estágio",
+    acao: "Trasitar",
+    categoria: "sistema",
+    geraNecessidade: false
+  },
   [EVENTO_TYPES.CREATE]: {id: EVENTO_TYPES.CREATE, nome: "Criação", categoria: "entidade", geraNecessidade: false},
 };
