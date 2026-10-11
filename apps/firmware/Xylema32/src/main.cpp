@@ -35,9 +35,9 @@ const int CHANNEL_R = 0;
 const int CHANNEL_G = 1;
 const int CHANNEL_B = 2;
 
-// Estrutura de MensagemCNC
+// Estrutura de ComandoCNC
 //TODO: esse nome .data está horrível e deveria ser command ou coisa do tipo
-struct MensagemCNC {
+struct ComandoCNC {
     long id;
     String type;
     String data;       // Usado para conteudo da mensagem (gcode line ou outros comandos)
@@ -47,7 +47,7 @@ struct MensagemCNC {
 
 
 // Variáveis de estado
-enum EstadoGuiche {
+enum estadoXylema {
     PRONTO,               // Pronto para receber novas instruções
     AGUARDANDO_GRBL_OK,   // Esperando o 'ok' de um comando enviado
     AGUARDANDO_GRBL_IDLE, // Esperando o GRBL voltar ao estado IDLE (ex: para executar um sync)
@@ -61,13 +61,13 @@ enum TipoEvento {
   GRAVE,
   CRITICO,
 };
-EstadoGuiche estadoGuiche = PRONTO;
+estadoXylema estadoXylema = PRONTO;
 EstadoGRBL estadoGRBL = DESCONHECIDO;
 static String posicaoGRBL = "";
 static String endstopGRBL = "";
 static int bufferGRBL = 0;
 bool pushed = true;
-bool estadoAcessorio[TOTAL_ACESSORIOS] ={false, false, false, false, false, false, false, false,};
+bool estadoAcessorio[TOTAL_ACESSORIOS] ={0, 0, 0, 0, 0, 0, 0, 0,};
 
 // Variáveis de timestamp
 static unsigned long ultimoEstadoTs = 0;
@@ -80,7 +80,7 @@ static int delayMs = 0;
 Preferences preferences;
 WiFiClient espClient;
 PubSubClient client(espClient);
-std::queue<MensagemCNC> filaCNC;
+std::queue<ComandoCNC> filaCNC;
 HardwareSerial SerialGRBL(2); // Porta Serial 2 para o GRBL
 
 // Variáveis de configuração em nível de software
@@ -92,8 +92,8 @@ String mqtt_ack_channel;
 String mqtt_status_channel;
 String mqtt_event_channel;
 int intervaloEstado;
-int pwmAcessorio[TOTAL_ACESSORIOS] = {-1, -1, -1, -1, 1024, 1024, 1024, 1024};
-
+int pwmMax[TOTAL_ACESSORIOS] = {1, 1, 1, 1, 255, 255, 255, 255};
+int pwmMin[TOTAL_ACESSORIOS] = {0, 0, 0, 0, 0, 0, 0, 0};
 
 // Declarações de funções
 void setupPins();
@@ -112,6 +112,8 @@ void acknowledgeQueued(long id);
 void reportStatusMQTT();
 void reportEventMQTT(int tipo, String mensagem, String origem);
 void limparFila(String mensagem);
+bool handleComandoRT(ComandoCNC comando);
+bool handleComandoSET(ComandoCNC comando);
 void processarFila();
 void serialGRBLReceive();
 void serialGRBLSend(String data);
@@ -142,7 +144,7 @@ void setupPins() {
   // Pinos de acessórios
   for (int i = 0; i < TOTAL_ACESSORIOS; i++) {
     pinMode(ACC_PIN[i], OUTPUT);
-    if (pwmAcessorio[i] == -1) {
+    if (pwmMax[i] == -1) {
       //Relés (iniciais em HIGH/desligado)
       digitalWrite(ACC_PIN[i], HIGH);
     } else {
@@ -352,14 +354,14 @@ void loopLED() {
     return;
   }
   // 3. Estados críticos que bloqueiam o envio de mensagens para o GRBL
-  // (Guiche Bloqueado OU Erro Crítico) -> Vermelho fixo
+  // (Xylema Bloqueado OU Erro Crítico) -> Vermelho fixo
   // (GRBL em Home) -> Azul fixo
   // (Fila cheia) -> Amarelo fixo
   if (estadoGRBL == HOMING) {
     led(0, 0, 255); 
     return;
   }
-  if (estadoGuiche == BLOQUEADO || estadoGuiche == ERRO_CRITICO) {
+  if (estadoXylema == BLOQUEADO || estadoXylema == ERRO_CRITICO) {
     led(255, 0, 0); 
     return;
   }
@@ -368,16 +370,16 @@ void loopLED() {
     return;
   }
 
-  // 4. Estado do Guiche
+  // 4. Estado do Xylema
   // Aguardando idle -> Branco piscando lento
   // Aguardando ok   -> Amarelo piscando lento 
   // Fluxo normal    -> Verde piscando lento
-  // Guiche pronto   -> Azul piscando muito lento
-  if (estadoGuiche == AGUARDANDO_GRBL_IDLE) {
+  // Xylema pronto   -> Azul piscando muito lento
+  if (estadoXylema == AGUARDANDO_GRBL_IDLE) {
     ledFade(255, 255, 255, 1500, 3000);
     return;
   }
-  if (estadoGuiche == AGUARDANDO_GRBL_OK) {
+  if (estadoXylema == AGUARDANDO_GRBL_OK) {
     ledFade(0, 255, 255, 1500, 3000);
     return;
   }
@@ -385,7 +387,7 @@ void loopLED() {
     ledFade(0, 255, 0, 1500, 3000);
     return;
   }
-  if (estadoGuiche == PRONTO) {
+  if (estadoXylema == PRONTO) {
     ledFade(0, 0, 255, 1500, 6000);
     return;
   }
@@ -408,12 +410,20 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // 0. Decompõe a instrucao
+  // 0. Recebimento do comando
   long id = doc["id"] | 0;
   String type = doc["type"] | "";
   String data = doc["data"] | "";
   int value = doc["value"] | 0;
   String msgPayload = doc["payload"] | "";
+
+  ComandoCNC comando;
+  comando.id = id;
+  comando.type = type;
+  comando.data = data;
+  comando.value = value;
+  comando.payload = msgPayload;
+
   Serial.print("id: ");
   Serial.print(id);
   Serial.print("; type: ");
@@ -425,9 +435,10 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   Serial.print("; payload: ");
   Serial.println(msgPayload);
 
-  if (estadoGuiche == BLOQUEADO) {
-    Serial.println ("Guichê bloqueado");
-    acknowledgeError(id, "Guichê bloqueado");
+  // 2. Erros de recebimento
+  if (estadoXylema == BLOQUEADO) {
+    Serial.println ("Xylema bloqueado");
+    acknowledgeError(id, "Xylema bloqueado");
     reportEventMQTT(LEVE, "Bloqueado", "Xylema32");
     return;
   }
@@ -439,30 +450,15 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  // 1. COMANDOS EM TEMPO REAL (RT) - Não entram na fila
-  if (type == "rt") {
-    if (data == "PAUSE") pulsoGRBL(GRBL_HOLD_PIN);
-    else if (data == "ABORT") pulsoGRBL(GRBL_ABORT_PIN);
-    else if (data == "RESUME") pulsoGRBL(GRBL_RESUME_PIN);
-    else if (data == "RESET") pulsoGRBL(GRBL_RESET_PIN, 100, 2000);
-    else if (data == "UNLOCK") estadoGuiche = PRONTO;
-    // TODO tratar o SET
-    acknowledgeCompleted(id);
-    //TRATAR O ERRO DE COMANDO INVALIDO
+  if (type == "rt") { // COMANDOS EM TEMPO REAL (RT) - Não entram na fila
+    handleComandoRT(comando);
     return;
   }
-
-  // 2. MENSAGENS QUE VÃO PARA A FILA (gcode, sync, macro, delay, config)
-  MensagemCNC msg;
-  msg.id = id;
-  msg.type = type;
-  msg.data = data;
-  msg.value = value;
-  msg.payload = msgPayload;
-
-  // Adiciona na fila e marca acnowledge
-  filaCNC.push(msg);
-  acknowledgeQueued(id);
+  else {   // MENSAGENS QUE VÃO PARA A FILA (gcode, sync)
+    // Adiciona na fila e marca acnowledge
+    filaCNC.push(comando);
+    acknowledgeQueued(id);
+  }
 }
 void acknowledgeQueued(long id) {
     String ackPayload = "{\"id\":" + String(id) + ",\"status\":\"QUEUED\"}";
@@ -492,7 +488,7 @@ void reportStatusMQTT() {
     grblObj["endstops"] = endstopGRBL;
     
     JsonObject filaObj = docStatus["fila"].to<JsonObject>();
-    filaObj["guiche"] = estadoGuiche;
+    filaObj["Xylema"] = estadoXylema;
     filaObj["disponivel"] = tamanhoFila - filaCNC.size();
 
     JsonObject acessoriosObj = docStatus["acessorios"].to<JsonObject>();
@@ -530,10 +526,61 @@ void reportEventMQTT(int tipo, String mensagem, String origem) {
 // ===
 // FILA
 // ===
+bool handleComandoRT(ComandoCNC comando) {
+  bool ok = false;
+  if (comando.data == "HOLD")        {pulsoGRBL(GRBL_HOLD_PIN); ok = true;}
+  else if (comando.data == "ABORT")  {pulsoGRBL(GRBL_ABORT_PIN); ok = true;}
+  else if (comando.data == "CYCLE")  {pulsoGRBL(GRBL_RESUME_PIN); ok = true;}
+  else if (comando.data == "RESET")  {pulsoGRBL(GRBL_RESET_PIN, 100, 2000); ok = true;}
+  else if (comando.data == "UNLOCK") {estadoXylema = PRONTO; ok = true;}
+  else if (comando.data.startsWith("SET")) handleComandoSET(comando);
+  if (ok) {
+    acknowledgeCompleted(comando.id);
+    return true;
+  }
+  char bufferErro[128];
+  snprintf(bufferErro, sizeof(bufferErro), "Comando RT inválido: %s", comando.data.c_str());
+  acknowledgeError(comando.id, bufferErro);
+  return false;
+}
+bool handleComandoSET(ComandoCNC comando) {
+  bool ok = false;
+
+  int indice = comando.value;
+  if (indice >= 0 && indice < TOTAL_ACESSORIOS) {
+    int novoPwm = comando.payload.toInt();
+    if (comando.data.indexOf("MAX") != -1) {pwmMax[indice] = novoPwm; ok = true; }
+    if (comando.data.indexOf("MIN") != -1) {pwmMin[indice] = novoPwm; ok = true; }
+    if (comando.data.indexOf("ON") != -1)  {
+      int pwmMapeado = map(novoPwm, 0, 255, pwmMin[indice], pwmMax[indice]);
+      estadoAcessorio[indice] = pwmMapeado;
+      ok = true;
+    }
+    if (comando.data.indexOf("OFF") != -1) {estadoAcessorio[indice] = 0; ok = true; }
+  }
+  else {
+    // Índice inválido
+    Serial.println("GRAVE: Acessório inexistente");
+    reportEventMQTT(GRAVE, "Acessório inexistente " + String(indice), "Xylema32");
+    char bufferErro[128];
+    snprintf(bufferErro, sizeof(bufferErro), "Indice de acessório inexistente %d", indice);
+    acknowledgeError(comando.id, bufferErro);
+    return false;
+  }
+
+  if (ok) {
+    acknowledgeCompleted(comando.id);
+    return true;
+  }
+  char bufferErro[128];
+  snprintf(bufferErro, sizeof(bufferErro), "Comando SET inválido: %s", comando.data.c_str());
+  acknowledgeError(comando.id, bufferErro);
+  return false;
+}
 void limparFila(String mensagem) {
-  estadoGuiche == BLOQUEADO;
+  estadoXylema == BLOQUEADO;
   while (!filaCNC.empty()) {
-    MensagemCNC m = filaCNC.front();
+    ComandoCNC m = filaCNC.front();
     acknowledgeError(m.id, mensagem);
     filaCNC.pop();
   }
@@ -543,8 +590,8 @@ void limparFila(String mensagem) {
 }
 void processarFila() {
   // Se a máquina estiver ociosa e houver itens na fila, pega o próximo
-  if (estadoGuiche == PRONTO && !filaCNC.empty()) {
-    MensagemCNC atual = filaCNC.front();
+  if (estadoXylema == PRONTO && !filaCNC.empty()) {
+    ComandoCNC atual = filaCNC.front();
     Serial.print("Processando: ");
     Serial.print(atual.data);
     if (atual.type == "gcode") {
@@ -555,7 +602,7 @@ void processarFila() {
     else if (atual.type == "sync") {
       Serial.println(" | Aguardando idle");
       // Para o sync, espera o status para saber quando fica Idle
-      estadoGuiche = AGUARDANDO_GRBL_IDLE;
+      estadoXylema = AGUARDANDO_GRBL_IDLE;
       inicioEsperaTs = millis();
     }
     else if (atual.type == "config") {
@@ -579,9 +626,9 @@ void serialGRBLReceive() {
     if (linha.startsWith("Grbl 1.1")) continue;               //linha de inicio
     if (linha.startsWith("[MSG:Caution: Unlocked]")) continue;//alerta de unlock
 
-    // Se receber mensagem de que está trancado, reporta evento, bloqueia o guichê e faz homing.
+    // Se receber mensagem de que está trancado, reporta evento, bloqueia o Xylema e faz homing.
     if (linha.startsWith("[MSG:'$H'|'$X' to unlock]")) {
-      if (estadoGuiche != ERRO_CRITICO) {
+      if (estadoXylema != ERRO_CRITICO) {
         Serial.println("INFO: GRBL em posição desconhecida. Iniciando homing...");
         reportEventMQTT(INFO, "Inicio de homing", "Xylema32");
         serialGRBLSend("$H");
@@ -625,7 +672,7 @@ void serialGRBLReceive() {
         case 7:
         case 8:
         case 9:
-          estadoGuiche = ERRO_CRITICO;
+          estadoXylema = ERRO_CRITICO;
           Serial.println("CRITICO: Falha no Homing. Reset ignorado.");
           reportEventMQTT(CRITICO, parseAlarmGRBL(codigoAlarme), "GRBL");
           break;
@@ -644,14 +691,14 @@ void serialGRBLReceive() {
       posicaoGRBL = interpretarPosicaoGRBL(linha);
       bufferGRBL = interpretarBufferGRBL(linha);
       endstopGRBL = interpretarEndstopGRBL(linha);
-      if (estadoGuiche == BLOQUEADO && estadoGRBL == OCIOSO) {
+      if (estadoXylema == BLOQUEADO && estadoGRBL == OCIOSO) {
         // Recuperou via homing!
-        Serial.println("Guichê pronto");
-        estadoGuiche = PRONTO;
+        Serial.println("Xylema pronto");
+        estadoXylema = PRONTO;
       }
-      if (estadoGuiche != ERRO_CRITICO && estadoGuiche != BLOQUEADO && estadoGRBL == ALARME) {
+      if (estadoXylema != ERRO_CRITICO && estadoXylema != BLOQUEADO && estadoGRBL == ALARME) {
         Serial.println("Alarme desconhecido identificado no GRBL");
-        estadoGuiche = BLOQUEADO;
+        estadoXylema = BLOQUEADO;
       }
     }
 
@@ -660,48 +707,23 @@ void serialGRBLReceive() {
       //Serial.println(linha);
     }
 
-    // Se o guiche está esperando o GRBL ficar Idle para executar um sync, aguarda OCIOSO ou TIMEOUT
-    if (estadoGuiche == AGUARDANDO_GRBL_IDLE) {
+    // Se o Xylema está esperando o GRBL ficar Idle para executar um sync, aguarda OCIOSO ou TIMEOUT
+    if (estadoXylema == AGUARDANDO_GRBL_IDLE) {
       if (estadoGRBL == OCIOSO) {
-        MensagemCNC atual = filaCNC.front();
+        ComandoCNC atual = filaCNC.front();
         if (atual.data == "DELAY") {
           delayMs = atual.value;
           //TODO
           filaCNC.pop();
         }
-        else if (atual.data == "SET") {
-          if (atual.value >= 0 && atual.value < TOTAL_ACESSORIOS) {
-            int indice = atual.value;
-            if (pwmAcessorio[indice] == -1) {
-              // É um Relé (-1)
-              estadoAcessorio[indice] = atual.payload == "ON";
-            }
-            else {
-              // É um MOSFET (0-1024): verifica o PWM
-              if (atual.payload == "ON") estadoAcessorio[indice] = true;
-              else if (atual.payload == "OFF") estadoAcessorio[indice] = false;
-              else {
-                // Se mandou um número novo como payload (ex: "250"), atualiza a calibração
-                int novoPwm = atual.payload.toInt();
-                pwmAcessorio[indice] = novoPwm;
-                estadoAcessorio[indice] = true;
-              }              
-            }
-            filaCNC.pop();
-            acknowledgeCompleted(atual.id);
-            estadoGuiche = PRONTO; // Libera para o próximo
-          }
-          else {
-            // Índice inválido
-            Serial.println("GRAVE: Acessório inexistente");
-            reportEventMQTT(GRAVE, "Acessório inexistente " + String(atual.value), "Xylema32");
-            filaCNC.pop();
-            acknowledgeError(atual.id, "Indice de acessório inexistente");
-            estadoGuiche = BLOQUEADO;
-          }
+        else if (atual.data.startsWith("SET")) {
+          handleComandoSET(atual); 
+          filaCNC.pop();
+          estadoXylema = PRONTO; // Libera para o próximo
         }
         else if (atual.data == "REPORT") {
           reportEventMQTT(INFO, atual.payload, "Xylema32");
+          filaCNC.pop();
         }
         else if (atual.data == "MACRO") {
           //TODO
@@ -710,33 +732,33 @@ void serialGRBLReceive() {
       }
       // Timeout de segurança
       else if (millis() - inicioEsperaTs > timeoutGRBLIdle) {
-        MensagemCNC atual = filaCNC.front();
+        ComandoCNC atual = filaCNC.front();
         acknowledgeError(atual.id, "timeout aguardando idle");
         //TODO: REPORT EVENT?
-        estadoGuiche = BLOQUEADO;
+        estadoXylema = BLOQUEADO;
         pulsoGRBL(GRBL_HOLD_PIN);
       }
     }
-    // Se o guiche está esperando o GRBL dar ACK para um G-code, aguardo OK, ERROR ou TIMEOUT
-    if (estadoGuiche == AGUARDANDO_GRBL_OK) {
+    // Se o Xylema está esperando o GRBL dar ACK para um G-code, aguardo OK, ERROR ou TIMEOUT
+    if (estadoXylema == AGUARDANDO_GRBL_OK) {
       if (linha == "ok") {
-        MensagemCNC atual = filaCNC.front();
+        ComandoCNC atual = filaCNC.front();
         acknowledgeCompleted(atual.id);
         filaCNC.pop();
-        estadoGuiche = PRONTO; // Libera para o próximo
+        estadoXylema = PRONTO; // Libera para o próximo
       }
       else if (linha.startsWith("error")) {
-        MensagemCNC atual = filaCNC.front();
+        ComandoCNC atual = filaCNC.front();
         acknowledgeError(atual.id, linha);
         limparFila("Erro em comando.");
         pulsoGRBL(GRBL_HOLD_PIN);
       }
       // Timeout de segurança
       else if (millis() - inicioEsperaTs > timeoutGRBLOk) {
-        MensagemCNC atual = filaCNC.front();
+        ComandoCNC atual = filaCNC.front();
         acknowledgeError(atual.id, "timeout aguardando ack GRBL");
         //REPORT EVENT?
-        estadoGuiche = BLOQUEADO;
+        estadoXylema = BLOQUEADO;
         pulsoGRBL(GRBL_HOLD_PIN);
       }
     }
@@ -749,7 +771,7 @@ void serialGRBLSend(String data) {
   if (data.startsWith("$H")) {
     SerialGRBL.print("$H\n");
     estadoGRBL = HOMING;
-    estadoGuiche = BLOQUEADO;
+    estadoXylema = BLOQUEADO;
     return;
   }
   // RT Commands
@@ -758,7 +780,7 @@ void serialGRBLSend(String data) {
     return;
   }
   SerialGRBL.print(data + "\n");
-  estadoGuiche = AGUARDANDO_GRBL_OK;
+  estadoXylema = AGUARDANDO_GRBL_OK;
 }
 
 // ===
@@ -767,8 +789,8 @@ void serialGRBLSend(String data) {
 void processarPush(unsigned long duracaoPush) {
   bool eLongPush = (duracaoPush >= longPushMs);
 
-  // Caso 1: Guiche Bloqueado
-  if (estadoGuiche == BLOQUEADO || estadoGuiche == ERRO_CRITICO) {
+  // Caso 1: Xylema Bloqueado
+  if (estadoXylema == BLOQUEADO || estadoXylema == ERRO_CRITICO) {
     if (eLongPush) {
       Serial.println("Reiniciando GRBL manualmente...");
       limparFila("Reset manual");
@@ -776,11 +798,11 @@ void processarPush(unsigned long duracaoPush) {
       reportEventMQTT(INFO, "Desbloqueio manual com reset", "Xylema32");
     }
     else {
-      Serial.println("Guichê bloqueado");
+      Serial.println("Xylema bloqueado");
     }
     return;
   }
-  // CASO 2: Guichê em execução normal / pronto
+  // CASO 2: Xylema em execução normal / pronto
   if (eLongPush) {
     Serial.println("Continuando trabalho");
     pulsoGRBL(GRBL_RESUME_PIN);
@@ -822,15 +844,18 @@ void loopPush() {
 // ===
 void loopAcessorios() {
   for (int i = 0; i < TOTAL_ACESSORIOS; i++) {
-    if (pwmAcessorio[i] == -1) {
-      // É Relé: estado true = ligado (LOW), false = desligado (HIGH)
-      // Ajuste o LOW/HIGH de acordo com o seu módulo de relé
-      digitalWrite(ACC_PIN[i], estadoAcessorio[i] ? LOW : HIGH);
-    } 
+    if (pwmMax[i] == -1) {
+      // Estado ligado é LOW, desligado é HIGH
+      digitalWrite(ACC_PIN[i], estadoAcessorio[i] > 0 ? LOW : HIGH);
+    }
+    else if (pwmMax[i] == 1) {
+      // Estado desligado é LOW, ligado é HIGH
+      digitalWrite(ACC_PIN[i], estadoAcessorio[i] > 0 ? HIGH : LOW);
+    }
     else {
-      // É MOSFET: se estiver ligado, aplica o PWM salvo; se desligado, envia 0
-      int valorFinal = estadoAcessorio[i] ? pwmAcessorio[i] : 0;
-      analogWrite(ACC_PIN[i], valorFinal);
+      // É MOSFET: se estiver ligado, aplica o PWM salvo;
+      int pwm = estadoAcessorio[i] ? pwmMax[i] : 0;
+      analogWrite(ACC_PIN[i], pwm);
     }
   }
 }
