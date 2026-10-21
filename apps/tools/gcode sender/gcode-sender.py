@@ -6,6 +6,9 @@ import time
 import threading
 import random
 import datetime
+import json
+
+from macros import MACROS
 
 
 # Configurações padrão do MQTT (ajuste conforme seu broker)
@@ -51,6 +54,8 @@ class CNCJogApp:
         self.limit_test_active = False
         self.modo_comando = tk.StringVar(value="sync")
         self.msg_counter = 1
+        self.ack_events = {}
+        self.ack_status = {}
 
         # Cliente MQTT
         self.client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -59,7 +64,7 @@ class CNCJogApp:
         self.is_connected = False
 
         # Dicionário para rastrear o estado de cada acessório (False = Desligado, True = Ligado)
-        self.estados_acessorios = {}
+        self.atuador = {}
 
         self.create_widgets()
 
@@ -91,6 +96,20 @@ class CNCJogApp:
                     msg_id = payload.get("id")
                     status = payload.get("status", "OK")
                     data = payload.get("data", "")
+                    # Libera a espera para este msg_id específico, se houver alguém aguardando
+                    if msg_id in self.ack_events:
+                        # Armazena o status atual recebido
+                        self.ack_status[msg_id] = status
+                        # Se for COMPLETED, liberam a espera imediatamente.
+                        if status == "COMPLETED":
+                            self.ack_events[msg_id].set()
+                        # Se for QUEUED, libera a espera imediatamente.
+                        elif status == "QUEUED":
+                            self.ack_events[msg_id].set()
+                        # Se for ERROR, libera a espera imediatamente.
+                        elif status == "ERROR":
+                            self.ack_events[msg_id].set()
+
                     self.root.after(0, lambda: self.log_ack(msg_id, status, data))
                 elif "estado" in topic:
                     self.root.after(0, lambda: self.atualizarEstados(payload))
@@ -106,11 +125,19 @@ class CNCJogApp:
 
         grbl_state = grbl.get("estado", 6)
         guiche_state = fila.get("guiche", 0)
-        posicao = grbl.get("posicao", "0,0,0")
         grbl_disp = grbl.get("disponivel", "--")
         fila_disp = fila.get("disponivel", "--")
         endstop = grbl.get("endstops", "--")
 
+        pos_data = grbl.get("pos", {"x": 0.0, "y": 0.0, "z": 0.0})
+        if isinstance(pos_data, dict):
+            x = pos_data.get("x", 0.0)
+            y = pos_data.get("y", 0.0)
+            z = pos_data.get("z", 0.0)
+            posicao = f"{x},{y},{z}"
+        else:
+            posicao = str(pos_data)
+        
         # Atualiza os textos na interface
         info_grbl = GRBL_ESTADOS.get(grbl_state, {"texto": f"Outro ({grbl_state})", "cor": "black"})
         self.lbl_grbl_state.config(text=info_grbl["texto"], fg=info_grbl["cor"])
@@ -121,12 +148,12 @@ class CNCJogApp:
         self.lbl_endstop.config(text=f"{endstop}", fg="red")
 
         # Atualiza os acessórios na interface
-        for i in range(8):
+        for i in range(4):
             estado_bool = acessorios_data.get(str(i), acessorios_data.get(i, False))
             
-            if i in self.estados_acessorios:
-                self.estados_acessorios[i]["estado"] = estado_bool
-                info = self.estados_acessorios.get(i)
+            if i in self.atuador:
+                self.atuador[i]["estado"] = estado_bool
+                info = self.atuador.get(i)
                 self.atualizarVisualBtn(info["botao"], estado_bool, f"Acessório {i}")
     def log_ack(self, msg_id, status, data = None):
         # Adiciona a linha no painel de log visual da interface
@@ -169,12 +196,17 @@ class CNCJogApp:
             return
 
         msg_id = self.proximoId()
-        # Monta o G-code (Modo incremental G91, move, volta para absoluto G90)
-        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G91\\nG0 {axis}{direction * step}\\nG90"}}'
-
+        # Monta o G-code no Modo incremental G91
+        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G91 G0 {axis}{direction * step}"}}'
         comando_topic = self.topic_entry.get() + "/comandos"
         self.client.publish(comando_topic, gcode)
         print(f"Enviado [{msg_id}] para [{comando_topic}]: {gcode.replace(chr(10), ' | ')}")
+
+        # Volta para o modo absoluto
+        msg_id_2 = self.proximoId()
+        gcode_2 = f'{{"id":{msg_id_2}, "type":"gcode", "data":"G90"}}'
+        self.client.publish(comando_topic, gcode_2)
+        print(f"Enviado [{msg_id_2}] para [{comando_topic}]: {gcode_2}")
     def rapidMoveTo(self, position):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -182,11 +214,22 @@ class CNCJogApp:
 
         msg_id = self.proximoId()
         # Monta o G-code (Modo Absoluto G90)
-        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G90\\nG0 {position}"}}'
+        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G90 G0 {position}"}}'
 
         comando_topic = self.topic_entry.get() + "/comandos"
         self.client.publish(comando_topic, gcode)
         print(f"Enviado [{msg_id}] para [{comando_topic}]: {gcode.replace(chr(10), ' | ')}")
+    def publishRT(self, rt, value = 0, payload = ""):
+        if not self.is_connected:
+            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
+            return
+        msg_id = self.proximoId()
+        # Monta o G-code
+        data = f'{{"id":{msg_id}, "type":"rt", "data":"{rt}", "value":{value}, "payload": "{payload}"}}'
+
+        comando_topic = self.topic_entry.get() + "/comandos"
+        self.client.publish(comando_topic, data)
+        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
     def publishGCode(self, gcode):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -198,21 +241,48 @@ class CNCJogApp:
         comando_topic = self.topic_entry.get() + "/comandos"
         self.client.publish(comando_topic, data)
         print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
-
-    
-    def customGcode(self, event=None):
+    def publishSync(self, sync, value = 0, payload = ""):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
             return
+        msg_id = self.proximoId()
+        # Monta o Sync
+        data = f'{{"id":{msg_id}, "type":"sync", "data":"{sync}", value: {value}, payload: "{payload}"}}'
 
-        gcode_text = self.custom_gcode_entry.get().strip()
-        if not gcode_text:
+        comando_topic = self.topic_entry.get() + "/comandos"
+        self.client.publish(comando_topic, data)
+        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
+
+    def enviarCustomizado(self):
+        if not self.is_connected:
+            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
             return
-
-        self.publishGCode(gcode_text)
         
-        # Limpa o campo após o envio
-        self.custom_gcode_entry.delete(0, tk.END)
+        tipo = self.custom_type_var.get()
+        data_val = self.custom_data_entry.get().strip()
+        value_val = self.custom_value_entry.get().strip()
+        payload_val = self.custom_payload_entry.get().strip()
+
+        # Monta o dicionário base
+        payload_dict = {"type": tipo, "data": data_val}
+
+        # Adiciona value e payload se preenchidos (ou converte value para int se necessário)
+        if value_val:
+            try:
+                payload_dict["value"] = int(value_val)
+            except ValueError:
+                payload_dict["value"] = value_val
+                
+        if payload_val:
+            payload_dict["payload"] = payload_val
+
+        msg_id = self.proximoId()
+        payload_final = {"id": msg_id, **payload_dict}
+        data_json = json.dumps(payload_final)
+
+        comando_topic = self.topic_entry.get() + "/comandos"
+        self.client.publish(comando_topic, data_json)
+        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data_json}")
 
     def rodarTeste(self, tipoTeste):
         if not self.is_connected:
@@ -221,6 +291,46 @@ class CNCJogApp:
 
         # Roda em background (Thread) para disparar a rajada sem travar a interface
         threading.Thread(target=self._stress_worker, args=(tipoTeste,), daemon=True).start()
+    def rodarMacro(self, macro):
+        if not self.is_connected:
+            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
+            return
+        
+        commands = MACROS.get(macro)
+        if not commands:
+            print(f"--- Macro '{macro}' não encontrada ---")
+            return
+        
+        print(f"--- Enviando macro {macro} ---")
+        for cmd in commands:
+            if not self.is_connected:
+                break
+            msg_id = self.proximoId()
+            payload_dict = cmd.copy()
+            payload_final = {"id": msg_id, **payload_dict}
+            data = json.dumps(payload_final)
+            comando_topic = self.topic_entry.get() + "/comandos"
+
+            # Cria o evento de sincronização para este ID
+            ack_event = threading.Event()
+            self.ack_events[msg_id] = ack_event            
+            
+            # Publica o comando
+            self.client.publish(comando_topic, data)
+            print(f"Enviado [{msg_id}] para [{comando_topic}]: {data}")
+
+            # Espera o ACK chegar (com timeout de segurança de 5 segundos)
+            recebeu_ack = ack_event.wait(timeout=5.0)
+            status_ack = self.ack_status.get(msg_id)
+            self.ack_events.pop(msg_id, None)
+            if not recebeu_ack:
+                print(f"Timeout: ACK não recebido para o comando [{msg_id}]. Parando o envio da macro.")
+                break # Interrompe a sequência se houver falha/timeout
+            if status_ack == "ERROR":
+                print(f"Comando [{msg_id}] retornou ERROR. Parando o envio da macro.")
+                break # Para tudo se houver erro
+        print(f"--- Macro {macro} enviada ---")
+            
 
     def atualizarVisualBtn(self, btn, ligado, label):
         if ligado:
@@ -240,26 +350,33 @@ class CNCJogApp:
                 activebackground="#c0c0c0",
                 activeforeground="black"
             )
+    def atualizarCamposCustom(self):
+        # Opcional: Ajusta o estado dos campos se quiser desativar o que não é usado no gcode
+        tipo = self.custom_type_var.get()
+        if tipo == "gcode":
+            self.custom_value_entry.config(state="disabled")
+            self.custom_payload_entry.config(state="disabled")
+        else:
+            self.custom_value_entry.config(state="normal")
+            self.custom_payload_entry.config(state="normal")
 
 
-    def toggle_acessorio(self, index):
+    def toggle_atuador(self, index):
         modo = self.modo_comando.get()
+        pub_func = self.publishSync if modo == "sync" else self.publishRT
+
         # Inverte o estado atual local apenas para saber qual comando enviar, 
         # mas sem mexer no visual do botão agora (deixa isso para o update_telemetry)
-        info = self.estados_acessorios[index]
-        novo_estado = not info["estado"]
-        
-        # Define o valor textual esperado pelo robô
-        acao_payload = info["pwm"].get() if novo_estado else "OFF"
-        
-        # Monta o payload JSON no novo formato solicitado
-        msg_id = self.proximoId()
-        sync = f'{{"id":{msg_id}, "type":"{modo}", "data":"SET", "value": {index}, "payload": "{acao_payload}"}}'
-        
-        # Envia via MQTT
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, sync)
-        print(f"Enviando MQTT -> Tópico: {comando_topic} | {sync}")
+        info = self.atuador[index]
+        pwm = info["pwm"].get()
+        estado = info["estado"]
+
+        if(pwm == estado):
+            pub_func("SET OFF", index)
+        else:
+            pub_func("SET ON", index, str(pwm)) 
+
+
     def toggle_random_test(self):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -430,7 +547,7 @@ class CNCJogApp:
                 # Intervalo ultra-rápido de 10ms (0.01s) entre as linhas
                 time.sleep(0.01)
             # Aguarda 60 segundos picotados em pedacinhos de 1s para conseguir parar rápido se o usuário desativar
-            for _ in range(15):
+            for _ in range(200):
                 if not self.helix_test_active:
                     break
                 time.sleep(1)
@@ -446,7 +563,6 @@ class CNCJogApp:
             f"X{X_LIMIT[0]} Y{Y_LIMIT[1]}",
         ]
         while self.limit_test_active:
-            comando_topic = self.topic_entry.get() + "/comandos"
             for pos in positions:
                 if not self.is_connected:
                     break
@@ -458,337 +574,6 @@ class CNCJogApp:
                 if not self.limit_test_active:
                     break
                 time.sleep(1)
-
-
-    def create_widgets(self):
-        # Frame de Conexão
-        conn_frame = tk.LabelFrame(self.root, text=" Configuração MQTT ", padx=10, pady=10)
-        conn_frame.pack(fill="x", padx=10, pady=10)
-
-        tk.Label(conn_frame, text="Broker:").grid(row=0, column=0, sticky="w")
-        self.broker_entry = tk.Entry(conn_frame, width=15)
-        self.broker_entry.insert(0, DEFAULT_BROKER)
-        self.broker_entry.grid(row=0, column=1, padx=5)
-
-        tk.Label(conn_frame, text="Porta:").grid(row=0, column=2, sticky="w")
-        self.port_entry = tk.Entry(conn_frame, width=6)
-        self.port_entry.insert(0, str(DEFAULT_PORT))
-        self.port_entry.grid(row=0, column=3, padx=5)
-
-        self.connect_btn = tk.Button(conn_frame, text="Conectar", command=self.conectarMQTT, bg="#e0e0e0")
-        self.connect_btn.grid(row=0, column=4, padx=5)
-
-        self.status_lbl = tk.Label(conn_frame, text="Status: Desconectado", fg="red")
-        self.status_lbl.grid(row=1, column=0, columnspan=5, sticky="w", pady=(5,0))
-
-        tk.Label(conn_frame, text="Tópico:").grid(row=2, column=0, sticky="w", pady=(5,0))
-        self.topic_entry = tk.Entry(conn_frame, width=30)
-        self.topic_entry.insert(0, DEFAULT_TOPIC)
-        self.topic_entry.grid(row=2, column=1, columnspan=4, sticky="w", pady=(5,0))
-
-        # --- Painel de Telemetria / Estado do Robô ---
-        tele_frame = tk.LabelFrame(self.root, text="Telemetria", padx=10, pady=5)
-        tele_frame.pack(fill="x", padx=10, pady=(0, 10))
-
-        # Grid de Status
-        tk.Label(tele_frame, text="Estado GRBL:", font=("Arial", 9, "bold")).grid(row=0, column=0, sticky="w")
-        self.lbl_grbl_state = tk.Label(tele_frame, text="---", fg="blue", font=("Arial", 9))
-        self.lbl_grbl_state.grid(row=0, column=1, sticky="w", padx=5)
-
-        tk.Label(tele_frame, text="Posição Atual (XYZ):", font=("Arial", 9, "bold")).grid(row=0, column=2, sticky="w", padx=(15, 0))
-        self.lbl_pos = tk.Label(tele_frame, text="X:0.00 Y:0.00 Z:0.00", font=("Consolas", 9, "bold"), fg="#333")
-        self.lbl_pos.grid(row=0, column=3, sticky="w", padx=5)
-
-        tk.Label(tele_frame, text="Endstops GRBL:", font=("Arial", 9, "bold")).grid(row=0, column=4, sticky="w")
-        self.lbl_endstop = tk.Label(tele_frame, text="---", fg="red", font=("Arial", 9))
-        self.lbl_endstop.grid(row=0, column=5, sticky="w", padx=5)
-
-        tk.Label(tele_frame, text="Estado Guichê:", font=("Arial", 9, "bold")).grid(row=1, column=0, sticky="w")
-        self.lbl_guiche_state = tk.Label(tele_frame, text="---", fg="blue", font=("Arial", 9))
-        self.lbl_guiche_state.grid(row=1, column=1, sticky="w", padx=5, pady=5)
-
-        tk.Label(tele_frame, text="Disp buffers (Serial/Fila):", font=("Arial", 9, "bold")).grid(row=1, column=2, sticky="w", pady=(5,0))
-        self.lbl_buffers = tk.Label(tele_frame, text="Grbl: -- | Fila: --", font=("Arial", 9), fg="#555")
-        self.lbl_buffers.grid(row=1, column=3, columnspan=3, sticky="w", padx=5, pady=(5,0))
-
-        # Jog Pad
-        jog_frame = tk.LabelFrame(self.root, text=" Painel de Movimento (Jog) ", padx=10, pady=15)
-        jog_frame.pack(fill="both", expand=True, padx=10, pady=15)
-        for c in range(9):
-            jog_frame.columnconfigure(c, weight=1)
-        for r in range(7):
-            jog_frame.rowconfigure(r, weight=1)
-
-        tk.Button(
-            jog_frame, 
-            text="Home",
-            command=lambda: self.publishGCode("$H")
-        ).grid(row=0, column=0, rowspan=2, columnspan=2, padx=5, pady=5, sticky="nsew")
-
-        # Y +
-        tk.Button(
-            jog_frame,
-            text="Y+100",
-            command=lambda: self.rapidMoveJog('Y', 1, 100)
-        ).grid(row=0, column=3, padx=5, pady=5, sticky="nsew")
-
-        tk.Button(
-            jog_frame,
-            text="Y+ 10",
-            command=lambda: self.rapidMoveJog('Y', 1, 10)
-        ).grid(row=1, column=3, padx=5, pady=5, sticky="nsew")
-
-        tk.Button(
-            jog_frame,
-            text="Y+  1",
-            command=lambda: self.rapidMoveJog('Y', 1, 1)
-        ).grid(row=2, column=3, padx=5, pady=5, sticky="nsew")
-        
-        # X
-        tk.Button(
-            jog_frame,
-            text="X-100",
-            command=lambda: self.rapidMoveJog('X', -1, 100)
-        ).grid(row=3, column=0, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="X- 10", 
-            command=lambda: self.rapidMoveJog('X', -1, 10)
-        ).grid(row=3, column=1, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="X-  1", 
-            command=lambda: self.rapidMoveJog('X', -1, 1)
-        ).grid(row=3, column=2, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="XY 0", 
-            #command=lambda: self.send_command('X', -1, 1)
-        ).grid(row=3, column=3, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="X+  1", 
-            command=lambda: self.rapidMoveJog('X', 1, 1)
-        ).grid(row=3, column=4, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="X+ 10", 
-            command=lambda: self.rapidMoveJog('X', 1, 10)
-        ).grid(row=3, column=5, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="X+100",
-            command=lambda: self.rapidMoveJog('X', 1, 100)
-        ).grid(row=3, column=6, padx=5, pady=5, sticky="nsew")
-        
-        # Y -
-        tk.Button(
-            jog_frame,
-            text="Y-  1",
-            command=lambda: self.rapidMoveJog('Y', -1, 1)
-        ).grid(row=4, column=3, padx=5, pady=5, sticky="nsew")        # --- EIXO Z (Isolado à Direita com 7 botões) ---
-        tk.Button(
-            jog_frame,
-            text="Y- 10",
-            command=lambda: self.rapidMoveJog('Y', -1, 10)
-        ).grid(row=5, column=3, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Y-100",
-            command=lambda: self.rapidMoveJog('Y', -1, 100)
-        ).grid(row=6, column=3, padx=5, pady=5, sticky="nsew")
-
-        z_col = 8  # Coluna separada à direita
-        tk.Button(
-            jog_frame,
-            text="Z+ 10",
-            command=lambda: self.rapidMoveJog('Z', 1, 10)
-        ).grid(row=0, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z+  1",
-            command=lambda: self.rapidMoveJog('Z', 1, 1)
-        ).grid(row=1, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z+0.1",
-            command=lambda: self.rapidMoveJog('Z', 1, 0.1)
-        ).grid(row=2, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z 0", 
-            #command=lambda: self.send_command('X', -1, 1)
-        ).grid(row=3, column=z_col, padx=5, pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z-0.1",
-            command=lambda: self.rapidMoveJog('Z', -1, 0.1)
-        ).grid(row=4, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z-  1",
-            command=lambda: self.rapidMoveJog('Z', -1, 1)
-        ).grid(row=5, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-        tk.Button(
-            jog_frame,
-            text="Z- 10",
-            command=lambda: self.rapidMoveJog('Z', -1, 10)
-        ).grid(row=6, column=z_col, padx=(15, 2), pady=5, sticky="nsew")
-
-        # --- Campo de G-code Personalizado ---
-        gcode_frame = tk.LabelFrame(self.root, text=" G-code Personalizado ", padx=10, pady=5)
-        gcode_frame.pack(fill="x", padx=10, pady=(0, 10))
-
-        self.custom_gcode_entry = tk.Entry(gcode_frame, font=("Consolas", 10))
-        self.custom_gcode_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        # Permite enviar apertando a tecla Enter
-        self.custom_gcode_entry.bind("<Return>", self.customGcode)
-
-        self.send_gcode_btn = tk.Button(gcode_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.customGcode)
-        self.send_gcode_btn.pack(side="right")
-
-        # Frame principal para organizar os botões em uma grade (2 linhas x 4 colunas ou ajuste livre)
-        frame_accessories = tk.LabelFrame(root, text="Acessórios", padx=10, pady=10)
-        frame_accessories.pack(padx=10, pady=10, fill=tk.BOTH, expand=True)
-
-        # --- SELETOR DE MODO (Sync / Real-time) ---
-        frame_modo = tk.Frame(frame_accessories)
-        frame_modo.grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 10))
-        tk.Label(frame_modo, text="Modo: ").pack(side=tk.LEFT)
-        tk.Radiobutton(frame_modo, text="Sync", variable=self.modo_comando, value="sync").pack(side=tk.LEFT, padx=5)
-        tk.Radiobutton(frame_modo, text="Real-time", variable=self.modo_comando, value="rt").pack(side=tk.LEFT, padx=5)
-
-        self.estados_acessorios = {}
-        for i in range(8):  # Índices de 0 a 7
-            linha = (i // 4) + 1
-            coluna = i % 4
-            
-            btn = tk.Label(
-                frame_accessories, 
-                text=f"Acessório {i}\n", 
-                bg="#d9d9d9", 
-                fg="black",
-                relief="raised",
-                bd=2,
-                padx=10, pady=5
-            )
-            # Para simular o clique:
-            btn.bind("<Button-1>", lambda e, idx=i: self.toggle_acessorio(idx))
-            
-            btn.grid(row=linha, column=coluna, padx=5, pady=5, sticky="nsew")
-            
-            # Salvamos a referência do botão no dicionário
-            self.estados_acessorios[i] = {
-                "estado": False,
-                "botao": btn
-            }
-
-            for c in range(4):
-                frame_accessories.columnconfigure(c, weight=1)
-        
-        # Frame de Testes
-        test_frame = tk.LabelFrame(self.root, text="Testes", padx=10, pady=10)
-        test_frame.pack(fill="both", expand=True, padx=10, pady=15)
-        for c in range(6):
-            test_frame.columnconfigure(c, weight=1)
-
-        # --- Botões de Teste ---
-        # Movimento aleatório (60s):
-        self.randomTestBtn = tk.Label(
-            test_frame, 
-            text=f"Aleatório\n", 
-            bg="#d9d9d9", 
-            fg="black",
-            relief="raised",
-            bd=2,
-            padx=10, pady=5
-        )
-        self.randomTestBtn.bind("<Button-1>", lambda e:self.toggle_random_test())
-        self.randomTestBtn.grid(row=1, column=0, padx=(15,2), pady=2, sticky="nsew")
-
-        # Movimento quadrado (15s):
-        self.squareTestBtn = tk.Label(
-            test_frame, 
-            text=f"Quadrado\n", 
-            bg="#d9d9d9", 
-            fg="black",
-            relief="raised",
-            bd=2,
-            padx=10, pady=5
-        )
-        self.squareTestBtn.bind("<Button-1>", lambda e:self.toggle_square_test())
-        self.squareTestBtn.grid(row=1, column=1, padx=(15,2), pady=2, sticky="nsew")
-
-        # Movimento zigzag (15s):
-        self.zigzagTestBtn = tk.Label(
-            test_frame, 
-            text=f"Zigzag\n", 
-            bg="#d9d9d9", 
-            fg="black",
-            relief="raised",
-            bd=2,
-            padx=10, pady=5
-        )
-        self.zigzagTestBtn.bind("<Button-1>", lambda e:self.toggle_zigzag_test())
-        self.zigzagTestBtn.grid(row=1, column=2, padx=(15,2), pady=2, sticky="nsew")
-
-        # Movimento helicoidal (60s):
-        self.helixTestBtn = tk.Label(
-            test_frame, 
-            text=f"Helicoidal\n", 
-            bg="#d9d9d9", 
-            fg="black",
-            relief="raised",
-            bd=2,
-            padx=10, pady=5
-        )
-        self.helixTestBtn.bind("<Button-1>", lambda e:self.toggle_helix_test())
-        self.helixTestBtn.grid(row=1, column=3, padx=(15,2), pady=2, sticky="nsew")
-
-        # Movimento limites (90s):
-        self.limitTestBtn = tk.Label(
-            test_frame, 
-            text=f"Limites\n", 
-            bg="#d9d9d9", 
-            fg="black",
-            relief="raised",
-            bd=2,
-            padx=10, pady=5
-        )
-        self.limitTestBtn.bind("<Button-1>", lambda e:self.toggle_limit_test())
-        self.limitTestBtn.grid(row=1, column=4, padx=(15,2), pady=2, sticky="nsew")
-
-        # --- Painel com Abas para Monitoramento (ACKs e Eventos) ---
-        notebook_frame = ttk.Notebook(self.root)
-        notebook_frame.pack(fill="both", expand=True, padx=15, pady=(0, 10))
-
-        # --- Aba 1: ACKs e Respostas ---
-        tab_acks = ttk.Frame(notebook_frame)
-        notebook_frame.add(tab_acks, text=" Monitor de ACKs ")
-
-        ack_frame = tk.Frame(tab_acks, padx=5, pady=5)
-        ack_frame.pack(fill="both", expand=True)
-
-        self.log_ack_box = tk.Text(ack_frame, height=6, bg="#1e1e1e", fg="#00ff00", font=("Consolas", 9))
-        self.log_ack_box.pack(side="left", fill="both", expand=True)
-
-        scrollbar_ack = tk.Scrollbar(ack_frame, command=self.log_ack_box.yview)
-        scrollbar_ack.pack(side="right", fill="y")
-        self.log_ack_box.config(yscrollcommand=scrollbar_ack.set)
-
-        # --- Aba 2: Eventos e Alertas ---
-        tab_eventos = ttk.Frame(notebook_frame)
-        notebook_frame.add(tab_eventos, text=" Eventos e Alertas ")
-
-        evento_frame = tk.Frame(tab_eventos, padx=5, pady=5)
-        evento_frame.pack(fill="both", expand=True)
-
-        self.log_evento_box = tk.Text(evento_frame, height=6, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 9))  # Texto amarelinho para destacar eventos
-        self.log_evento_box.pack(side="left", fill="both", expand=True)
-
-        scrollbar_evento = tk.Scrollbar(evento_frame, command=self.log_evento_box.yview)
-        scrollbar_evento.pack(side="right", fill="y")
-        self.log_evento_box.config(yscrollcommand=scrollbar_evento.set)
 
     def create_widgets(self):
         # Notebook Principal (Abas da Aplicação)
@@ -810,16 +595,17 @@ class CNCJogApp:
         self.createFrameConexao(parent)
         self.createFrameTelemetria(parent)
         self.createFrameJog(parent)
-        self.createFrameGCode(parent)
+        self.createFrameCustom(parent)
         self.createNotebookLogs(parent)
 
     def createTabAutomacao(self, parent):
-        self.createFrameAcessorios(parent)
+        self.createFrameAtuadores(parent)
+        self.createFrameDocas(parent)
         self.createFrameTestes(parent)
+        self.createFrameMacros(parent)
         self.createFrameRealtime(parent)
 
     # --- Sub-métodos modulares para cada bloco ---
-
     def createFrameConexao(self, parent):
         conn_frame = tk.LabelFrame(parent, text=" Conexão MQTT ", padx=5, pady=2)
         conn_frame.pack(fill="x", padx=5, pady=2)
@@ -875,7 +661,7 @@ class CNCJogApp:
         for c in range(9):
             jog_frame.columnconfigure(c, weight=1)
 
-        tk.Button(jog_frame, text="Home", command=lambda: self.publishGCode("$H")).grid(row=0, column=0, rowspan=2, columnspan=2, padx=1, pady=1, sticky="nsew")
+        tk.Button(jog_frame, text="Home", command=lambda: self.publishRT("HOME_CYCLE")).grid(row=0, column=0, rowspan=2, columnspan=2, padx=1, pady=1, sticky="nsew")
 
         tk.Button(jog_frame, text="Y+100", command=lambda: self.rapidMoveJog('Y', 1, 100)).grid(row=0, column=3, padx=1, pady=1, sticky="nsew")
         tk.Button(jog_frame, text="Y+10", command=lambda: self.rapidMoveJog('Y', 1, 10)).grid(row=1, column=3, padx=1, pady=1, sticky="nsew")
@@ -901,38 +687,72 @@ class CNCJogApp:
         tk.Button(jog_frame, text="Z-1", command=lambda: self.rapidMoveJog('Z', -1, 1)).grid(row=5, column=z_col, padx=1, pady=1, sticky="nsew")
         tk.Button(jog_frame, text="Z-10", command=lambda: self.rapidMoveJog('Z', -1, 10)).grid(row=6, column=z_col, padx=1, pady=1, sticky="nsew")
 
-    def createFrameGCode(self, parent):
-        gcode_frame = tk.LabelFrame(parent, text=" G-code Personalizado ", padx=5, pady=2)
-        gcode_frame.pack(fill="x", padx=5, pady=2)
-        self.custom_gcode_entry = tk.Entry(gcode_frame, font=("Consolas", 9))
-        self.custom_gcode_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
-        self.custom_gcode_entry.bind("<Return>", self.customGcode)
-        tk.Button(gcode_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.customGcode).pack(side="right")
+    def createFrameCustom(self, parent):
+        custom_frame = tk.LabelFrame(parent, text=" Comando Personalizado ", padx=5, pady=5)
+        custom_frame.pack(fill="x", padx=5, pady=2)
 
-    def createFrameAcessorios(self, parent):
-        frame_accessories = tk.LabelFrame(parent, text="Acessórios", padx=5, pady=2)
-        frame_accessories.pack(padx=5, pady=2, fill="x")
+        # Variável para armazenar o tipo selecionado (padrão "gcode")
+        self.custom_type_var = tk.StringVar(value="gcode")
 
-        frame_modo = tk.Frame(frame_accessories)
+        # --- Linha 1: RadioButtons para seleção do tipo ---
+        tipo_frame = tk.Frame(custom_frame)
+        tipo_frame.pack(fill="x", anchor="w", pady=(0, 5))
+
+        tk.Radiobutton(tipo_frame, text="G-code", variable=self.custom_type_var, value="gcode", command=self.atualizarCamposCustom).pack(side="left", padx=(0, 10))
+        tk.Radiobutton(tipo_frame, text="Sync", variable=self.custom_type_var, value="sync", command=self.atualizarCamposCustom).pack(side="left", padx=(0, 10))
+        tk.Radiobutton(tipo_frame, text="Tempo Real", variable=self.custom_type_var, value="rt", command=self.atualizarCamposCustom).pack(side="left")
+
+        # --- Linha 2: Entradas para Data, Value e Payload ---
+        inputs_frame = tk.Frame(custom_frame)
+        inputs_frame.pack(fill="x", expand=True)
+
+        inputs_frame.grid_columnconfigure(0, weight=2)  # Data
+        inputs_frame.grid_columnconfigure(1, weight=1)  # Value
+        inputs_frame.grid_columnconfigure(2, weight=4)  # Payload (maior)
+
+        self.custom_data_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
+        self.custom_value_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
+        self.custom_payload_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
+
+        # Posicionamento com Grid
+        self.custom_data_entry.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=2)
+        self.custom_value_entry.grid(row=0, column=1, sticky="ew", padx=3, pady=2)
+        self.custom_payload_entry.grid(row=0, column=2, sticky="ew", padx=3, pady=2)
+
+        # Botão Enviar
+        tk.Button(inputs_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.enviarCustomizado).grid(row=0, column=3, padx=(5, 0), pady=2)
+
+        # Atalho de Enter em qualquer campo
+        for entry in (self.custom_data_entry, self.custom_value_entry, self.custom_payload_entry):
+            entry.bind("<Return>", lambda e: self.enviarCustomizado())
+
+        # Atualiza o estado inicial dos campos com base no padrão (gcode)
+        self.atualizarCamposCustom()
+
+    def createFrameAtuadores(self, parent):
+        frame_atuadores = tk.LabelFrame(parent, text="Acessórios", padx=5, pady=2)
+        frame_atuadores.pack(padx=5, pady=2, fill="x")
+
+        frame_modo = tk.Frame(frame_atuadores)
         frame_modo.grid(row=0, column=0, columnspan=4, sticky="w", pady=(0, 2))
         tk.Label(frame_modo, text="Modo: ").pack(side=tk.LEFT)
-        tk.Radiobutton(frame_modo, text="Sync", variable=self.modo_comando, value="sync").pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(frame_modo, text="Real-time", variable=self.modo_comando, value="rt").pack(side=tk.LEFT, padx=5)
+        tk.Radiobutton(frame_modo, text="Sync", variable=self.modo_comando, value="sync").pack(side=tk.LEFT, padx=5)
 
-        for i in range(8):
-            linha = (i // 4) + 1
-            coluna = i % 4
+        for i in range(4):
+            linha = (i // 2) + 1
+            coluna = i % 2
 
-            acc_frame = tk.Frame(frame_accessories, relief="groove", bd=1, padx=2, pady=2)
-            acc_frame.grid(row=linha, column=coluna, padx=3, pady=3, sticky="nsew")
+            atuador_frame = tk.Frame(frame_atuadores, relief="groove", bd=1, padx=2, pady=2)
+            atuador_frame.grid(row=linha, column=coluna, padx=3, pady=3, sticky="nsew")
 
-            btn = tk.Label(acc_frame, text=f"Acessório {i}\n", bg="#d9d9d9", fg="black", relief="raised", bd=2, padx=2, pady=1)
-            btn.bind("<Button-1>", lambda e, idx=i: self.toggle_acessorio(idx))
+            btn = tk.Label(atuador_frame, text=f"Acessório {i}\n", bg="#d9d9d9", fg="black", relief="raised", bd=2, padx=2, pady=1)
+            btn.bind("<Button-1>", lambda e, idx=i: self.toggle_atuador(idx))
             btn.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
 
             # Slider (Scale) para o PWM de 0 a 255
             pwm = tk.Scale(
-                acc_frame, 
+                atuador_frame, 
                 from_=0, 
                 to=255, 
                 orient="horizontal", 
@@ -943,11 +763,31 @@ class CNCJogApp:
             pwm.grid(row=1, column=0, sticky="ew", padx=2, pady=2)
 
             # Armazena as referências
-            self.estados_acessorios[i] = {
-                "estado": False, 
+            self.atuador[i] = {
+                "estado": 0, 
                 "botao": btn, 
                 "pwm": pwm
             }
+
+    def createFrameDocas(self, parent):
+        frame_docas = tk.LabelFrame(parent, text="Docas", padx=5, pady=2)
+        frame_docas.pack(padx=5, pady=2, fill="x")
+
+        for i in range(4):
+            doca_frame = tk.Frame(frame_docas, relief="groove", bd=1, padx=2, pady=2)
+            doca_frame.pack(fill="x", padx=2, pady=2)
+            tk.Button(doca_frame, text=f"Pegar {i}", command=lambda: self.publishRT("PICK", i)).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
+            tk.Button(doca_frame, text=f"Soltar {i}", command=lambda: self.publishRT("DROP", i)).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
+            tk.Button(doca_frame, text=f"Salvar {i}", command=lambda: self.publishRT("SET DOCK", i)).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+
+    def createFrameMacros(self, parent):
+        rt_frame = tk.LabelFrame(parent, text=" Macros", padx=5, pady=5)
+        rt_frame.pack(fill="x", padx=5, pady=5)
+        
+        tk.Button(rt_frame, text="Lava HotWheels", command=lambda: self.rodarMacro("lava_hotwheels")).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Lava MonsterTruck", command=lambda: self.rodarMacro("lava_monstertruck")).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Roça 300x300", command=lambda: self.rodarMacro("roca_300")).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Rega 300x300", command=lambda: self.rodarMacro("rega_300")).grid(row=0, column=3, padx=5, pady=2, sticky="nsew")
 
     def createFrameTestes(self, parent):
         test_frame = tk.LabelFrame(parent, text=" Testes Automatizados ", padx=5, pady=5)
@@ -977,14 +817,14 @@ class CNCJogApp:
         rt_frame = tk.LabelFrame(parent, text=" Comandos em Tempo Real", padx=5, pady=5)
         rt_frame.pack(fill="x", padx=5, pady=5)
         
-        tk.Button(rt_frame, text="Feed Hold (!)", bg="#ff9800", fg="white", font=("Arial", 9, "bold"),
-                  command=lambda: self.client.publish(self.topic_entry.get() + "/comandos", '{"type":"rt","data":"!"}')).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
-        
-        tk.Button(rt_frame, text="Cycle Resume (~)", bg="#4caf50", fg="white", font=("Arial", 9, "bold"),
-                  command=lambda: self.client.publish(self.topic_entry.get() + "/comandos", '{"type":"rt","data":"~"}')).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
-        
-        tk.Button(rt_frame, text="Soft Reset (^X)", bg="#f44336", fg="white", font=("Arial", 9, "bold"),
-                  command=lambda: self.client.publish(self.topic_entry.get() + "/comandos", '{"type":"rt","data":"\x18"}')).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Pausar motores", command=lambda: self.publishRT("HOLD")).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Continuar motores", command=lambda: self.publishRT("CYCLE")).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Abortar motores", command=lambda: self.publishRT("ABORT")).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Resetar motores", command=lambda: self.publishRT("RESET")).grid(row=0, column=3, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Destravar motores", command=lambda: self.publishRT("UNLOCK", 0, "GRBL")).grid(row=1, column=0, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Destravar robô", command=lambda: self.publishRT("UNLOCK", 0, "XYLEMA")).grid(row=1, column=1, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Salvar estacionamento", command=lambda: self.publishRT("SET PARK")).grid(row=1, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Estacionar", command=lambda: self.publishRT("PARK")).grid(row=1, column=3, padx=5, pady=2, sticky="nsew")
 
     def createNotebookLogs(self, parent):
         log_notebook = ttk.Notebook(parent)
