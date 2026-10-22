@@ -9,6 +9,9 @@
 
 #include <grbl.h>
 
+// ==== DEFINIÇÕES
+#define CONFIG_NETWORK "xylema32"
+
 // === ENUM E CLASSES
 enum estadoXylema {
     PRONTO,               // Pronto para receber novas instruções
@@ -23,6 +26,13 @@ enum TipoEvento {
   LEVE,
   GRAVE,
   CRITICO,
+};
+enum DebugLevel {
+    DEBUG_OFF = 0,
+    DEBUG_ERROR = 1,
+    DEBUG_EVENT = 2,
+    DEBUG_INFO = 3,
+    DEBUG_VERBOSE = 4
 };
 struct ComandoCNC {
     long id;
@@ -80,6 +90,7 @@ float dockPos[TOTAL_DOCKS][TOTAL_EIXOS] = {
     {-50, -300, -550},
     {-50, -400, -550} 
 };
+int debugLevel = DEBUG_VERBOSE;
 
 // Instâncias globais
 Preferences preferences;
@@ -119,12 +130,12 @@ void connectMQTT();
 void serialGRBLSend(String data);
 void serialGRBLReceive();
 
-
 void ledFade(int maxR, int maxG, int maxB, unsigned long tempoFadeMs, unsigned long intervaloMaximosMs);
 void led(int r, int g, int b);
 void loopLED();
 void processarPush(unsigned long duracaoPush);
 void loopPush();
+void logDebug(int level, const char* formato, ...);
 
 void callbackMQTT(char* topic, byte* payload, unsigned int length);
 void acknowledgeCompleted(long id);
@@ -163,6 +174,7 @@ void loopOkTimeout();
 // SETUP
 // == 
 void setupPins() {
+  logDebug(DEBUG_VERBOSE, "setupPins iniciado em %lu ms", millis());
   // Pinos RGB
   pinMode(LED_R_PIN, OUTPUT);
   pinMode(LED_G_PIN, OUTPUT);
@@ -207,7 +219,7 @@ void setupPins() {
   digitalWrite(GRBL_RESUME_PIN, HIGH);
 }
 void wifiConfig() {
-  Serial.println("Modo de configuração. Acesse a rede xylema32.");
+  logDebug(DEBUG_EVENT, "Xylema em mode de configuração Wi-fi. Acesse a rede %s", CONFIG_NETWORK);
   led(255,120,0);
   WiFiManager wm;
   
@@ -224,9 +236,9 @@ void wifiConfig() {
   wm.addParameter(&custom_status_ch);
   wm.addParameter(&custom_event_ch);
 
-  // Inicia o Access Point (Rede "xylema32") e trava aguardando a configuração
-  if (!wm.startConfigPortal("xylema32")) {
-    Serial.println("Falha ao criar portal de configuração.");
+  // Inicia o Access Point e trava aguardando a configuração
+  if (!wm.startConfigPortal(CONFIG_NETWORK)) {
+    logDebug(DEBUG_ERROR, "Falha ao criar portal de configuração. Reiniciando ESP.");
     delay(3000);
     ESP.restart();
     return;
@@ -243,7 +255,7 @@ void wifiConfig() {
   preferences.putString("event_ch", custom_event_ch.getValue());
   preferences.end();
 
-  Serial.println("Configurações salvas com sucesso!");
+  logDebug(DEBUG_INFO, "Configurações salvas com sucesso.");
   led(0, 255, 0); 
   delay(1000);
 }
@@ -257,8 +269,9 @@ void lerConfig() {
   mqtt_command_channel = preferences.getString("cmd_ch", "cnc/comandos");
   mqtt_ack_channel = preferences.getString("ack_ch", "cnc/ack");
   mqtt_status_channel = preferences.getString("status_ch", "cnc/estado");
-  mqtt_event_channel = "cnc/evento"; //preferences.getString("event_ch", "cnc/evento");
+  mqtt_event_channel = preferences.getString("event_ch", "cnc/evento");
   intervaloEstado = preferences.getInt("intervalo", 1000);
+  debugLevel = preferences.getInt("dbg_level", 2); // Padrão 2 (INFO) se não existir
 
   // Tenta ler o pwmMax. Se a chave "pwmMax" existir, o getBytes preenche o array.
   size_t bytesMax = preferences.getBytes("pwmMax", pwmMax, sizeof(pwmMax));
@@ -298,56 +311,26 @@ void lerConfig() {
 
   preferences.end();
 
-  Serial.println("==Configurações==");
-  Serial.print("ssid: ");
-  Serial.println(ssid);
-  Serial.print("password: ");
-  Serial.println(password);
-  Serial.print("mqtt_server: ");
-  Serial.println(mqtt_server);
-  Serial.print("mqtt_command_channel: ");
-  Serial.println(mqtt_command_channel);
-  Serial.print("mqtt_ack_channel: ");
-  Serial.println(mqtt_ack_channel);
-  Serial.print("mqtt_status_channel: ");
-  Serial.println(mqtt_status_channel);
-  Serial.print("mqtt_event_channel: ");
-  Serial.println(mqtt_event_channel);
-  
+  logDebug(DEBUG_EVENT, "Configurações lidas com sucesso.");
+  logDebug(DEBUG_INFO, "SSID %s", ssid);
+  logDebug(DEBUG_INFO, "PASSWORD %s", password);
+  logDebug(DEBUG_INFO, "MQTT SERVER: %s", mqtt_server);
+  logDebug(DEBUG_INFO, "CMD: %s, ACK: %s, STATUS: %s, EVENTOS: %s", 
+           mqtt_command_channel.c_str(), 
+           mqtt_ack_channel.c_str(), 
+           mqtt_status_channel.c_str(), 
+           mqtt_event_channel.c_str());
+
   // Exibindo os arrays PWM no Serial Monitor
-  Serial.print("pwmMax: ");
   for (int i = 0; i < TOTAL_ATUADORES; i++) {
-    Serial.print(pwmMax[i]);
-    if (i < TOTAL_ATUADORES - 1) Serial.print(", ");
+    logDebug(DEBUG_INFO, "Atuador %d: Min=%d, Max=%d", i, pwmMin[i], pwmMax[i]);
   }
-  Serial.println();
-  Serial.print("pwmMin: ");
-  for (int i = 0; i < TOTAL_ATUADORES; i++) {
-    Serial.print(pwmMin[i]);
-    if (i < TOTAL_ATUADORES - 1) Serial.print(", ");
-  }
-  Serial.println();
-  
-  // Exibe os arrays de posições
-  // Imprime a posição de Park
-  Serial.print("parkPos: ");
-  for (int i = 0; i < TOTAL_EIXOS; i++) {
-    Serial.print(parkPos[i]);
-    if (i < TOTAL_EIXOS - 1) Serial.print(", ");
-  }
-  Serial.println();
-  // Imprime as posições das Docas
-  Serial.println("dockPos:");
+
+  // Posições salvas
+  logDebug(DEBUG_INFO, "Estacionamento: %.2f, %.2f, %.2f", parkPos[0], parkPos[1], parkPos[2]);
   for (int d = 0; d < TOTAL_DOCKS; d++) {
-    Serial.print("  Doca ");
-    Serial.print(d);
-    Serial.print(": ");
-    for (int e = 0; e < TOTAL_EIXOS; e++) {
-      Serial.print(dockPos[d][e]);
-      if (e < TOTAL_EIXOS - 1) Serial.print(", ");
-    }
-    Serial.println();
-  }  
+    logDebug(DEBUG_INFO, "Doca %d: %.2f, %.2f, %.2f", d, dockPos[d][0], dockPos[d][1], dockPos[d][2]);
+  }
 }
 
 // ==
@@ -620,8 +603,16 @@ void loopPush() {
     }
   }
 }
-
-
+void logDebug(int level, const char* formato, ...) {
+    if (currentDebugLevel >= level) {
+        char loc_buf[256];
+        va_list args;
+        va_start(args, formato);
+        vsnprintf(loc_buf, sizeof(loc_buf), formato, args);
+        va_end(args);
+        Serial.println(loc_buf);
+    }
+}
 // ===
 // COMUNICACAO MQTT
 // ==
@@ -865,6 +856,14 @@ bool handleComandoSET(ComandoCNC comando) {
       Serial.println(dockPos[indice][2]);
       ok = true;
     }
+  }
+  else if (comando.data.indexOf("DEBUG_LEVEL") != -1) {
+    currentDebugLevel = comando.payload.toInt();
+    preferences.begin("xylema-cfg", false);
+    preferences.putInt("dbg_level", currentDebugLevel);
+    preferences.end();
+    Serial.printf("Nível de debug alterado para: %d\n", currentDebugLevel);
+    ok = true;
   }
   return ok;
 }
