@@ -40,6 +40,7 @@ const int tamanhoFila = 64;         // instrucoes
 const int timeoutGRBLOk   =  60000; // ms
 const int timeoutGRBLIdle = 600000; // ms
 const int longPushMs   =  2000;     // ms
+const bool verbose = false;
 
 // Definicao de Pinos
 const int LED_R_PIN = 6;
@@ -97,6 +98,7 @@ static String endstopGRBL = "";
 static int bufferGRBL = 0;
 int estadoAtuadorMapeado[TOTAL_ATUADORES] ={ 0, 0, 0, 0,};
 int estadoAtuadorNormalizado[TOTAL_ATUADORES] ={ 0, 0, 0, 0,};
+String jobAtual = "";
 
 // Variáveis de timestamp
 static unsigned long ultimoStatusGRBLTs = 0;
@@ -420,7 +422,7 @@ void serialGRBLSend(String data) {
 
   // Comandos especiais: rt commands - não muda estado ne usa linha no final
   if (data == "?" || data == "~" || data == "!" || data == "\x18") SerialGRBL.print(data);
-  // Todos os outros comandos
+    // Todos os outros comandos
   else {
     SerialGRBL.print(data + "\n");
     estadoXylema = AGUARDANDO_GRBL_OK;
@@ -430,7 +432,13 @@ void serialGRBLReceive() {
   while (SerialGRBL.available()) {
     String linha = SerialGRBL.readStringUntil('\n');
     linha.trim();
-    Serial.print("GRBL -->");
+    if (linha.startsWith("<")) {
+      handleGRBLStatusMsg(linha);
+      if (verbose) Serial.println(linha);
+      continue;
+    }
+
+    Serial.print("GRBL --> ");
     Serial.println(linha);
     // Se receber uma das mensagens abaixo, ignora
     if (linha.length() == 0) continue;                        //linha vazia
@@ -450,7 +458,6 @@ void serialGRBLReceive() {
 
     if (linha.startsWith("ALARM:")) handleGRBLAlarm(linha);
     if (linha.startsWith("error:")) handleGRBLError(linha);
-    if (linha.startsWith("<")) handleGRBLStatusMsg(linha);
     // Se receber uma linha de configuração:
     if (linha.startsWith("$")) {
       //Serial.println(linha);
@@ -655,7 +662,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   Serial.println(msgPayload);
 
   // 2. Erros de recebimento
-  if (estadoXylema == BLOQUEADO) {
+  if (estadoXylema == BLOQUEADO && data != "UNLOCK" && data != "RESET") {
     Serial.println ("Xylema bloqueado");
     acknowledgeError(id, "Xylema bloqueado");
     reportEventMQTT(LEVE, "Bloqueado", "Xylema32");
@@ -668,6 +675,15 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
     reportEventMQTT(LEVE, "Fila Cheia", "Xylema32");
     return;
   }
+
+  /* CONTROLAR SE O JOB É O MESMO
+    if (filaCNC.size() >= tamanhoFila) {
+    Serial.println ("Fila cheia");
+    acknowledgeError(id, "Fila cheia");
+    reportEventMQTT(LEVE, "Fila Cheia", "Xylema32");
+    return;
+  }
+  */
 
   if (type == "rt") handleComandoXylema(comando, false);
   else {
@@ -966,6 +982,22 @@ bool handleComandoEMERGENCY() {
   }
   return ok;
 }
+bool handleComandoJOB(ComandoCNC comando) {
+  bool ok = false;
+
+  String job = comando.payload;
+  if (comando.data.indexOf("START") != -1 && jobAtual == "")  {
+    reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
+    jobAtual = job;
+    ok = true;
+  }
+  if (comando.data.indexOf("END") != -1)  {
+    reportEventMQTT(INFO, "Finalizada a tarefa " + jobAtual, "XYLEMA");
+    jobAtual = "";
+    ok = true;
+  }
+  return ok;
+}
 
 void limparFila(String mensagem) {
   estadoXylema == BLOQUEADO;
@@ -1031,9 +1063,7 @@ void handleGRBLStatusMsg(String linha) {
   EstadoGRBL novoEstado = interpretarEstadoGRBL(linha);
 
   // Se o estado atual for HOMING, ignora mensagens que não sejam OCIOSO (Idle)
-  if (estadoGRBL == HOMING && novoEstado != OCIOSO) {
-    return;
-  }
+  if (estadoGRBL == HOMING && novoEstado != OCIOSO) return;
 
   estadoGRBL = novoEstado;
   interpretarPosicaoGRBL(linha, posicaoGRBL);

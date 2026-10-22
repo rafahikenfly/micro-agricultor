@@ -40,6 +40,7 @@ XYLEMA_ESTADOS = {
     4: {"texto": "Bloqueado", "cor": "red"},
 }
 
+
 class CNCJogApp:
     def __init__(self, root):
 
@@ -65,6 +66,12 @@ class CNCJogApp:
 
         # Dicionário para rastrear o estado de cada acessório (False = Desligado, True = Ligado)
         self.atuador = {}
+        self.atuadores = {
+            0: {"label": "Desativado"},
+            1: {"label": "Motor"},
+            2: {"label": "Solenóide"},
+            3: {"label": "Mini-bomba"}
+        }
 
         self.create_widgets()
 
@@ -148,13 +155,14 @@ class CNCJogApp:
         self.lbl_endstop.config(text=f"{endstop}", fg="red")
 
         # Atualiza os acessórios na interface
-        for i in range(4):
+        for i, info_atuador in self.atuadores.items():
             estado_bool = acessorios_data.get(str(i), acessorios_data.get(i, False))
-            
+                    
             if i in self.atuador:
                 self.atuador[i]["estado"] = estado_bool
                 info = self.atuador.get(i)
-                self.atualizarVisualBtn(info["botao"], estado_bool, f"Acessório {i}")
+                label_nome = info_atuador.get("label", f"Acessório {i}")
+                self.atualizarVisualBtn(info["botao"], estado_bool, label_nome)        
     def log_ack(self, msg_id, status, data = None):
         # Adiciona a linha no painel de log visual da interface
         log_text = f"[ACK Recebido] ID: {msg_id} -> Status: {status} {data}\n"
@@ -318,17 +326,18 @@ class CNCJogApp:
             # Publica o comando
             self.client.publish(comando_topic, data)
             print(f"Enviado [{msg_id}] para [{comando_topic}]: {data}")
+            time.sleep(0.1)
 
             # Espera o ACK chegar (com timeout de segurança de 5 segundos)
-            recebeu_ack = ack_event.wait(timeout=5.0)
-            status_ack = self.ack_status.get(msg_id)
-            self.ack_events.pop(msg_id, None)
-            if not recebeu_ack:
-                print(f"Timeout: ACK não recebido para o comando [{msg_id}]. Parando o envio da macro.")
-                break # Interrompe a sequência se houver falha/timeout
-            if status_ack == "ERROR":
-                print(f"Comando [{msg_id}] retornou ERROR. Parando o envio da macro.")
-                break # Para tudo se houver erro
+            #recebeu_ack = ack_event.wait(timeout=5.0)
+            #status_ack = self.ack_status.get(msg_id)
+            #self.ack_events.pop(msg_id, None)
+            #if not recebeu_ack:
+            #    print(f"Timeout: ACK não recebido para o comando [{msg_id}]. Parando o envio da macro.")
+            #    break # Interrompe a sequência se houver falha/timeout
+            #if status_ack == "ERROR":
+            #    print(f"Comando [{msg_id}] retornou ERROR. Parando o envio da macro.")
+            #    break # Para tudo se houver erro
         print(f"--- Macro {macro} enviada ---")
             
 
@@ -738,15 +747,16 @@ class CNCJogApp:
         tk.Label(frame_modo, text="Modo: ").pack(side=tk.LEFT)
         tk.Radiobutton(frame_modo, text="Real-time", variable=self.modo_comando, value="rt").pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(frame_modo, text="Sync", variable=self.modo_comando, value="sync").pack(side=tk.LEFT, padx=5)
-
-        for i in range(4):
-            linha = (i // 2) + 1
-            coluna = i % 2
+        
+        for i, info in self.atuadores.items():
+            linha = (i // 4) + 1
+            coluna = i % 4
 
             atuador_frame = tk.Frame(frame_atuadores, relief="groove", bd=1, padx=2, pady=2)
             atuador_frame.grid(row=linha, column=coluna, padx=3, pady=3, sticky="nsew")
 
-            btn = tk.Label(atuador_frame, text=f"Acessório {i}\n", bg="#d9d9d9", fg="black", relief="raised", bd=2, padx=2, pady=1)
+            # Utiliza o label vindo diretamente do dicionário
+            btn = tk.Label(atuador_frame, text=f"{info['label']}\n", bg="#d9d9d9", fg="black", relief="raised", bd=2, padx=2, pady=1)
             btn.bind("<Button-1>", lambda e, idx=i: self.toggle_atuador(idx))
             btn.grid(row=0, column=0, padx=2, pady=2, sticky="nsew")
 
