@@ -14,14 +14,6 @@
 #define VERSION "0.01"
 
 // === ENUM E CLASSES
-enum estadoXylema {
-    PRONTO,               // Pronto para receber novas instruções
-    AGUARDANDO_GRBL_OK,   // Esperando o 'ok' de um comando enviado
-    AGUARDANDO_GRBL_IDLE, // Esperando o GRBL voltar ao estado IDLE (ex: para executar um sync)
-    AGUARDANDO,
-    BLOQUEADO,
-    ERRO_CRITICO          // Falha crítica: requer intervenção
-};
 enum TipoEvento {
   INFO,
   LEVE,
@@ -35,18 +27,23 @@ enum DebugLevel {
     DEBUG_INFO = 3,
     DEBUG_VERBOSE = 4
 };
+enum EstadoXylema {
+    PRONTO,               // Pronto para receber novas instruções
+    AGUARDANDO_GRBL_OK,   // Esperando o 'ok' de um comando enviado
+    AGUARDANDO_GRBL_IDLE, // Esperando o GRBL voltar ao estado IDLE (ex: para executar um sync)
+    AGUARDANDO,
+    BLOQUEADO,
+    ERRO_CRITICO          // Falha crítica: requer intervenção
+};
 struct ComandoCNC {
     long id;
-    String type;
-    String data;       // Usado para conteudo da mensagem (gcode line ou outros comandos)
-    int value;         // Usado para parâmetro do comando sync e config
-    String payload;    // Usado como parâmetro do comando sync e config 
+    String data;
     String job;
+    bool rt;
 };
 
 // Constantes de configuração em nível de hardware
 const int TOTAL_ATUADORES = 4;      // MAX = 5 (8 DO ESP - 3 DO RGB)
-const int TOTAL_EIXOS = 3;          // X, Y e Z
 const int TOTAL_DOCKS = 4;          // R, S, T e U
 const int tamanhoFila = 64;         // instrucoes
 const int timeoutGRBLOk   =  60000; // ms
@@ -85,8 +82,8 @@ String mqtt_event_channel;
 int intervaloEstado;
 int pwmMax[TOTAL_ATUADORES] = { 255,  255, 255, 255};
 int pwmMin[TOTAL_ATUADORES] = {   0,   0,    0,   0};
-float parkPos[TOTAL_EIXOS]    = {-5, -5, -5};
-float dockPos[TOTAL_DOCKS][TOTAL_EIXOS] = {
+float parkPos[3]    = {-5, -5, -5};
+float dockPos[TOTAL_DOCKS][3] = {
     {-50, -100, -550},
     {-50, -200, -550},
     {-50, -300, -550},
@@ -103,7 +100,7 @@ HardwareSerial SerialGRBL(2); // Porta Serial 2 para o GRBL
 
 // Variáveis de estado
 bool pushed = true;
-estadoXylema estadoXylema = PRONTO;
+EstadoXylema estadoXylema = PRONTO;
 EstadoGRBL estadoGRBL = DESCONHECIDO;
 int intervaloStatusGRBL = 1000;
 PosicaoCNC posicaoGRBL = {0.0, 0.0, 0.0};
@@ -148,16 +145,18 @@ void reportStatusMQTT();
 void reportEventMQTT(int tipo, String mensagem, String origem);
 
 bool handleComandoXylema(ComandoCNC comando, bool popQueue);
-bool handleComandoSET(ComandoCNC comando);
-bool handleComandoDELAY(ComandoCNC comando);
+bool handleComandoEMERGENCY();
 bool handleComandoHEARTBEAT();
 bool handleComandoHOME_CYCLE();
-bool handleComandoUNLOCK(ComandoCNC comando);
+bool handleComandoON(ComandoCNC comando);
+bool handleComandoOFF(ComandoCNC comando);
+bool handleComandoSET(ComandoCNC comando);
+bool handleComandoJOB(ComandoCNC comando);
 bool handleComandoPARK(ComandoCNC comando);
 bool handleComandoPICK(ComandoCNC comando);
 bool handleComandoDROP(ComandoCNC comando);
-bool handleComandoEMERGENCY();
-bool handleComandoJOB(ComandoCNC comando);
+bool handleComandoDELAY(ComandoCNC comando);
+bool handleComandoUNLOCK(ComandoCNC comando);
 
 void limparFila(String mensagem);
 void updateGRBLStatus();
@@ -184,12 +183,15 @@ void setupPins() {
   pinMode(LED_B_PIN, OUTPUT);
 
   // Configuração do PWM do ESP32 (Frequência de 5000Hz, resolução de 8 bits = 0 a 255)
-  ledcSetup(CHANNEL_R, 5000, 8);
-  ledcAttachPin(LED_R_PIN, CHANNEL_R);
-  ledcSetup(CHANNEL_G, 5000, 8);
-  ledcAttachPin(LED_G_PIN, CHANNEL_G);
-  ledcSetup(CHANNEL_B, 5000, 8);
-  ledcAttachPin(LED_B_PIN, CHANNEL_B);
+  //ledcSetup(CHANNEL_R, 5000, 8);
+  //ledcAttachPin(LED_R_PIN, CHANNEL_R);
+  //ledcSetup(CHANNEL_G, 5000, 8);
+  //ledcAttachPin(LED_G_PIN, CHANNEL_G);
+  //ledcSetup(CHANNEL_B, 5000, 8);
+  //ledcAttachPin(LED_B_PIN, CHANNEL_B);
+  ledcAttach(LED_R_PIN, 5000, 8);
+  ledcAttach(LED_G_PIN, 5000, 8);
+  ledcAttach(LED_B_PIN, 5000, 8);
   // Pino do Botão (le estado do botao)
   pinMode(PUSH_PIN, INPUT_PULLUP);
   pushed = (digitalRead(PUSH_PIN) == LOW);
@@ -205,9 +207,10 @@ void setupPins() {
       digitalWrite(ATUADOR_PIN[i], LOW);
     } else {
       // Analógico
-      ledcSetup(i, 5000, 8);             // Frequência de 5kHz, 8 bits (0-255)
-      ledcAttachPin(ATUADOR_PIN[i], i);  // Associa o pino ao canal 'i'
-      ledcWrite(i, 0);                   // Garante que inicia desligado (PWM = 0)    }
+      //ledcSetup(i, 5000, 8);             // Frequência de 5kHz, 8 bits (0-255)
+      //ledcAttachPin(ATUADOR_PIN[i], i);  // Associa o pino ao canal 'i'
+      ledcAttach(ATUADOR_PIN[i], 5000, 8);
+      ledcWrite(ATUADOR_PIN[i], 0);                   // Garante que inicia desligado (PWM = 0)    }
     }
   }
 
@@ -295,7 +298,7 @@ void lerConfig() {
   size_t bytesParkPos = preferences.getBytes("parkPos", parkPos, sizeof(parkPos));
   if (bytesParkPos == 0) {
     // Se não existir nada salvo ainda, definimos os padrões no array local
-    float padraoPos[TOTAL_EIXOS] = { -5.0f, -5.0f, -5.0f };
+    float padraoPos[3] = { -5.0f, -5.0f, -5.0f };
     memcpy(parkPos, padraoPos, sizeof(parkPos));
   }
 
@@ -303,7 +306,7 @@ void lerConfig() {
   size_t bytesDockPos = preferences.getBytes("dockPos", dockPos, sizeof(dockPos));
   if (bytesDockPos == 0) {
     // Se não existir nada salvo ainda, define os padrões no array local
-    float padraoDocks[TOTAL_DOCKS][TOTAL_EIXOS] = {
+    float padraoDocks[TOTAL_DOCKS][3] = {
       {-5.0f, -100.0f, -550.0f},
       {-5.0f, -200.0f, -550.0f},
       {-5.0f, -300.0f, -550.0f},
@@ -476,40 +479,40 @@ void serialGRBLReceive() {
 // INTERFACE (LED E PUSH)
 // ===
 void led(int r, int g, int b) {
-    ledcWrite(CHANNEL_R, r);
-    ledcWrite(CHANNEL_G, g);
-    ledcWrite(CHANNEL_B, b);
+  ledcWrite(LED_R_PIN, r);
+  ledcWrite(LED_G_PIN, g);
+  ledcWrite(LED_B_PIN, b);
 }
 void ledFade(int maxR, int maxG, int maxB, unsigned long tempoFadeMs, unsigned long intervaloMaximosMs) {
-    unsigned long agora = millis();
-    
-    // Calcula em qual momento do ciclo atual nós estamos (de 0 até intervaloMaximosMs)
-    unsigned long tempoNoCiclo = agora % intervaloMaximosMs;
+  unsigned long agora = millis();
+  
+  // Calcula em qual momento do ciclo atual nós estamos (de 0 até intervaloMaximosMs)
+  unsigned long tempoNoCiclo = agora % intervaloMaximosMs;
 
-    int brilhoAjustado = 0;
+  int brilhoAjustado = 0;
 
-    // Se o tempo atual estiver dentro da janela do fade
-    if (tempoNoCiclo < tempoFadeMs) {
-        // Mapeia o tempo do fade para o intervalo de 0 a PI (180 graus), que é a metade positiva da onda seno
-        // sin(0) = 0 (apagado), sin(PI/2) = 1 (máximo), sin(PI) = 0 (apagado)
-        float angulo = (float)tempoNoCiclo / tempoFadeMs * 3.14159265;
-        
-        // Aplica a função seno e multiplica pelo valor máximo da cor (0 a 255)
-        float senoide = sin(angulo);
-        brilhoAjustado = (int)(senoide * 255);
-    } 
-    else {
-        // Se passou do tempo do fade, o LED fica totalmente desligado até o próximo ciclo
-        brilhoAjustado = 0;
-    }
+  // Se o tempo atual estiver dentro da janela do fade
+  if (tempoNoCiclo < tempoFadeMs) {
+      // Mapeia o tempo do fade para o intervalo de 0 a PI (180 graus), que é a metade positiva da onda seno
+      // sin(0) = 0 (apagado), sin(PI/2) = 1 (máximo), sin(PI) = 0 (apagado)
+      float angulo = (float)tempoNoCiclo / tempoFadeMs * 3.14159265;
+      
+      // Aplica a função seno e multiplica pelo valor máximo da cor (0 a 255)
+      float senoide = sin(angulo);
+      brilhoAjustado = (int)(senoide * 255);
+  } 
+  else {
+      // Se passou do tempo do fade, o LED fica totalmente desligado até o próximo ciclo
+      brilhoAjustado = 0;
+  }
 
-    // Aplica a intensidade proporcional em cada canal RGB
-    // (Se a cor máxima for 255, ele usa o brilho cheio. Se for 0, fica apagado).
-    int r = (maxR > 0) ? (maxR * brilhoAjustado / 255) : 0;
-    int g = (maxG > 0) ? (maxG * brilhoAjustado / 255) : 0;
-    int b = (maxB > 0) ? (maxB * brilhoAjustado / 255) : 0;
+  // Aplica a intensidade proporcional em cada canal RGB
+  // (Se a cor máxima for 255, ele usa o brilho cheio. Se for 0, fica apagado).
+  int r = (maxR > 0) ? (maxR * brilhoAjustado / 255) : 0;
+  int g = (maxG > 0) ? (maxG * brilhoAjustado / 255) : 0;
+  int b = (maxB > 0) ? (maxB * brilhoAjustado / 255) : 0;
 
-    led(r, g, b);
+  led(r, g, b);
 }
 void loopLED() {
   unsigned long agora = millis();
@@ -657,44 +660,40 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
 
   // 1. Recebimento do comando
   long id = doc["id"] | 0;
-  String type = doc["type"] | "";
   String data = doc["data"] | "";
-  int value = doc["value"] | 0;
-  String msgPayload = doc["payload"] | "";
   String job = doc["job"] | "";
+  bool rt = doc["rt"] | false;
 
   ComandoCNC comando;
   comando.id = id;
-  comando.type = type;
   comando.data = data;
-  comando.value = value;
-  comando.payload = msgPayload;
+  comando.rt = rt;
   comando.job = job;
 
   // 2. Erros de recebimento
-  if (estadoXylema == BLOQUEADO && data != "UNLOCK" && data != "RESET") {
+  if (estadoXylema == BLOQUEADO && !data.startsWith("UNLOCK") && !data.startsWith("RESET")) {
     logDebug(DEBUG_ERROR, "Xylema bloqueado");
     acknowledgeError(id, "Xylema bloqueado");
-    reportEventMQTT(LEVE, "Bloqueado", "Xylema32");
+    reportEventMQTT(LEVE, "Bloqueado", "XYLEMA32");
     return;
   }
 
   if (filaCNC.size() >= tamanhoFila) {
     logDebug(DEBUG_ERROR, "Fila cheia");
     acknowledgeError(id, "Fila cheia");
-    reportEventMQTT(LEVE, "Fila Cheia", "Xylema32");
+    reportEventMQTT(LEVE, "Fila Cheia", "XYLEMA32");
     return;
   }
 
-  if (comando.job != jobAtual) {
+  if (!comando.rt && comando.job != jobAtual) {
     logDebug(DEBUG_ERROR, "Xylema ocupado com outra tarefa: %s", jobAtual);
     acknowledgeError(id, "Xylema ocupado");
-    reportEventMQTT(LEVE, "Xylema ocupado", "Xylema32");
+    reportEventMQTT(LEVE, "Xylema ocupado", "XYLEMA32");
     return;
   }
 
   // 3. Processa ou inclui na fila
-  if (type == "rt") handleComandoXylema(comando, false);
+  if (comando.rt) handleComandoXylema(comando, false);
   else {
     // Adiciona na fila e marca acnowledge
     filaCNC.push(comando);
@@ -729,19 +728,19 @@ void reportStatusMQTT() {
     docStatus["timestamp"] = millis();
     
     JsonObject grblObj = docStatus["grbl"].to<JsonObject>();
-    grblObj["estado"] = estadoGRBL;
-    grblObj["disponivel"] = bufferGRBL;
-    grblObj["endstops"] = endstopGRBL;
+    grblObj["est"] = estadoGRBL;
+    grblObj["bf"] = bufferGRBL;
+    grblObj["fdc"] = endstopGRBL;
     JsonObject posObj = grblObj["pos"].to<JsonObject>();
     posObj["x"] = posicaoGRBL.x;
     posObj["y"] = posicaoGRBL.y;
     posObj["z"] = posicaoGRBL.z;
     
-    JsonObject xylemaObj = docStatus["fila"].to<JsonObject>();
-    xylemaObj["Xylema"] = estadoXylema;
-    xylemaObj["disponivel"] = tamanhoFila - filaCNC.size();
+    JsonObject xylemaObj = docStatus["xylema"].to<JsonObject>();
+    xylemaObj["est"] = estadoXylema;
+    xylemaObj["bf"] = tamanhoFila - filaCNC.size();
 
-    JsonObject atuadoresObj = docStatus["acessorios"].to<JsonObject>();
+    JsonObject atuadoresObj = docStatus["at"].to<JsonObject>();
     for (int i = 0; i < TOTAL_ATUADORES; i++) {
       char chaveStr[4];
       itoa(i, chaveStr, 10); // Transforma o índice em string ("0", "1", etc.)
@@ -756,9 +755,9 @@ void reportStatusMQTT() {
 }
 void reportEventMQTT(int tipo, String mensagem, String origem) {
   JsonDocument docEvent;
-  docEvent["timestamp"] = millis();
+  docEvent["ts"] = millis();
   docEvent["tipo"] = tipo;
-  docEvent["mensagem"] = mensagem;
+  docEvent["msg"] = mensagem;
   docEvent["origem"] = origem;
 
   char buffer[256];
@@ -777,16 +776,18 @@ bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   else if (comando.data == "ABORT")  { pulsoGRBL(GRBL_ABORT_PIN); ok = true;}
   else if (comando.data == "CYCLE")  { pulsoGRBL(GRBL_RESUME_PIN); ok = true;}
   else if (comando.data == "RESET")  { pulsoGRBL(GRBL_RESET_PIN, 100, 2000); ok = true;}
-  else if (comando.data.startsWith("SET")) ok = handleComandoSET(comando);
-  else if (comando.data.startsWith("PARK")) ok = handleComandoPARK(comando);
-  else if (comando.data.startsWith("JOB")) ok = handleComandoJOB(comando);
-  else if (comando.data == "DELAY") ok = handleComandoDELAY(comando);
-  else if (comando.data == "HEARTBEAT") ok = handleComandoHEARTBEAT();
-  else if (comando.data == "HOME_CYCLE") ok = handleComandoHOME_CYCLE();
-  else if (comando.data == "UNLOCK") ok = handleComandoUNLOCK(comando);
-  else if (comando.data == "PICK") ok = handleComandoPICK(comando);
-  else if (comando.data == "DROP") ok = handleComandoDROP(comando);
-  else if (comando.data == "EMERGENCY") ok = handleComandoEMERGENCY();
+  else if (comando.data == "HEARTBEAT")   ok = handleComandoHEARTBEAT();
+  else if (comando.data == "EMERGENCY")   ok = handleComandoEMERGENCY();
+  else if (comando.data == "HOME_CYCLE")  ok = handleComandoHOME_CYCLE();
+  else if (comando.data.startsWith("ON"))     ok = handleComandoON(comando);
+  else if (comando.data.startsWith("OFF"))    ok = handleComandoOFF(comando);
+  else if (comando.data.startsWith("SET"))    ok = handleComandoSET(comando);
+  else if (comando.data.startsWith("JOB"))    ok = handleComandoJOB(comando);
+  else if (comando.data.startsWith("PARK"))   ok = handleComandoPARK(comando);
+  else if (comando.data.startsWith("PICK"))   ok = handleComandoPICK(comando);
+  else if (comando.data.startsWith("DROP"))   ok = handleComandoDROP(comando);
+  else if (comando.data.startsWith("DELAY"))  ok = handleComandoDELAY(comando);
+  else if (comando.data.startsWith("UNLOCK")) ok = handleComandoUNLOCK(comando);
   else {
     char bufferErro[128];
     snprintf(bufferErro, sizeof(bufferErro), "Comando Xylema %s desconhecido", comando.data.c_str());
@@ -800,172 +801,10 @@ bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   }
   return ok;
 }
-bool handleComandoSET(ComandoCNC comando) {
-  bool ok = false;
-
-  int indice = comando.value;
-  if (comando.data.indexOf("MAX_PWM") != -1) {
-    if (indice >= 0 && indice < TOTAL_ATUADORES) {
-      int novoPwm = comando.payload.toInt();
-      // Atualiza o array pwmMax
-      pwmMax[indice] = novoPwm;
-      logDebug(DEBUG_EVENT, "PWM máximo do atuador %d atualizado para %d.", indice, novoPwm);
-      ok = true;
-      // Salva o array pwmMax atualizado na NVS
-      preferences.begin("xylema-cfg", false); // false = modo de escrita
-      preferences.putBytes("pwmMax", pwmMax, sizeof(pwmMax));
-      preferences.end();
-    }
-    else {
-      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", indice);
-    }
-  }
-  else if (comando.data.indexOf("MIN_PWM") != -1) {
-    if (indice >= 0 && indice < TOTAL_ATUADORES) {
-      int novoPwm = comando.payload.toInt();
-      // Atualiza o array pwmMax
-      pwmMin[indice] = novoPwm;
-      logDebug(DEBUG_EVENT, "PWM mínimo do atuador %d atualizado para %d.", indice, novoPwm);
-      ok = true;
-      // Salva o array pwmMin atualizado na NVS
-      preferences.begin("xylema-cfg", false); // false = modo de escrita
-      preferences.putBytes("pwmMin", pwmMin, sizeof(pwmMin));
-      preferences.end();
-    }
-    else {
-      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", indice);
-    }
-  }
-  else if (comando.data.indexOf("ON") != -1)  {
-    estadoAtuadorNormalizado[indice] = comando.payload.toInt();
-    int pwmMapeado = map(estadoAtuadorNormalizado[indice], 1, 255, pwmMin[indice], pwmMax[indice]);
-    estadoAtuadorMapeado[indice] = pwmMax[indice] == 1 ? 1 : pwmMapeado;
-    logDebug(DEBUG_EVENT, "Atuador %d ligado em %d (%d).", indice, estadoAtuadorNormalizado[indice], estadoAtuadorMapeado[indice]);
-    ok = true;
-  }
-  else if (comando.data.indexOf("OFF") != -1) {
-    estadoAtuadorNormalizado[indice] = 0;
-    estadoAtuadorMapeado[indice] = 0;
-    logDebug(DEBUG_EVENT, "Atuador %d desligado.", indice);
-    ok = true; 
-  }
-  else if (comando.data.indexOf("PARK") != -1) {
-    // Atualiza o array parkPos
-    parkPos[0] = posicaoGRBL.x;
-    parkPos[1] = posicaoGRBL.y;
-    parkPos[2] = posicaoGRBL.z;
-    // Salva o array parkPos atualizado na NVS
-    preferences.begin("xylema-cfg", false); // false = modo de escrita
-    preferences.putBytes("parkPos", parkPos, sizeof(parkPos));
-    preferences.end();
-    logDebug(DEBUG_EVENT, "Posição de estacionamento salva em %.3f, %.3f, %.3f", parkPos[0], parkPos[1], parkPos[2]);
-    ok = true;
-  }
-  else if (comando.data.indexOf("DOCK") != -1) {
-    if (indice >= 0 && indice < TOTAL_ATUADORES) {
-      // Atualiza o array dockPos
-      dockPos[indice][0] = posicaoGRBL.x;
-      dockPos[indice][1] = posicaoGRBL.y;
-      dockPos[indice][2] = posicaoGRBL.z;
-      // Salva o array dockPos atualizado na NVS
-      preferences.begin("xylema-cfg", false); // false = modo de escrita
-      preferences.putBytes("dockPos", dockPos, sizeof(dockPos));
-      preferences.end();
-      logDebug(DEBUG_EVENT, "Posição da doca %d salva em %.3f, %.3f, %.3f", indice, dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
-      ok = true;
-    }
-  }
-  else if (comando.data.indexOf("DEBUG_LEVEL") != -1) {
-    debugLevel = comando.payload.toInt();
-    preferences.begin("xylema-cfg", false);
-    preferences.putInt("dbg_level", debugLevel);
-    preferences.end();
-    logDebug(DEBUG_ALWAYS, "Nível de debug alterado para %d", debugLevel);
-    ok = true;
-  }
-  return ok;
-}
-bool handleComandoDELAY(ComandoCNC comando) {
-  bool ok = true;
-  pulsoGRBL(GRBL_HOLD_PIN);
-  inicioEsperaTs = millis();
-  delayMs = comando.value;
-  logDebug(DEBUG_INFO, "Pausa em %lu por %d ms", inicioEsperaTs, delayMs);
-  reportEventMQTT(INFO, "Pausa", "Xylema32");
-  estadoGRBL = PAUSA;
-  estadoXylema = AGUARDANDO;
-  return ok;
-}
 bool handleComandoHEARTBEAT() {
   bool ok = true;
   logDebug(DEBUG_ALWAYS, "Heartbeat: %lu", millis());
-  reportEventMQTT(INFO, "Alive", "Xylema32");
-  return ok;
-}
-bool handleComandoHOME_CYCLE() {
-  bool ok = true;
-  if (estadoXylema == ERRO_CRITICO) return false;
-  if (estadoGRBL == HOMING) return false;
-  logDebug(DEBUG_EVENT, "Iniciando ciclo de homing...");
-  reportEventMQTT(INFO, "Inicio de homing", "Xylema32");
-  serialGRBLSend("$H");
-  estadoGRBL = HOMING;
-  estadoXylema = BLOQUEADO;
-  return ok;
-}
-bool handleComandoUNLOCK(ComandoCNC comando) {
-  bool ok = false;
-  if (comando.payload = "GRBL") {
-    ok = true;
-    serialGRBLSend("$X");
-  }
-  if (comando.payload = "XYLEMA") {
-    ok = true;
-    estadoXylema = PRONTO;
-  }
-  return ok;
-}
-// ESSAS FUNÇÕES ABAIXO TÊM ALGUNS EFEITOS COLATERAIS A SEREM REPENSADOS
-// - MANDA 3 OU MAIS COMANDOS G PARA O GRBL DE UMA SÓ VEZ (GERA 3 OKS QUE SÃO IGNORADOS)
-// - USA "FORÇA BRUTA PARA FAZER UM OVERRIDE DO ESTADO AGUARDANDO OK", O QUE PODE BAGUNÇAR O FLUXO DE COMUNICAÇÃO
-bool handleComandoPARK(ComandoCNC comando) {
-  bool ok = true;
-  char buffer[64];
-  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f", parkPos[0], parkPos[1], parkPos[2]);
-  serialGRBLSend(buffer); // GERA NA MARRA O STRING
-  estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
-  return ok;
-}
-bool handleComandoPICK(ComandoCNC comando) {
-  bool ok = false;
-
-  int indice = comando.value;
-  if (indice >= 0 && indice < TOTAL_DOCKS) {
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X-100 F500\nG90", dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
-    serialGRBLSend(buffer); // GERA NA MARRA O STRING
-    estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
-    ok = true;
-  }
-  else {
-    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", indice);
-  }
-  return ok;
-}
-bool handleComandoDROP(ComandoCNC comando) {
-  bool ok = false;
-
-  int indice = comando.value;
-  if (indice >= 0 && indice < TOTAL_DOCKS) {
-    char buffer[128];
-    snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X100 F500\nG1 Z-100 F500\nG90", dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
-    serialGRBLSend(buffer); // GERA NA MARRA O STRING
-    estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
-    ok = true;
-  }
-  else {
-    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", indice);
-  }
+  reportEventMQTT(INFO, "Heartbeat", "XYLEMA");
   return ok;
 }
 bool handleComandoEMERGENCY() {
@@ -980,32 +819,235 @@ bool handleComandoEMERGENCY() {
   for (int i = 0; i<TOTAL_ATUADORES; i++) {
     estadoAtuadorNormalizado[i] = 0;
     estadoAtuadorMapeado[i] = 0;
-    ledcWrite(i, pwmMax[i] == -1 ? 255 : 0);
+    ledcWrite(ATUADOR_PIN[i], pwmMax[i] == -1 ? 255 : 0);
   }
   return ok;
 }
+bool handleComandoHOME_CYCLE() {
+  if (estadoXylema == ERRO_CRITICO) return false;
+  if (estadoGRBL == HOMING) return false;
+  logDebug(DEBUG_EVENT, "Iniciando ciclo de homing...");
+  reportEventMQTT(INFO, "Inicio de homing", "Xylema32");
+  serialGRBLSend("$H");
+  estadoGRBL = HOMING;
+  estadoXylema = BLOQUEADO;
+  return true;
+}
+
+int extrairParametro(const char* comando, char letra, int valorPadrao = -1) {
+    // Procura a primeira ocorrência da letra na string
+    const char* pos = strchr(comando, toupper(letra));
+    
+    if (pos == NULL) {
+        return valorPadrao; // Retorna o valor padrão se a letra não existir
+    }
+    
+    pos++; // Avanca para logo apos a letra (ex: pula o 'A' ou 'L')
+    
+    // O atoi lê o número a partir do ponteiro, ignorando espaços iniciais automaticamente
+    return atoi(pos); 
+}
+String extrairParametroStr(const char* comando, char letra, String valorPadrao = "") {
+  return valorPadrao;
+}
+
+bool handleComandoON(ComandoCNC comando) {
+  // Obtém parâmetros
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (index < 0 || index >= TOTAL_ATUADORES) {
+    acknowledgeError(comando.id, "Comando ON com índice de atuador inválido");
+    logDebug(DEBUG_ERROR, "Comando ON com índice de atuador inválido: %d", index);
+    return false;
+  }
+  int pwm = extrairParametro(comando.data.c_str(), 'F') | pwmMax[index];
+
+  // Atualiza os estados
+  int pwmMapeado = map(pwm, 1, 255, pwmMin[index], pwmMax[index]);
+  estadoAtuadorNormalizado[index] = pwm;
+  estadoAtuadorMapeado[index] = pwmMax[index] == 1 ? 1 : pwmMapeado;
+
+  // Reporta
+  logDebug(DEBUG_EVENT, "Atuador %d ligado em %d (%d).", index, estadoAtuadorNormalizado[index], estadoAtuadorMapeado[index]);
+  return true;
+}
+bool handleComandoOFF(ComandoCNC comando) {
+  // Obtém parâmetros
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (index < 0 || index >= TOTAL_ATUADORES) {
+    acknowledgeError(comando.id, "Comando OFF com índice de atuador inválido");
+    logDebug(DEBUG_ERROR, "Comando OFF com índice de atuador inválido: %d", index);
+    return false;
+  }
+
+  // Atualiza os estados
+  estadoAtuadorNormalizado[index] = 0;
+  estadoAtuadorMapeado[index] = 0;
+
+  // Reporta
+  logDebug(DEBUG_EVENT, "Atuador %d desligado.", index);
+  return true;
+}
+bool handleComandoSET(ComandoCNC comando) {
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (comando.data.indexOf("MAX") != -1) {
+    if (index < 0 && index >= TOTAL_ATUADORES) {
+      acknowledgeError(comando.id, "Índice de atuador inválido.");
+      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", index);
+      return false;
+    }
+    int novoPwm = extrairParametro(comando.data.c_str(), 'F');
+    // Atualiza o array pwmMax
+    pwmMax[index] = novoPwm;
+    logDebug(DEBUG_EVENT, "PWM máximo do atuador %d atualizado para %d.", index, novoPwm);
+    // Salva o array pwmMax atualizado na NVS
+    preferences.begin("xylema-cfg", false); // false = modo de escrita
+    preferences.putBytes("pwmMax", pwmMax, sizeof(pwmMax));
+    preferences.end();
+    return true;
+  }
+  else if (comando.data.indexOf("MIN") != -1) {
+    if (index < 0 && index >= TOTAL_ATUADORES) {
+      acknowledgeError(comando.id, "Índice de atuador inválido.");
+      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", index);
+      return false;
+    }
+    int novoPwm = extrairParametro(comando.data.c_str(), 'F');
+    // Atualiza o array pwmMax
+    pwmMin[index] = novoPwm;
+    logDebug(DEBUG_EVENT, "PWM mínimo do atuador %d atualizado para %d.", index, novoPwm);
+
+    // Salva o array pwmMin atualizado na NVS
+    preferences.begin("xylema-cfg", false); // false = modo de escrita
+    preferences.putBytes("pwmMin", pwmMin, sizeof(pwmMin));
+    preferences.end();
+    return true;
+  }
+  else if (comando.data.indexOf("PARK") != -1) {
+    // Atualiza o array parkPos
+    parkPos[0] = posicaoGRBL.x;
+    parkPos[1] = posicaoGRBL.y;
+    parkPos[2] = posicaoGRBL.z;
+    // Salva o array parkPos atualizado na NVS
+    preferences.begin("xylema-cfg", false); // false = modo de escrita
+    preferences.putBytes("parkPos", parkPos, sizeof(parkPos));
+    preferences.end();
+    logDebug(DEBUG_EVENT, "Posição de estacionamento salva em %.3f, %.3f, %.3f", parkPos[0], parkPos[1], parkPos[2]);
+    return true;
+  }
+  else if (comando.data.indexOf("DOCK") != -1) {
+    if (index < 0 && index >= TOTAL_DOCKS) {
+      acknowledgeError(comando.id, "Índice de doca inválido.");
+      logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", index);
+      return false;
+    }
+    // Atualiza o array dockPos
+    dockPos[index][0] = posicaoGRBL.x;
+    dockPos[index][1] = posicaoGRBL.y;
+    dockPos[index][2] = posicaoGRBL.z;
+    // Salva o array dockPos atualizado na NVS
+    preferences.begin("xylema-cfg", false); // false = modo de escrita
+    preferences.putBytes("dockPos", dockPos, sizeof(dockPos));
+    preferences.end();
+    logDebug(DEBUG_EVENT, "Posição da doca %d salva em %.3f, %.3f, %.3f", index, dockPos[index][0], dockPos[index][1], dockPos[index][2]);
+    return true;
+  }
+  else if (comando.data.indexOf("DEBUG_LEVEL") != -1) {
+    if (index < 0 && index >= 5) { // 5 É O NÚMERO MÁXIMO DO ENUM
+      acknowledgeError(comando.id, "Índice de atuador inválido.");
+      logDebug(DEBUG_ERROR, "Nível de. debug %d inválido.", index);
+      return false;
+    }
+    preferences.begin("xylema-cfg", false);
+    preferences.putInt("dbg_level", index);
+    preferences.end();
+    logDebug(DEBUG_ALWAYS, "Nível de debug alterado para %d", index);
+    return true;
+  }
+  else {
+    acknowledgeError(comando.id, "Comando SET sem parâmetro de configuração válido.");
+    logDebug(DEBUG_ERROR, "Comando SET sem parâmetro de configuração válido: %s", comando.data);
+    return false;
+  }
+}
 bool handleComandoJOB(ComandoCNC comando) {
   bool ok = false;
-
-  String job = comando.payload;
-  if (comando.data.indexOf("START") != -1 && jobAtual == "")  {
-    logDebug(DEBUG_EVENT, "Iniciando a tarefa %s.", job.c_str());
-    reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
-    jobAtual = job;
-    ok = true;
-  }
-  if (comando.data.indexOf("END") != -1)  {
+  if (comando.data.indexOf("F") != -1)  {
+    String job = extrairParametroStr(comando.data.c_str(), 'F');
     logDebug(DEBUG_EVENT, "Finalizada a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Finalizada a tarefa " + jobAtual, "XYLEMA");
     jobAtual = "";
     ok = true;
   }
+  if (comando.data.indexOf("S") != -1 && jobAtual == "")  {
+    String job = extrairParametroStr(comando.data.c_str(), 'S');
+    logDebug(DEBUG_EVENT, "Iniciando a tarefa %s.", job.c_str());
+    reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
+    jobAtual = job;
+    ok = true;
+  }
   return ok;
+}
+bool handleComandoDELAY(ComandoCNC comando) {
+  pulsoGRBL(GRBL_HOLD_PIN);
+  inicioEsperaTs = millis();
+  delayMs = 1000 * extrairParametro(comando.data.c_str(), 'S', 0) + extrairParametro(comando.data.c_str(), 'M', 0);
+  estadoGRBL = PAUSA;
+  estadoXylema = AGUARDANDO;
+  logDebug(DEBUG_INFO, "Pausa em %lu por %d ms", inicioEsperaTs, delayMs);
+  reportEventMQTT(INFO, "Pausa", "Xylema32");
+  return true;
+}
+bool handleComandoUNLOCK(ComandoCNC comando) {
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (index == 0) { estadoXylema = PRONTO; return true; }
+  else if (index == 1) { serialGRBLSend("$X"); return true; }
+  else {
+    acknowledgeError(comando.id, "Parâmetro inválido para comando UNLOCK.");
+    logDebug(DEBUG_ERROR, "Parâmetro %d inválido para comando UNLOCK.", index);
+    return false;
+  }
+}
+
+// ESSAS 3 FUNÇÕES ABAIXO TÊM ALGUNS EFEITOS COLATERAIS A SEREM REPENSADOS
+// - MANDA 3 OU MAIS COMANDOS G PARA O GRBL DE UMA SÓ VEZ (GERA 3 OKS QUE SÃO IGNORADOS)
+// - USA "FORÇA BRUTA PARA FAZER UM OVERRIDE DO ESTADO AGUARDANDO OK", O QUE PODE BAGUNÇAR O FLUXO DE COMUNICAÇÃO
+bool handleComandoPARK(ComandoCNC comando) {
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f", parkPos[0], parkPos[1], parkPos[2]);
+  serialGRBLSend(buffer); // GERA NA MARRA O STRING
+  estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
+  return true;
+}
+bool handleComandoPICK(ComandoCNC comando) {
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (index < 0 && index >= TOTAL_DOCKS) {
+    acknowledgeError(comando.id, "Índice de doca inválido.");
+    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", index);
+    return false;
+  }
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X-100 F500\nG90", dockPos[index][0], dockPos[index][1], dockPos[index][2]);
+  serialGRBLSend(buffer); // GERA NA MARRA O STRING
+  estadoXylema = PRONTO;  //OVERRIDE DO AGUARDA OK!
+  return true;
+}
+bool handleComandoDROP(ComandoCNC comando) {
+  int index = extrairParametro(comando.data.c_str(), 'I');
+  if (index < 0 || index >= TOTAL_DOCKS) {
+    acknowledgeError(comando.id, "Índice de doca inválido.");
+    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", index);
+    return false;
+  }
+  char buffer[128];
+  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X100 F500\nG1 Z-100 F500\nG90", dockPos[index][0], dockPos[index][1], dockPos[index][2]);
+  serialGRBLSend(buffer); // GERA NA MARRA O STRING
+  estadoXylema = PRONTO;  //OVERRIDE DO AGUARDA OK!
+  return true;
 }
 
 void limparFila(String mensagem) {
   logDebug(DEBUG_INFO, "Limpando a fila de comandos.");
-  estadoXylema == BLOQUEADO;
+  estadoXylema = BLOQUEADO;
   while (!filaCNC.empty()) {
     ComandoCNC m = filaCNC.front();
     acknowledgeError(m.id, mensagem);
@@ -1027,17 +1069,17 @@ void processarFila() {
   // Chama o próximo
   ComandoCNC atual = filaCNC.front();
   
-  if (estadoXylema != PRONTO && atual.data !="UNLOCK" && atual.payload !="XYLEMA") return;
+  if (estadoXylema != PRONTO && !atual.data.startsWith("UNLOCK")) return;
   
-  // Gcode manda para o GRBL
-  if (atual.type == "gcode") {
+  // Gcode manda para o buffer do GRBL
+  if (atual.data.startsWith("G")) {
     logDebug(DEBUG_VERBOSE, "Processando: %s", atual.data.c_str());
     serialGRBLSend(atual.data.c_str());
     inicioEsperaTs = millis();
   }
 
-  // Sync aguarda Idle se necessário
-  else if (atual.type == "sync") {
+  // Outros comando não RT, aguarda Idle
+  else {
     if (estadoGRBL == OCIOSO) {
       handleComandoXylema(atual, true);
     }
@@ -1046,13 +1088,6 @@ void processarFila() {
       estadoXylema = AGUARDANDO_GRBL_IDLE;
       inicioEsperaTs = millis();
     }
-  }
-
-  else {
-    logDebug(DEBUG_ERROR, "Tipo de instrução %s inválida no comando id %d.", atual.type, atual.id);
-    reportEventMQTT(GRAVE, "Tipo de instrução inválida", "Xylema32");
-    acknowledgeError(atual.id, "Tipo de instrução inválida.");
-    limparFila("Instrução inválida");
   }
 }
 
@@ -1110,16 +1145,19 @@ void handleGRBLAlarm(String linha) {
     case 3: // Reset durante o movimento
     case 6: // Reset durante o ciclo de homing
       eCritico = false; // Não é crítico, o robo pode tentar se recuperar.
+      break;
     case 1: // Limite físico (checar os limites).
     case 7: // Porta de segurança aberta (checar abertura da porta)
     case 8: // Falha no homing após encontrar o fim-de-curso (verificar sistema de tração e posição.)
     case 9: // Falha no homing antes de achar o fim-de-curso (verificar sistema de tração.)
       eCritico = true;
+      break;
     case 4: //return "Probe fail. The probe is not in the expected initial state before starting probe cycle, where G38.2 and G38.3 is not triggered and G38.4 and G38.5 is triggered.";
     case 5: //return "Probe fail. Probe did not contact the workpiece within the programmed travel for G38.2 and G38.4.";
     case 10: //return "Spindle control failed or system used to control spindle reported an error. This typically could be RS485 errors reported from your controller. Suggest using 0-10V signals instead if this occurs regularly.";
     default:
       eCritico = true;
+      break;
   }
 
   // Qualquer alarme bloqueia e muda o estado do GRBL
@@ -1154,6 +1192,7 @@ void handleGRBLError(String linha) {
     case 11: // "Max characters per line exceeded. Line was not processed and executed."
       // É crítico pois houve perda de comando já acknowledged, não adianta tentar recuperar.
       eCritico = true;
+      break;
     case 3: // "Machine ‘$’ system command was not recognized or supported."
     case 5: // "Homing cycle is not enabled via settings."
     case 6: // "Minimum step pulse time must be greater than 3usec"
@@ -1163,8 +1202,10 @@ void handleGRBLError(String linha) {
     case 12: // "‘$’ setting value exceeds the maximum step rate supported."
       // Não é crítico, é apenas informativo, o robo pode tentar se recuperar.
       eCritico = false;
+      break;
     default:
       eCritico = true;
+      break;
   }
   logDebug(DEBUG_ERROR, "ERRO GRBL: %s", linha.c_str());
 
@@ -1206,16 +1247,16 @@ void loopAtuadores() {
   for (int i = 0; i < TOTAL_ATUADORES; i++) {
     if (pwmMax[i] == -1) {
       // Estado ligado é LOW, desligado é HIGH
-      ledcWrite(i, estadoAtuadorNormalizado[i] ? 0 : 255); // Nunca escrever variável para não queimar bobinas!!
+      ledcWrite(ATUADOR_PIN[i], estadoAtuadorNormalizado[i] ? 0 : 255); // Nunca escrever variável para não queimar bobinas!!
     }
     else if (pwmMax[i] == 1) {
       // Estado desligado é LOW, ligado é HIGH
-      ledcWrite(i, estadoAtuadorNormalizado[i] ? 255 : 0); // Nunca escrever variável para não queimar bobinas!!
+      ledcWrite(ATUADOR_PIN[i], estadoAtuadorNormalizado[i] ? 255 : 0); // Nunca escrever variável para não queimar bobinas!!
     }
     else {
-      // É MOSFET: Usa ledcWrite usando o índice 'i' como canal
+      // É MOSFET: Usa ledcWrite
       int pwm = estadoAtuadorNormalizado[i] ? estadoAtuadorMapeado[i] : 0;
-      ledcWrite(i, pwm);
+      ledcWrite(ATUADOR_PIN[i], pwm);
     }
   }
 }

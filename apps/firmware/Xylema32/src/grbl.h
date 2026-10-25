@@ -83,7 +83,6 @@ int interpretarBufferGRBL(String linhaStatus) {
   // O formato é Bf:blocos_livres,bytes_livres
   // Vamos pegar apenas a parte antes da primeira vírgula ou fechamento '>'
   int indiceVirgula = bfSubstring.indexOf(',');
-  int indiceFim = bfSubstring.indexOf('>');
   
   if (indiceVirgula == -1) {
     return -1;
