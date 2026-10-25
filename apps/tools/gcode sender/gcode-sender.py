@@ -55,8 +55,7 @@ class CNCJogApp:
         self.limit_test_active = False
         self.modo_comando = tk.StringVar(value="sync")
         self.msg_counter = 1
-        self.ack_events = {}
-        self.ack_status = {}
+        self.active_commands = {}
 
         # Cliente MQTT
         self.client = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
@@ -101,21 +100,18 @@ class CNCJogApp:
                 
                 if "ack" in topic:
                     msg_id = payload.get("id")
-                    status = payload.get("status", "OK")
+                    status = payload.get("status", "ERROR")
                     data = payload.get("data", "")
                     # Libera a espera para este msg_id específico, se houver alguém aguardando
-                    if msg_id in self.ack_events:
+                    if msg_id in self.active_commands:
                         # Armazena o status atual recebido
-                        self.ack_status[msg_id] = status
-                        # Se for COMPLETED, liberam a espera imediatamente.
+                        self.active_commands[msg_id]["status"] = status
                         if status == "COMPLETED":
-                            self.ack_events[msg_id].set()
-                        # Se for QUEUED, libera a espera imediatamente.
+                            self.on_ackCompleted(msg_id)
                         elif status == "QUEUED":
-                            self.ack_events[msg_id].set()
-                        # Se for ERROR, libera a espera imediatamente.
+                            self.on_ackQueued(msg_id)
                         elif status == "ERROR":
-                            self.ack_events[msg_id].set()
+                            self.on_ackError(msg_id)
 
                     self.root.after(0, lambda: self.log_ack(msg_id, status, data))
                 elif "estado" in topic:
@@ -184,7 +180,32 @@ class CNCJogApp:
         # Insere na caixa de texto da aba de eventos
         self.log_evento_box.insert("end", log_text)
         self.log_evento_box.see("end")  # Auto-scroll para a última linha
+    def log_comando(self, comando):
+        # Formata um timestamp legível para o log
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")        
+        data = comando.get("data", "--")
+        
+        # Monta a linha de texto formatada para a caixa de comandos
+        log_text = f"[{timestamp}] {data}\n"
+        
+        # Insere na caixa de texto da aba de comandos
+        self.log_comando_box.insert("end", log_text)
+        self.log_comando_box.see("end")  # Auto-scroll para a última linha
 
+    def on_ackQueued(self, cmd_id):
+        if cmd_id in self.active_commands:
+            self.active_commands[cmd_id]["status"] = "QUEUED"
+    def on_ackCompleted(self, cmd_id):
+        if cmd_id in self.active_commands:
+            # Remove do ativo para liberar memória
+            cmd_info = self.active_commands.pop(cmd_id)
+            cmd_info["status"] = "COMPLETED"
+            self.log_comando(cmd_info)
+    def on_ackError(self, cmd_id):
+        if cmd_id in self.active_commands:
+            self.active_commands[cmd_id]["status"] = "ERROR"
+    def waiting_ack(self):
+        return any(cmd["status"] == "SENT" for cmd in self.active_commands.values())
     def conectarMQTT(self):
         broker = self.broker_entry.get()
         port = int(self.port_entry.get())
@@ -199,98 +220,62 @@ class CNCJogApp:
         self.msg_counter += 1
         return current_id
     def rapidMoveJog(self, axis, direction, step):
-        if not self.is_connected:
-            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
-
-        msg_id = self.proximoId()
-        # Monta o G-code no Modo incremental G91
-        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G91 G0 {axis}{direction * step}"}}'
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, gcode)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {gcode.replace(chr(10), ' | ')}")
-
-        # Volta para o modo absoluto
-        msg_id_2 = self.proximoId()
-        gcode_2 = f'{{"id":{msg_id_2}, "type":"gcode", "data":"G90"}}'
-        self.client.publish(comando_topic, gcode_2)
-        print(f"Enviado [{msg_id_2}] para [{comando_topic}]: {gcode_2}")
+        data = f'G91 G0 {axis}{direction * step}\n G90'
+        self.despachaComando(data)
     def rapidMoveTo(self, position):
+        data = f'G90 G0 {position}'
+        self.despachaComando(data)
+    def despachaComando(self, data, rt = False, job = ""):
+        # Verifica conexão
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
+            return False
 
-        msg_id = self.proximoId()
-        # Monta o G-code (Modo Absoluto G90)
-        gcode = f'{{"id":{msg_id}, "type":"gcode", "data":"G90 G0 {position}"}}'
-
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, gcode)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {gcode.replace(chr(10), ' | ')}")
-    def publishRT(self, rt, value = 0, payload = ""):
-        if not self.is_connected:
-            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
-        msg_id = self.proximoId()
-        # Monta o G-code
-        data = f'{{"id":{msg_id}, "type":"rt", "data":"{rt}", "value":{value}, "payload": "{payload}"}}'
-
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, data)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
-    def publishGCode(self, gcode):
-        if not self.is_connected:
-            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
-        msg_id = self.proximoId()
-        # Monta o G-code
-        data = f'{{"id":{msg_id}, "type":"gcode", "data":"{gcode}"}}'
-
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, data)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
-    def publishSync(self, sync, value = 0, payload = ""):
-        if not self.is_connected:
-            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
-        msg_id = self.proximoId()
-        # Monta o Sync
-        data = f'{{"id":{msg_id}, "type":"sync", "data":"{sync}", value: {value}, payload: "{payload}"}}'
-
-        comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, data)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data.replace(chr(10), ' | ')}")
-
-    def enviarCustomizado(self):
-        if not self.is_connected:
-            messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-            return
+        # Verifica disponibilidade
+        start_time = time.time()
+        while self.waiting_ack():
+            if not self.is_connected:
+                return False
         
-        tipo = self.custom_type_var.get()
-        data_val = self.custom_data_entry.get().strip()
-        value_val = self.custom_value_entry.get().strip()
-        payload_val = self.custom_payload_entry.get().strip()
-
-        # Monta o dicionário base
-        payload_dict = {"type": tipo, "data": data_val}
-
-        # Adiciona value e payload se preenchidos (ou converte value para int se necessário)
-        if value_val:
-            try:
-                payload_dict["value"] = int(value_val)
-            except ValueError:
-                payload_dict["value"] = value_val
-                
-        if payload_val:
-            payload_dict["payload"] = payload_val
-
+            # Timeout caso o ESP32 demore mais de 5 segundos para liberar o comando anterior
+            if time.time() - start_time > 5.0:
+                messagebox.showwarning("Erro", "ESP32 não liberou canal a tempo para enviar comando")
+                return False
+            time.sleep(0.01)        
+        
+        # Envia o comando
         msg_id = self.proximoId()
-        payload_final = {"id": msg_id, **payload_dict}
-        data_json = json.dumps(payload_final)
+        comando = f'{{"id":{msg_id}, "data":"{data}", "rt":{rt}, "job":"{job}"}}'
 
         comando_topic = self.topic_entry.get() + "/comandos"
-        self.client.publish(comando_topic, data_json)
-        print(f"Enviado [{msg_id}] para [{comando_topic}]: {data_json}")
+        self.client.publish(comando_topic, comando)
+        print(f"Enviado [{msg_id}] para [{comando_topic}]: {comando.replace(chr(10), ' | ')}")
+
+        # Salva o comando ativo
+        self.active_commands[msg_id] = {"status": "SENT", "data": comando.replace(chr(10), ' | ')}
+        return True
+    #def publishRT(self, rt, value = 0, payload = ""):
+    #    if not self.is_connected:
+    #        messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
+    #        return
+    #    msg_id = self.proximoId()
+    #    # Monta o G-code
+    #    data = f'{{"id":{msg_id}, "type":"rt", "data":"{rt}", "value":{value}, "payload": "{payload}"}}'
+    #    self.despachaComando(data, msg_id)
+    #def publishGCode(self, gcode, job):
+    #    msg_id = self.proximoId()
+    #    # Monta o G-code
+    #    data = f'{{"id":{msg_id}, "data":"{gcode}", "job":"{job}"}}'
+    #    return self.despachaComando(data, msg_id)
+    #def publishSync(self, sync, value = 0, payload = ""):
+    #    msg_id = self.proximoId()
+    #    # Monta o Sync
+    #    data = f'{{"id":{msg_id}, "type":"sync", "data":"{sync}", value: {value}, payload: "{payload}"}}'
+    #    return self.despachaComando(data, msg_id)
+    def despachaCustomCommand(self):
+        pubRt = False if self.custom_type_var.get() == "sync" else True
+        data = self.custom_data_entry.get().strip()
+        return self.despachaComando(data, pubRt)
 
     def rodarTeste(self, tipoTeste):
         if not self.is_connected:
@@ -317,27 +302,8 @@ class CNCJogApp:
             payload_dict = cmd.copy()
             payload_final = {"id": msg_id, **payload_dict}
             data = json.dumps(payload_final)
-            comando_topic = self.topic_entry.get() + "/comandos"
-
-            # Cria o evento de sincronização para este ID
-            ack_event = threading.Event()
-            self.ack_events[msg_id] = ack_event            
-            
-            # Publica o comando
-            self.client.publish(comando_topic, data)
-            print(f"Enviado [{msg_id}] para [{comando_topic}]: {data}")
+            self.despachaComando(data, msg_id)
             time.sleep(0.1)
-
-            # Espera o ACK chegar (com timeout de segurança de 5 segundos)
-            #recebeu_ack = ack_event.wait(timeout=5.0)
-            #status_ack = self.ack_status.get(msg_id)
-            #self.ack_events.pop(msg_id, None)
-            #if not recebeu_ack:
-            #    print(f"Timeout: ACK não recebido para o comando [{msg_id}]. Parando o envio da macro.")
-            #    break # Interrompe a sequência se houver falha/timeout
-            #if status_ack == "ERROR":
-            #    print(f"Comando [{msg_id}] retornou ERROR. Parando o envio da macro.")
-            #    break # Para tudo se houver erro
         print(f"--- Macro {macro} enviada ---")
             
 
@@ -370,20 +336,20 @@ class CNCJogApp:
             self.custom_payload_entry.config(state="normal")
 
 
-    def toggle_atuador(self, index):
+    def toggle_atuador(self, i):
         modo = self.modo_comando.get()
-        pub_func = self.publishSync if modo == "sync" else self.publishRT
+        pubRt = False if modo == "sync" else True
 
         # Inverte o estado atual local apenas para saber qual comando enviar, 
         # mas sem mexer no visual do botão agora (deixa isso para o update_telemetry)
-        info = self.atuador[index]
+        info = self.atuador[i]
         pwm = info["pwm"].get()
         estado = info["estado"]
 
         if(pwm == estado):
-            pub_func("SET OFF", index)
+            self.despachaComando(f"OFF I{i}", pubRt)
         else:
-            pub_func("SET ON", index, str(pwm)) 
+            self.despachaComando(f"ON I{i} L{pwm}", pubRt) 
 
 
     def toggle_random_test(self):
@@ -494,7 +460,7 @@ class CNCJogApp:
             for cmd in commands:
                 if not self.is_connected:
                     break
-                self.publishGCode(cmd)
+                self.despachaComando(cmd)
                 # Intervalo ultra-rápido de 10ms (0.01s) entre as linhas
                 time.sleep(0.01)
             # Aguarda 60 segundos picotados em pedacinhos de 1s para conseguir parar rápido se o usuário desativar
@@ -515,7 +481,7 @@ class CNCJogApp:
             for cmd in commands:
                 if not self.is_connected:
                     break
-                self.publishGCode(cmd)
+                self.despachaComando(cmd)
                 
                 # Intervalo ultra-rápido de 10ms (0.01s) entre as linhas
                 time.sleep(0.01)
@@ -543,19 +509,13 @@ class CNCJogApp:
             "G90"                   # Retorna ao modo absoluto
         ]
         while self.helix_test_active:
-            comando_topic = self.topic_entry.get() + "/comandos"
             for cmd in commands:
                 if not self.is_connected:
                     break
-                
-                msg_id = self.proximoId()
-                payload = f'{{"id":{msg_id}, "type":"gcode", "data":"{cmd}"}}'
-                self.client.publish(comando_topic, payload)
-                print(f"[Helicoidal]: {cmd}")
-                
+                self.despachaComando(cmd)
                 # Intervalo ultra-rápido de 10ms (0.01s) entre as linhas
                 time.sleep(0.01)
-            # Aguarda 60 segundos picotados em pedacinhos de 1s para conseguir parar rápido se o usuário desativar
+            # Aguarda 200 segundos picotados em pedacinhos de 1s para conseguir parar rápido se o usuário desativar
             for _ in range(200):
                 if not self.helix_test_active:
                     break
@@ -585,6 +545,12 @@ class CNCJogApp:
                 time.sleep(1)
 
     def create_widgets(self):
+        top_frame = ttk.Frame(self.root)
+        top_frame.pack(side="top", fill="x", padx=5, pady=(5, 0))        
+        self.createFrameConexao(top_frame)
+        self.createFrameTelemetria(top_frame)
+
+
         # Notebook Principal (Abas da Aplicação)
         main_notebook = ttk.Notebook(self.root)
         main_notebook.pack(fill="both", expand=True, padx=5, pady=5)
@@ -601,8 +567,6 @@ class CNCJogApp:
         self.createTabAutomacao(tab_automacao)
 
     def createTabOperacional(self, parent):
-        self.createFrameConexao(parent)
-        self.createFrameTelemetria(parent)
         self.createFrameJog(parent)
         self.createFrameCustom(parent)
         self.createNotebookLogs(parent)
@@ -670,7 +634,7 @@ class CNCJogApp:
         for c in range(9):
             jog_frame.columnconfigure(c, weight=1)
 
-        tk.Button(jog_frame, text="Home", command=lambda: self.publishRT("HOME_CYCLE")).grid(row=0, column=0, rowspan=2, columnspan=2, padx=1, pady=1, sticky="nsew")
+        tk.Button(jog_frame, text="Home", command=lambda: self.despachaComando("HOME_CYCLE", True)).grid(row=0, column=0, rowspan=2, columnspan=2, padx=1, pady=1, sticky="nsew")
 
         tk.Button(jog_frame, text="Y+100", command=lambda: self.rapidMoveJog('Y', 1, 100)).grid(row=0, column=3, padx=1, pady=1, sticky="nsew")
         tk.Button(jog_frame, text="Y+10", command=lambda: self.rapidMoveJog('Y', 1, 10)).grid(row=1, column=3, padx=1, pady=1, sticky="nsew")
@@ -729,11 +693,11 @@ class CNCJogApp:
         self.custom_payload_entry.grid(row=0, column=2, sticky="ew", padx=3, pady=2)
 
         # Botão Enviar
-        tk.Button(inputs_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.enviarCustomizado).grid(row=0, column=3, padx=(5, 0), pady=2)
+        tk.Button(inputs_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.despachaCustomCommand).grid(row=0, column=3, padx=(5, 0), pady=2)
 
         # Atalho de Enter em qualquer campo
         for entry in (self.custom_data_entry, self.custom_value_entry, self.custom_payload_entry):
-            entry.bind("<Return>", lambda e: self.enviarCustomizado())
+            entry.bind("<Return>", lambda e: self.despachaCustomCommand())
 
         # Atualiza o estado inicial dos campos com base no padrão (gcode)
         self.atualizarCamposCustom()
@@ -786,9 +750,9 @@ class CNCJogApp:
         for i in range(4):
             doca_frame = tk.Frame(frame_docas, relief="groove", bd=1, padx=2, pady=2)
             doca_frame.pack(fill="x", padx=2, pady=2)
-            tk.Button(doca_frame, text=f"Pegar {i}", command=lambda: self.publishRT("PICK", i)).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
-            tk.Button(doca_frame, text=f"Soltar {i}", command=lambda: self.publishRT("DROP", i)).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
-            tk.Button(doca_frame, text=f"Salvar {i}", command=lambda: self.publishRT("SET DOCK", i)).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+            tk.Button(doca_frame, text=f"Pegar {i}", command=lambda: self.despachaComando(f"PICK I{i}", True)).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
+            tk.Button(doca_frame, text=f"Soltar {i}", command=lambda: self.despachaComando(f"DROP I{i}", True)).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
+            tk.Button(doca_frame, text=f"Salvar {i}", command=lambda: self.despachaComando(f"SET DOCK I{i}", True)).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
 
     def createFrameMacros(self, parent):
         rt_frame = tk.LabelFrame(parent, text=" Macros", padx=5, pady=5)
@@ -827,27 +791,32 @@ class CNCJogApp:
         rt_frame = tk.LabelFrame(parent, text=" Comandos em Tempo Real", padx=5, pady=5)
         rt_frame.pack(fill="x", padx=5, pady=5)
         
-        tk.Button(rt_frame, text="Pausar motores", command=lambda: self.publishRT("HOLD")).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Continuar motores", command=lambda: self.publishRT("CYCLE")).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Abortar motores", command=lambda: self.publishRT("ABORT")).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Resetar motores", command=lambda: self.publishRT("RESET")).grid(row=0, column=3, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Destravar motores", command=lambda: self.publishRT("UNLOCK", 0, "GRBL")).grid(row=1, column=0, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Destravar robô", command=lambda: self.publishRT("UNLOCK", 0, "XYLEMA")).grid(row=1, column=1, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Salvar estacionamento", command=lambda: self.publishRT("SET PARK")).grid(row=1, column=2, padx=5, pady=2, sticky="nsew")
-        tk.Button(rt_frame, text="Estacionar", command=lambda: self.publishRT("PARK")).grid(row=1, column=3, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Pausar motores", command=lambda: self.despachaComando("HOLD", True)).grid(row=0, column=0, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Continuar motores", command=lambda: self.despachaComando("CYCLE", True)).grid(row=0, column=1, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Abortar motores", command=lambda: self.despachaComando("ABORT", True)).grid(row=0, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Resetar motores", command=lambda: self.despachaComando("RESET", True)).grid(row=0, column=3, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Destravar motores", command=lambda: self.despachaComando("UNLOCK I1", True)).grid(row=1, column=0, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Destravar robô", command=lambda: self.despachaComando("UNLOCK I0", True)).grid(row=1, column=1, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Salvar estacionamento", command=lambda: self.despachaComando("SET PARK", True)).grid(row=1, column=2, padx=5, pady=2, sticky="nsew")
+        tk.Button(rt_frame, text="Estacionar", command=lambda: self.despachaComando("PARK", True)).grid(row=1, column=3, padx=5, pady=2, sticky="nsew")
 
     def createNotebookLogs(self, parent):
         log_notebook = ttk.Notebook(parent)
         log_notebook.pack(fill="both", expand=True, padx=5, pady=5)
 
+        tab_comandos = ttk.Frame(log_notebook)
+        log_notebook.add(tab_comandos, text="Comandos Completados")
+        self.log_comando_box = tk.Text(tab_comandos, height=10, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 10))
+        self.log_comando_box.pack(fill="both", expand=True)
+
         tab_acks = ttk.Frame(log_notebook)
         log_notebook.add(tab_acks, text=" Monitor de ACKs ")
-        self.log_ack_box = tk.Text(tab_acks, height=8, bg="#1e1e1e", fg="#00ff00", font=("Consolas", 8))
+        self.log_ack_box = tk.Text(tab_acks, height=10, bg="#1e1e1e", fg="#00ff00", font=("Consolas", 10))
         self.log_ack_box.pack(fill="both", expand=True)
 
         tab_eventos = ttk.Frame(log_notebook)
         log_notebook.add(tab_eventos, text=" Eventos e Alertas ")
-        self.log_evento_box = tk.Text(tab_eventos, height=8, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 8))
+        self.log_evento_box = tk.Text(tab_eventos, height=10, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 10))
         self.log_evento_box.pack(fill="both", expand=True)
 
 if __name__ == "__main__":

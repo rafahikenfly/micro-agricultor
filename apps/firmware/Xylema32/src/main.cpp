@@ -11,6 +11,7 @@
 
 // ==== DEFINIÇÕES
 #define CONFIG_NETWORK "xylema32"
+#define VERSION "0.01"
 
 // === ENUM E CLASSES
 enum estadoXylema {
@@ -28,7 +29,7 @@ enum TipoEvento {
   CRITICO,
 };
 enum DebugLevel {
-    DEBUG_OFF = 0,
+    DEBUG_ALWAYS = 0,
     DEBUG_ERROR = 1,
     DEBUG_EVENT = 2,
     DEBUG_INFO = 3,
@@ -40,6 +41,7 @@ struct ComandoCNC {
     String data;       // Usado para conteudo da mensagem (gcode line ou outros comandos)
     int value;         // Usado para parâmetro do comando sync e config
     String payload;    // Usado como parâmetro do comando sync e config 
+    String job;
 };
 
 // Constantes de configuração em nível de hardware
@@ -136,10 +138,11 @@ void loopLED();
 void processarPush(unsigned long duracaoPush);
 void loopPush();
 void logDebug(int level, const char* formato, ...);
+void logWaiting(int level);
 
 void callbackMQTT(char* topic, byte* payload, unsigned int length);
 void acknowledgeCompleted(long id);
-void acknowledgeError(long id, String errorMsg);
+void acknowledgeError(long id, const String& errorMsg);
 void acknowledgeQueued(long id);
 void reportStatusMQTT();
 void reportEventMQTT(int tipo, String mensagem, String origem);
@@ -154,6 +157,7 @@ bool handleComandoPARK(ComandoCNC comando);
 bool handleComandoPICK(ComandoCNC comando);
 bool handleComandoDROP(ComandoCNC comando);
 bool handleComandoEMERGENCY();
+bool handleComandoJOB(ComandoCNC comando);
 
 void limparFila(String mensagem);
 void updateGRBLStatus();
@@ -163,7 +167,6 @@ void handleGRBLStatusMsg(String linha);
 void handleGRBLAlarm(String linha);
 void handleGRBLError(String linha);
 void handleGRBLTimeout(String msgTimeout);
-void handleXYLEMAError(String msgError);
 
 void loopAtuadores();
 void loopDelay();
@@ -339,26 +342,26 @@ void lerConfig() {
 void connectWiFI() {
   delay(10);
   led(255, 120, 0); // Indica tentativa de conexão
-  Serial.print("Conectando ao WiFi");
+  logDebug(DEBUG_EVENT, "Conectando ao WiFi...");
   WiFi.begin(ssid, password);
 
   unsigned long startTime = millis();
   const unsigned long timeout = 30000; // 30 segundos em milissegundos
     while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    // Verifica se o tempo limite de 30s foi atingido
+      logWaiting(DEBUG_VERBOSE);
+      // Verifica se o tempo limite de 30s foi atingido
       if (millis() - startTime >= timeout) {
         // TIMEOUT: Não conectou
+        logDebug(DEBUG_ERROR, "Timeout conectando WiFi");
         led(255, 0, 0); // Vermelho
-        Serial.println("Erro");
         delay(1000);
-        led(0, 0, 0);   // Apaga
+        led(0, 0, 0);
         return;
       }
       delay(200);
     }
     led(0,255,0);
-    Serial.println("OK");
+    logDebug(DEBUG_EVENT, "Conectado a %s", ssid);
     delay(1000);
 }
 void setupMQTT() {
@@ -366,19 +369,19 @@ void setupMQTT() {
     client.setCallback(callbackMQTT);  
 }
 void connectMQTT() {
-  led(64, 30, 0); // Âmbar
-  Serial.print("Conectando ao MQTT");
+  led(64, 30, 0);
+  logDebug(DEBUG_EVENT, "Conectando ao MQTT...");
 
   unsigned long startTime = millis();
   const unsigned long timeout = 30000; // 30 segundos em milissegundos
 
   while (!client.connected()) {
-    Serial.print(".");
+    logWaiting(DEBUG_VERBOSE);
     // Tenta conectar ao broker MQTT
     if (millis() - startTime >= timeout) {
       // TIMEOUT: Não conectou
       led(255, 0, 0); // Vermelho
-      Serial.println("Erro");
+      logDebug(DEBUG_ERROR, "Timeout conectando MQTT");
       delay(1000);
       led(0, 0, 0);   // Apaga
       return;
@@ -387,20 +390,20 @@ void connectMQTT() {
       client.subscribe(mqtt_command_channel.c_str());
       // CONECTADO COM SUCESSO!
       led(0, 255, 0); // Verde
-      Serial.println("OK");
+      logDebug(DEBUG_EVENT, "Conectado a %s", mqtt_server);
       delay(1000);
       led(0, 0, 0);   // Apaga
     }
+    reportEventMQTT(INFO, "Xylema32 conectado", "Xylema");
     delay(200);
   }
 }
 void serialGRBLSend(String data) {
   // Reporta no Serial
   if (data == "?"){
-    Serial.print(".");
+    logWaiting(DEBUG_VERBOSE);
   } else {
-    Serial.print(data);
-    Serial.println(" --> GRBL");
+    logDebug(DEBUG_INFO, "--> GRBL: %s ", data.c_str());
   }
 
   // Comandos especiais: rt commands - não muda estado ne usa linha no final
@@ -415,44 +418,55 @@ void serialGRBLReceive() {
   while (SerialGRBL.available()) {
     String linha = SerialGRBL.readStringUntil('\n');
     linha.trim();
+
+    // MENSAGEM DE ESTADO
     if (linha.startsWith("<")) {
+      logDebug(DEBUG_VERBOSE, "<-- GRBL: %s ", linha.c_str());
       handleGRBLStatusMsg(linha);
-      if (verbose) Serial.println(linha);
       continue;
     }
 
-    Serial.print("GRBL --> ");
-    Serial.println(linha);
-    // Se receber uma das mensagens abaixo, ignora
-    if (linha.length() == 0) continue;                        //linha vazia
-    if (linha.startsWith("Grbl 1.1")) continue;               //linha de inicio
-    if (linha.startsWith("[MSG:Caution: Unlocked]")) continue;//alerta de unlock
-
-    // Se receber mensagem de que está trancado, reporta evento, bloqueia o Xylema e faz homing.
-    if (linha.startsWith("[MSG:'$H'|'$X' to unlock]")) {
-      if (estadoXylema != ERRO_CRITICO) {
-        Serial.println("INFO: GRBL em posição desconhecida.");
-        handleComandoHOME_CYCLE();
-      } else {
-        Serial.println("Xylema em estado de erro crítico. Reset ignorado.");
+    // OK DO GRBL
+    if (linha == "ok") {
+      logDebug(DEBUG_VERBOSE, "<-- GRBL: %s ", linha.c_str());
+      if (estadoXylema == AGUARDANDO_GRBL_OK) {
+        ComandoCNC atual = filaCNC.front();
+        acknowledgeCompleted(atual.id);
+        filaCNC.pop();
+        estadoXylema = PRONTO;
       }
       continue;
     }
 
-    if (linha.startsWith("ALARM:")) handleGRBLAlarm(linha);
-    if (linha.startsWith("error:")) handleGRBLError(linha);
-    // Se receber uma linha de configuração:
-    if (linha.startsWith("$")) {
-      //Serial.println(linha);
+    // MENSAGENS IGNORADAS:
+    if (linha.length() == 0 ||                        //linha vazia
+        linha.startsWith("Grbl 1.1") ||               //linha de inicio
+        linha.startsWith("[MSG:Caution: Unlocked]")) {//alerta de unlock
+      logDebug(DEBUG_VERBOSE, "<-- GRBL: %s ", linha.c_str());
+      continue;
     }
 
-    // Se o Xylema está esperando o GRBL dar ACK para um G-code,
-    // Aguarda OK ou TIMEOUT (error: já foi tratado acima)
-    if (estadoXylema == AGUARDANDO_GRBL_OK && linha == "ok") {
-      ComandoCNC atual = filaCNC.front();
-      acknowledgeCompleted(atual.id);
-      filaCNC.pop();
-      estadoXylema = PRONTO;
+    // GRBL TRANCADO
+    if (linha.startsWith("[MSG:'$H'|'$X' to unlock]")) {
+      logDebug(DEBUG_EVENT, "<-- GRBL: %s ", linha.c_str());
+      if (estadoXylema == ERRO_CRITICO) {
+        // Em ERRO_CRITICO, precisa de intervenção humana.
+        logDebug(DEBUG_ERROR, "Erro crítico no Xylema32. Verificar manualmente.");
+      } else {
+        // Ou, tenta fazer o homing.
+        logDebug(DEBUG_INFO, "Recuperando por homing.");
+        handleComandoHOME_CYCLE();
+      }
+      continue;
+    }
+
+    // ERROS E ALARMES SÃO GERENCIADOS PELO HANDLER
+    if (linha.startsWith("ALARM:")) handleGRBLAlarm(linha);
+    if (linha.startsWith("error:")) handleGRBLError(linha);
+
+    // LINHA DE CONFIGURAÇÃO
+    if (linha.startsWith("$")) {
+      logDebug(DEBUG_INFO, linha.c_str());
     }
   }
 }
@@ -539,10 +553,16 @@ void loopLED() {
     ledFade(0, 255, 255, 1500, 3000);
     return;
   }
-  if (filaCNC.size() > 0 || estadoGRBL == ATIVO) {
+
+  int atuadorLigado = 0;
+  for (int i = 0; i<TOTAL_ATUADORES; i++) {
+    atuadorLigado += estadoAtuadorMapeado[i];
+  }
+  if (filaCNC.size() > 0 || estadoGRBL == ATIVO || atuadorLigado > 0) {
     ledFade(0, 255, 0, 1500, 3000);
     return;
   }
+
   if (estadoXylema == PRONTO) {
     ledFade(0, 0, 255, 1500, 6000);
     return;
@@ -557,35 +577,39 @@ void processarPush(unsigned long duracaoPush) {
   // Caso 1: Xylema Bloqueado
   if (estadoXylema == BLOQUEADO || estadoXylema == ERRO_CRITICO) {
     if (eLongPush) {
-      Serial.println("Reiniciando GRBL manualmente...");
+      logDebug(DEBUG_EVENT, "Reset GRBL manual");
+      reportEventMQTT(INFO, "Reset GRBL manual", "Xylema32");
       limparFila("Reset manual");
       pulsoGRBL(GRBL_RESET_PIN, 100, 2000);
-      reportEventMQTT(INFO, "Desbloqueio manual com reset", "Xylema32");
     }
     else {
-      Serial.println("Xylema bloqueado");
+      logDebug(DEBUG_ERROR, "Push curto sem ação com Xylema32 bloqueado");
     }
     return;
   }
-  // CASO 2: Xylema em execução normal / pronto
-  if (eLongPush) {
-    Serial.println("Continuando trabalho");
-    pulsoGRBL(GRBL_RESUME_PIN);
-  } 
+  // CASO 2: Xylema Desbloqueado (normal/pronto)
   else {
-    Serial.println("Pausando trabalho");
-    pulsoGRBL(GRBL_HOLD_PIN);
+    if (eLongPush) {
+      logDebug(DEBUG_EVENT, "Cycle GRBL manual");
+      reportEventMQTT(INFO, "Cycle GRBL manual", "Xylema32");
+      pulsoGRBL(GRBL_RESUME_PIN);
+    } 
+    else {
+      logDebug(DEBUG_EVENT, "Hold GRBL manual");
+      reportEventMQTT(INFO, "Hold GRBL manual", "Xylema32");
+      pulsoGRBL(GRBL_HOLD_PIN);
+    }
   }
 }
 void loopPush() {
-  // Como usamos INPUT_PULLUP, o botão pressionado lê LOW
+  // Como usa INPUT_PULLUP, o botão pressionado lê LOW
   int leituraBotao = digitalRead(PUSH_PIN);
 
   // Botao acabou de ser apertado
   if (leituraBotao == LOW && !pushed) {
     delay(30); // Debounce simples
     if (digitalRead(PUSH_PIN) == LOW) {
-      Serial.println("Botão pressionado.");
+      logDebug(DEBUG_VERBOSE, "Botão pressionado.");
       pushed = true;
       pushStartTs = millis();
     }
@@ -595,8 +619,8 @@ void loopPush() {
   if (leituraBotao == HIGH && pushed) {
     delay(30); // Debounce
     if (digitalRead(PUSH_PIN) == HIGH) {
-      Serial.println("Botão solto.");
       unsigned long duracao = millis() - pushStartTs;
+      logDebug(DEBUG_VERBOSE, "Botão solto após %lu ms.", duracao);
       pushed = false;
       // Executa a lógica com base no tempo que ficou pressionado
       processarPush(duracao);
@@ -604,14 +628,19 @@ void loopPush() {
   }
 }
 void logDebug(int level, const char* formato, ...) {
-    if (currentDebugLevel >= level) {
-        char loc_buf[256];
-        va_list args;
-        va_start(args, formato);
-        vsnprintf(loc_buf, sizeof(loc_buf), formato, args);
-        va_end(args);
-        Serial.println(loc_buf);
-    }
+  if (debugLevel >= level) {
+    char loc_buf[256];
+    va_list args;
+    va_start(args, formato);
+    vsnprintf(loc_buf, sizeof(loc_buf), formato, args);
+    va_end(args);
+    Serial.println(loc_buf);
+  }
+}
+void logWaiting(int level) {
+  if (debugLevel >= level) {
+    Serial.print(".");
+  }
 }
 // ===
 // COMUNICACAO MQTT
@@ -620,10 +649,9 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   JsonDocument doc;
   DeserializationError error = deserializeJson(doc, payload, length);
 
-  Serial.print("Mensagem recebida. ");
+  logDebug(DEBUG_INFO, "<-- MQTT: %.*s", length, payload);
   if (error) {
-    Serial.print ("Erro deserializando!");
-    Serial.println(error.c_str());
+    logDebug(DEBUG_ERROR, "Erro deserializando: %s", error.c_str());
     return;
   }
 
@@ -633,6 +661,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   String data = doc["data"] | "";
   int value = doc["value"] | 0;
   String msgPayload = doc["payload"] | "";
+  String job = doc["job"] | "";
 
   ComandoCNC comando;
   comando.id = id;
@@ -640,42 +669,31 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   comando.data = data;
   comando.value = value;
   comando.payload = msgPayload;
-
-  Serial.print("id: ");
-  Serial.print(id);
-  Serial.print("; type: ");
-  Serial.print(type);
-  Serial.print("; data: ");
-  Serial.print(data);
-  Serial.print("; value: ");
-  Serial.print(value);
-  Serial.print("; payload: ");
-  Serial.println(msgPayload);
+  comando.job = job;
 
   // 2. Erros de recebimento
   if (estadoXylema == BLOQUEADO && data != "UNLOCK" && data != "RESET") {
-    Serial.println ("Xylema bloqueado");
+    logDebug(DEBUG_ERROR, "Xylema bloqueado");
     acknowledgeError(id, "Xylema bloqueado");
     reportEventMQTT(LEVE, "Bloqueado", "Xylema32");
     return;
   }
 
   if (filaCNC.size() >= tamanhoFila) {
-    Serial.println ("Fila cheia");
+    logDebug(DEBUG_ERROR, "Fila cheia");
     acknowledgeError(id, "Fila cheia");
     reportEventMQTT(LEVE, "Fila Cheia", "Xylema32");
     return;
   }
 
-  /* CONTROLAR SE O JOB É O MESMO
-    if (filaCNC.size() >= tamanhoFila) {
-    Serial.println ("Fila cheia");
-    acknowledgeError(id, "Fila cheia");
-    reportEventMQTT(LEVE, "Fila Cheia", "Xylema32");
+  if (comando.job != jobAtual) {
+    logDebug(DEBUG_ERROR, "Xylema ocupado com outra tarefa: %s", jobAtual);
+    acknowledgeError(id, "Xylema ocupado");
+    reportEventMQTT(LEVE, "Xylema ocupado", "Xylema32");
     return;
   }
-  */
 
+  // 3. Processa ou inclui na fila
   if (type == "rt") handleComandoXylema(comando, false);
   else {
     // Adiciona na fila e marca acnowledge
@@ -684,17 +702,24 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
   }
 }
 void acknowledgeQueued(long id) {
-    String ackPayload = "{\"id\":" + String(id) + ",\"status\":\"QUEUED\"}";
-    client.publish(mqtt_ack_channel.c_str(), ackPayload.c_str());
+  char payload[64];
+  snprintf(payload, sizeof(payload), "{\"id\":%ld,\"status\":\"QUEUED\"}", id);
+  logDebug(DEBUG_VERBOSE, "--> MQTT: %s", payload);
+  if (!client.publish(mqtt_ack_channel.c_str(), payload)) logDebug(DEBUG_ERROR, "Erro publicando ack (estado MQTT: %d", client.state());
 }
-void acknowledgeError(long id, String errorMsg) {
-    String ackPayload = "{\"id\":" + String(id) + ",\"status\":\"ERROR\",\"data\":\"" + errorMsg + "\"}";
-    client.publish(mqtt_ack_channel.c_str(), ackPayload.c_str());
-    erroLedFimTs = millis() + 3000;
+void acknowledgeError(long id, const String& errorMsg) {
+  char payload[256];
+  int maxErrorLen = sizeof(payload) - 50; // Reserva espaço no buffer para a estrutura fixa do JSON (ID, status, chaves, aspas e chaves de fechamento)
+  snprintf(payload, sizeof(payload), "{\"id\":%ld,\"status\":\"ERROR\",\"data\":\"%.*s\"}", id, maxErrorLen, errorMsg.c_str());    
+  logDebug(DEBUG_VERBOSE, "--> MQTT: %s", payload);
+  if (!client.publish(mqtt_ack_channel.c_str(), payload)) logDebug(DEBUG_ERROR, "Erro publicando ack (estado MQTT: %d", client.state());
+  erroLedFimTs = millis() + 3000;
 }
 void acknowledgeCompleted(long id) {
-    String ackPayload = "{\"id\":" + String(id) + ",\"status\":\"COMPLETED\"}";
-    client.publish(mqtt_ack_channel.c_str(), ackPayload.c_str());
+  char payload[64];
+  snprintf(payload, sizeof(payload), "{\"id\":%ld,\"status\":\"COMPLETED\"}", id);   
+  logDebug(DEBUG_VERBOSE, "--> MQTT: %s", payload);
+  if (!client.publish(mqtt_ack_channel.c_str(), payload)) logDebug(DEBUG_ERROR, "Erro publicando ack (estado MQTT: %d", client.state());
 }
 void reportStatusMQTT() {
   if (millis() - ultimoEstadoMQTTTs > intervaloEstado) {
@@ -725,11 +750,8 @@ void reportStatusMQTT() {
 
     char buffer[256];
     serializeJson(docStatus, buffer);
-
-    if (!client.publish(mqtt_status_channel.c_str(), buffer, true)) {
-      Serial.print("Erro publicando estado! Estado do client MQTT: ");
-      Serial.println(client.state()); // Mostra o código de erro interno
-    }
+    logDebug(DEBUG_VERBOSE, "--> MQTT: %s", buffer);
+    if (!client.publish(mqtt_status_channel.c_str(), buffer, true)) logDebug(DEBUG_ERROR, "Erro publicando estado (estado MQTT: %d", client.state());
   }
 }
 void reportEventMQTT(int tipo, String mensagem, String origem) {
@@ -741,8 +763,8 @@ void reportEventMQTT(int tipo, String mensagem, String origem) {
 
   char buffer[256];
   serializeJson(docEvent, buffer);
-
-  client.publish(mqtt_event_channel.c_str(), buffer, true); // Retain = true
+  logDebug(DEBUG_VERBOSE, "--> MQTT: %s", buffer);
+  if (!client.publish(mqtt_event_channel.c_str(), buffer, true)) logDebug(DEBUG_ERROR, "Erro publicando evento (estado MQTT: %d", client.state());
 }
 
 // ===
@@ -750,12 +772,14 @@ void reportEventMQTT(int tipo, String mensagem, String origem) {
 // ===
 bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   bool ok = false;
-  if (comando.data == "HOLD")        {pulsoGRBL(GRBL_HOLD_PIN); ok = true;}
-  else if (comando.data == "ABORT")  {pulsoGRBL(GRBL_ABORT_PIN); ok = true;}
-  else if (comando.data == "CYCLE")  {pulsoGRBL(GRBL_RESUME_PIN); ok = true;}
-  else if (comando.data == "RESET")  {pulsoGRBL(GRBL_RESET_PIN, 100, 2000); ok = true;}
+  logDebug(DEBUG_VERBOSE, "Processando: %s", comando.data.c_str());
+  if (comando.data == "HOLD")        { pulsoGRBL(GRBL_HOLD_PIN); ok = true;}
+  else if (comando.data == "ABORT")  { pulsoGRBL(GRBL_ABORT_PIN); ok = true;}
+  else if (comando.data == "CYCLE")  { pulsoGRBL(GRBL_RESUME_PIN); ok = true;}
+  else if (comando.data == "RESET")  { pulsoGRBL(GRBL_RESET_PIN, 100, 2000); ok = true;}
   else if (comando.data.startsWith("SET")) ok = handleComandoSET(comando);
   else if (comando.data.startsWith("PARK")) ok = handleComandoPARK(comando);
+  else if (comando.data.startsWith("JOB")) ok = handleComandoJOB(comando);
   else if (comando.data == "DELAY") ok = handleComandoDELAY(comando);
   else if (comando.data == "HEARTBEAT") ok = handleComandoHEARTBEAT();
   else if (comando.data == "HOME_CYCLE") ok = handleComandoHOME_CYCLE();
@@ -763,15 +787,18 @@ bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   else if (comando.data == "PICK") ok = handleComandoPICK(comando);
   else if (comando.data == "DROP") ok = handleComandoDROP(comando);
   else if (comando.data == "EMERGENCY") ok = handleComandoEMERGENCY();
+  else {
+    char bufferErro[128];
+    snprintf(bufferErro, sizeof(bufferErro), "Comando Xylema %s desconhecido", comando.data.c_str());
+    logDebug(DEBUG_ERROR, bufferErro);
+    acknowledgeError(comando.id, bufferErro);
+  }
   if (ok) {
+    logDebug(DEBUG_VERBOSE, "Ok: %s", comando.data.c_str());
     acknowledgeCompleted(comando.id);
     if (popQueue) filaCNC.pop();
-    return true;
   }
-  char bufferErro[128];
-  snprintf(bufferErro, sizeof(bufferErro), "Comando Xylema %s inválido", comando.data.c_str());
-  acknowledgeError(comando.id, bufferErro);
-  return false;
+  return ok;
 }
 bool handleComandoSET(ComandoCNC comando) {
   bool ok = false;
@@ -782,11 +809,15 @@ bool handleComandoSET(ComandoCNC comando) {
       int novoPwm = comando.payload.toInt();
       // Atualiza o array pwmMax
       pwmMax[indice] = novoPwm;
+      logDebug(DEBUG_EVENT, "PWM máximo do atuador %d atualizado para %d.", indice, novoPwm);
       ok = true;
       // Salva o array pwmMax atualizado na NVS
       preferences.begin("xylema-cfg", false); // false = modo de escrita
       preferences.putBytes("pwmMax", pwmMax, sizeof(pwmMax));
       preferences.end();
+    }
+    else {
+      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", indice);
     }
   }
   else if (comando.data.indexOf("MIN_PWM") != -1) {
@@ -794,29 +825,28 @@ bool handleComandoSET(ComandoCNC comando) {
       int novoPwm = comando.payload.toInt();
       // Atualiza o array pwmMax
       pwmMin[indice] = novoPwm;
+      logDebug(DEBUG_EVENT, "PWM mínimo do atuador %d atualizado para %d.", indice, novoPwm);
       ok = true;
       // Salva o array pwmMin atualizado na NVS
       preferences.begin("xylema-cfg", false); // false = modo de escrita
       preferences.putBytes("pwmMin", pwmMin, sizeof(pwmMin));
       preferences.end();
     }
+    else {
+      logDebug(DEBUG_ERROR, "Índice de atuador %d inválido.", indice);
+    }
   }
   else if (comando.data.indexOf("ON") != -1)  {
     estadoAtuadorNormalizado[indice] = comando.payload.toInt();
     int pwmMapeado = map(estadoAtuadorNormalizado[indice], 1, 255, pwmMin[indice], pwmMax[indice]);
     estadoAtuadorMapeado[indice] = pwmMax[indice] == 1 ? 1 : pwmMapeado;
-    Serial.print("Atuador ");
-    Serial.print(indice);
-    Serial.print(" ligado em ");
-    Serial.print(estadoAtuadorNormalizado[indice]);
-    Serial.print(" (");
-    Serial.print(estadoAtuadorMapeado[indice]);
-    Serial.println(")");
+    logDebug(DEBUG_EVENT, "Atuador %d ligado em %d (%d).", indice, estadoAtuadorNormalizado[indice], estadoAtuadorMapeado[indice]);
     ok = true;
   }
   else if (comando.data.indexOf("OFF") != -1) {
     estadoAtuadorNormalizado[indice] = 0;
     estadoAtuadorMapeado[indice] = 0;
+    logDebug(DEBUG_EVENT, "Atuador %d desligado.", indice);
     ok = true; 
   }
   else if (comando.data.indexOf("PARK") != -1) {
@@ -828,12 +858,7 @@ bool handleComandoSET(ComandoCNC comando) {
     preferences.begin("xylema-cfg", false); // false = modo de escrita
     preferences.putBytes("parkPos", parkPos, sizeof(parkPos));
     preferences.end();
-    Serial.print("Nova posição de estacionamento: ");
-    Serial.print(parkPos[0]);
-    Serial.print(", ");
-    Serial.print(parkPos[1]);
-    Serial.print(", ");
-    Serial.println(parkPos[2]);
+    logDebug(DEBUG_EVENT, "Posição de estacionamento salva em %.3f, %.3f, %.3f", parkPos[0], parkPos[1], parkPos[2]);
     ok = true;
   }
   else if (comando.data.indexOf("DOCK") != -1) {
@@ -846,23 +871,16 @@ bool handleComandoSET(ComandoCNC comando) {
       preferences.begin("xylema-cfg", false); // false = modo de escrita
       preferences.putBytes("dockPos", dockPos, sizeof(dockPos));
       preferences.end();
-      Serial.print("Nova posição da doca ");
-      Serial.print(indice);
-      Serial.print(": ");
-      Serial.print(dockPos[indice][0]);
-      Serial.print(", ");
-      Serial.print(dockPos[indice][1]);
-      Serial.print(", ");
-      Serial.println(dockPos[indice][2]);
+      logDebug(DEBUG_EVENT, "Posição da doca %d salva em %.3f, %.3f, %.3f", indice, dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
       ok = true;
     }
   }
   else if (comando.data.indexOf("DEBUG_LEVEL") != -1) {
-    currentDebugLevel = comando.payload.toInt();
+    debugLevel = comando.payload.toInt();
     preferences.begin("xylema-cfg", false);
-    preferences.putInt("dbg_level", currentDebugLevel);
+    preferences.putInt("dbg_level", debugLevel);
     preferences.end();
-    Serial.printf("Nível de debug alterado para: %d\n", currentDebugLevel);
+    logDebug(DEBUG_ALWAYS, "Nível de debug alterado para %d", debugLevel);
     ok = true;
   }
   return ok;
@@ -872,25 +890,27 @@ bool handleComandoDELAY(ComandoCNC comando) {
   pulsoGRBL(GRBL_HOLD_PIN);
   inicioEsperaTs = millis();
   delayMs = comando.value;
+  logDebug(DEBUG_INFO, "Pausa em %lu por %d ms", inicioEsperaTs, delayMs);
+  reportEventMQTT(INFO, "Pausa", "Xylema32");
   estadoGRBL = PAUSA;
   estadoXylema = AGUARDANDO;
-  Serial.print("Xylema delay");
   return ok;
 }
 bool handleComandoHEARTBEAT() {
   bool ok = true;
-  Serial.print("Heartbeat <3: ");
-  Serial.println(millis());
+  logDebug(DEBUG_ALWAYS, "Heartbeat: %lu", millis());
+  reportEventMQTT(INFO, "Alive", "Xylema32");
   return ok;
 }
 bool handleComandoHOME_CYCLE() {
   bool ok = true;
   if (estadoXylema == ERRO_CRITICO) return false;
   if (estadoGRBL == HOMING) return false;
+  logDebug(DEBUG_EVENT, "Iniciando ciclo de homing...");
   reportEventMQTT(INFO, "Inicio de homing", "Xylema32");
+  serialGRBLSend("$H");
   estadoGRBL = HOMING;
   estadoXylema = BLOQUEADO;
-  serialGRBLSend("$H");
   return ok;
 }
 bool handleComandoUNLOCK(ComandoCNC comando) {
@@ -905,17 +925,15 @@ bool handleComandoUNLOCK(ComandoCNC comando) {
   }
   return ok;
 }
+// ESSAS FUNÇÕES ABAIXO TÊM ALGUNS EFEITOS COLATERAIS A SEREM REPENSADOS
+// - MANDA 3 OU MAIS COMANDOS G PARA O GRBL DE UMA SÓ VEZ (GERA 3 OKS QUE SÃO IGNORADOS)
+// - USA "FORÇA BRUTA PARA FAZER UM OVERRIDE DO ESTADO AGUARDANDO OK", O QUE PODE BAGUNÇAR O FLUXO DE COMUNICAÇÃO
 bool handleComandoPARK(ComandoCNC comando) {
   bool ok = true;
   char buffer[64];
-  // 1. Recua o Z para altura de segurança (absoluto G90)
-  serialGRBLSend("G0 Z-2");
-  // 2. Move para a posição X, Y da dock
-  snprintf(buffer, sizeof(buffer), "G90 G0 X%.3f Y%.3f", parkPos[0], parkPos[1]);
-  serialGRBLSend(buffer);
-  // 3. Baixa o Z para a altura de encaixe da dock
-  snprintf(buffer, sizeof(buffer), "G90 G0 Z%.3f", parkPos[2]);
-  serialGRBLSend(buffer);
+  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f", parkPos[0], parkPos[1], parkPos[2]);
+  serialGRBLSend(buffer); // GERA NA MARRA O STRING
+  estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
   return ok;
 }
 bool handleComandoPICK(ComandoCNC comando) {
@@ -924,19 +942,13 @@ bool handleComandoPICK(ComandoCNC comando) {
   int indice = comando.value;
   if (indice >= 0 && indice < TOTAL_DOCKS) {
     char buffer[64];
-    // 1. Recua o Z para altura de segurança (absoluto G90)
-    serialGRBLSend("G90 G0 Z-2");
-    // 2. Move para a posição X, Y da dock
-    snprintf(buffer, sizeof(buffer), "G90 G0 X%.3f Y%.3f", dockPos[indice][0], dockPos[indice][1]);
-    serialGRBLSend(buffer);
-    // 3. Baixa o Z para a altura de encaixe da dock
-    snprintf(buffer, sizeof(buffer), "G90 G0 Z%.3f", dockPos[indice][2]);
-    serialGRBLSend(buffer);
-    // 4. Recua X em -100mm de forma relativa e lenta
-    serialGRBLSend("G91 G1 X-100 F500");
-    // 5. Volta para o modo absoluto para os próximos comandos
-    serialGRBLSend("G90");
+    snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X-100 F500\nG90", dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
+    serialGRBLSend(buffer); // GERA NA MARRA O STRING
+    estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
     ok = true;
+  }
+  else {
+    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", indice);
   }
   return ok;
 }
@@ -945,28 +957,19 @@ bool handleComandoDROP(ComandoCNC comando) {
 
   int indice = comando.value;
   if (indice >= 0 && indice < TOTAL_DOCKS) {
-    char buffer[64];
-    // 1. Recua o Z para altura de segurança (absoluto G90)
-    serialGRBLSend("G90 G0 Z-2");
-    // 2. Move para a posição X, Y da dock
-    snprintf(buffer, sizeof(buffer), "G90 G0 X%.3f Y%.3f", dockPos[indice][0], dockPos[indice][1]);
-    serialGRBLSend(buffer);
-    // 5. Recua X em -100mm
-    serialGRBLSend("G91 G0 X-100");
-    // 4. Baixa o Z para a altura de encaixe da dock
-    snprintf(buffer, sizeof(buffer), "G90 G0 Z%.3f", dockPos[indice][2]);
-    serialGRBLSend(buffer);
-    // 5. Avança X em 100mm de forma relativa e lenta
-    serialGRBLSend("G91 G1 X100 F500");
-    // 6. Avança Z em -100mm de forma relativa e lenta
-    serialGRBLSend("G91 G1 Z-100 F500");
-    // 7. Volta para o modo absoluto para os próximos comandos
-    serialGRBLSend("G90");
+    char buffer[128];
+    snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X100 F500\nG1 Z-100 F500\nG90", dockPos[indice][0], dockPos[indice][1], dockPos[indice][2]);
+    serialGRBLSend(buffer); // GERA NA MARRA O STRING
+    estadoXylema = PRONTO; //OVERRIDE DO AGUARDA OK!
     ok = true;
+  }
+  else {
+    logDebug(DEBUG_ERROR, "Índice de doca %d inválido.", indice);
   }
   return ok;
 }
 bool handleComandoEMERGENCY() {
+  logDebug(DEBUG_ALWAYS, "PARADA DE EMERGÊNCIA VIA SOFTWARE");
   bool ok = true;
   // Bloqueia o Xylema
   estadoXylema = ERRO_CRITICO;
@@ -986,11 +989,13 @@ bool handleComandoJOB(ComandoCNC comando) {
 
   String job = comando.payload;
   if (comando.data.indexOf("START") != -1 && jobAtual == "")  {
+    logDebug(DEBUG_EVENT, "Iniciando a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
     jobAtual = job;
     ok = true;
   }
   if (comando.data.indexOf("END") != -1)  {
+    logDebug(DEBUG_EVENT, "Finalizada a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Finalizada a tarefa " + jobAtual, "XYLEMA");
     jobAtual = "";
     ok = true;
@@ -999,6 +1004,7 @@ bool handleComandoJOB(ComandoCNC comando) {
 }
 
 void limparFila(String mensagem) {
+  logDebug(DEBUG_INFO, "Limpando a fila de comandos.");
   estadoXylema == BLOQUEADO;
   while (!filaCNC.empty()) {
     ComandoCNC m = filaCNC.front();
@@ -1023,35 +1029,30 @@ void processarFila() {
   
   if (estadoXylema != PRONTO && atual.data !="UNLOCK" && atual.payload !="XYLEMA") return;
   
-  Serial.print("Processando: ");
-  Serial.print(atual.data);
-
   // Gcode manda para o GRBL
   if (atual.type == "gcode") {
-    Serial.println(" | Enviado para GRBL");
-    serialGRBLSend(atual.data);
+    logDebug(DEBUG_VERBOSE, "Processando: %s", atual.data.c_str());
+    serialGRBLSend(atual.data.c_str());
     inicioEsperaTs = millis();
   }
 
   // Sync aguarda Idle se necessário
   else if (atual.type == "sync") {
     if (estadoGRBL == OCIOSO) {
-      Serial.println(" | Enviado sync para GRBL/Xylema");
       handleComandoXylema(atual, true);
     }
     else {
-      // Para o sync, espera o status para saber quando fica Idle
-      Serial.println(" | Aguardando idle");
+      logDebug(DEBUG_VERBOSE, "Aguardando GRBL ocioso.");
       estadoXylema = AGUARDANDO_GRBL_IDLE;
       inicioEsperaTs = millis();
     }
   }
 
   else {
-    Serial.print("GRAVE: Tipo de instrução inválida.");
-    acknowledgeError(atual.id, "Tipo de instrução inválida.");
+    logDebug(DEBUG_ERROR, "Tipo de instrução %s inválida no comando id %d.", atual.type, atual.id);
     reportEventMQTT(GRAVE, "Tipo de instrução inválida", "Xylema32");
-    handleXYLEMAError("Tipo de instrução inválida");
+    acknowledgeError(atual.id, "Tipo de instrução inválida.");
+    limparFila("Instrução inválida");
   }
 }
 
@@ -1061,33 +1062,43 @@ void processarFila() {
 void handleGRBLStatusMsg(String linha) {
   EstadoGRBL novoEstado = interpretarEstadoGRBL(linha);
 
-  // Se o estado atual for HOMING, ignora mensagens que não sejam OCIOSO (Idle)
+  // Processa casos de homing
   if (estadoGRBL == HOMING && novoEstado != OCIOSO) return;
+  if (estadoGRBL == HOMING && novoEstado == OCIOSO) {
+    logDebug(DEBUG_EVENT, "Homing realizado com sucesso.", "Xylema");
+    reportEventMQTT(INFO, "Homing realizado com sucesso.", "Xylema");
+    estadoXylema = PRONTO;
+  }
 
+  // Processa espera de idle
+  if (estadoXylema == AGUARDANDO_GRBL_IDLE && novoEstado == OCIOSO) {
+    logDebug(DEBUG_VERBOSE, "GRBL ocioso.");
+    estadoXylema = PRONTO;
+  }
+
+  // Processa estados bloqueantes
+  if (novoEstado == ALARME) {
+    if (estadoXylema != ERRO_CRITICO && estadoXylema != BLOQUEADO) {
+      logDebug(DEBUG_EVENT, "Xylema bloqueado por alarme no GRBL");
+      estadoXylema = BLOQUEADO;
+    }
+  }
+
+  // Salva informações
   estadoGRBL = novoEstado;
   interpretarPosicaoGRBL(linha, posicaoGRBL);
   bufferGRBL = interpretarBufferGRBL(linha);
   endstopGRBL = interpretarEndstopGRBL(linha);
   reportStatusMQTT();
   
+  // Atualiza a frequencia de consulta do GRBL
   switch (estadoGRBL) {
     case ATIVO: intervaloStatusGRBL = 100; break;
     case HOMING: intervaloStatusGRBL = 5000; break;
     default: intervaloStatusGRBL = 1000;
   }
-  if (estadoXylema == BLOQUEADO && estadoGRBL == OCIOSO) {
-    // Recuperou via homing!
-    Serial.println("Xylema pronto");
-    estadoXylema = PRONTO;
-  }
-  if (estadoXylema == AGUARDANDO_GRBL_IDLE && estadoGRBL == OCIOSO) {
-    estadoXylema = PRONTO;
-  }
-  if (estadoXylema != ERRO_CRITICO && estadoXylema != BLOQUEADO && estadoGRBL == ALARME) {
-    Serial.println("Alarme desconhecido identificado no GRBL");
-    estadoXylema = BLOQUEADO;
-  }
 }
+
 void handleGRBLAlarm(String linha) {
   bool eCritico = false;
   int codigoAlarme = linha.substring(6).toInt();
@@ -1110,16 +1121,18 @@ void handleGRBLAlarm(String linha) {
     default:
       eCritico = true;
   }
+
   // Qualquer alarme bloqueia e muda o estado do GRBL
   estadoGRBL = ALARME;
-  Serial.print(msgAlarme);
+  logDebug(DEBUG_ERROR, "ALARME GRBL: %s", msgAlarme.c_str());
   if (eCritico) {
-    estadoXylema = ERRO_CRITICO;
+    logDebug(DEBUG_EVENT, "Xylema bloqueado por alarme no GRBL");
     reportEventMQTT(CRITICO, msgAlarme, "GRBL");
     limparFila(msgAlarme);
+    estadoXylema = ERRO_CRITICO;
   }
   else {
-    Serial.println(msgAlarme + " Recuperando...");
+    logDebug(DEBUG_INFO, "Tentando recuperação via RESET.");
     reportEventMQTT(GRAVE, msgAlarme, "GRBL");
     limparFila(msgAlarme);
     pulsoGRBL(GRBL_RESET_PIN, 100, 2000);
@@ -1129,12 +1142,6 @@ void handleGRBLError(String linha) {
   bool eCritico = false;
   int codigoErro = linha.substring(6).toInt();
   String msgErro = parseErrorGRBL(codigoErro);
-
-  // Avisa o backend via acnowledge
-  if (estadoXylema == AGUARDANDO_GRBL_OK) {
-    ComandoCNC atual = filaCNC.front();
-    acknowledgeError(atual.id, msgErro);
-  }
 
   // Verifica se o erro é crítico
   switch (codigoErro) {
@@ -1159,17 +1166,24 @@ void handleGRBLError(String linha) {
     default:
       eCritico = true;
   }
-  Serial.print(msgErro);
+  logDebug(DEBUG_ERROR, "ERRO GRBL: %s", linha.c_str());
+
+  // Avisa o backend via acnowledge
+  if (estadoXylema == AGUARDANDO_GRBL_OK) {
+    ComandoCNC atual = filaCNC.front();
+    acknowledgeError(atual.id, msgErro);
+  }
 
   // Erro critico bloqueia o Xylema
   if (eCritico) {
-    estadoXylema = BLOQUEADO;
+    logDebug(DEBUG_EVENT, "Xylema bloqueado por erro em mensagem enviada ao GRBL");
     reportEventMQTT(GRAVE, msgErro, "GRBL");
     limparFila(msgErro);
+    estadoXylema = BLOQUEADO;
   }
   // Erro não crítico segue a fila
   else {
-    Serial.println(msgErro + " Recuperando...");
+    logDebug(DEBUG_INFO, "Seguindo a fila.");
     reportEventMQTT(LEVE, msgErro, "GRBL");
   }
 
@@ -1178,15 +1192,11 @@ void handleGRBLError(String linha) {
 void handleGRBLTimeout(String msgTimeout) {
   estadoXylema = BLOQUEADO;
   ComandoCNC atual = filaCNC.front();
+  logDebug(DEBUG_ERROR, msgTimeout.c_str());
   acknowledgeError(atual.id, msgTimeout);
   reportEventMQTT(GRAVE, msgTimeout, "GRBL");
-  limparFila(msgTimeout);
   pulsoGRBL(GRBL_HOLD_PIN);
-}
-void handleXYLEMAError(String msgErro) {
-  estadoXylema = BLOQUEADO;
-  reportEventMQTT(GRAVE, msgErro, "XYLEMA");
-  limparFila(msgErro);
+  limparFila(msgTimeout);
 }
 
 // ===
@@ -1211,17 +1221,20 @@ void loopAtuadores() {
 }
 void loopDelay() {
   if (millis() - inicioEsperaTs > delayMs) {
+    logDebug(DEBUG_INFO, "Fim da pausa.");
     estadoXylema = PRONTO;
     pulsoGRBL(GRBL_RESUME_PIN);
-    Serial.println();
   }
-  else Serial.print(".");
+  else {
+    logWaiting(DEBUG_VERBOSE);
+    delay(100);
+  }
 }
 void loopIdleTimeout() {
-  if (millis() - inicioEsperaTs > timeoutGRBLIdle) handleGRBLTimeout("idle não recebido");
+  if (millis() - inicioEsperaTs > timeoutGRBLIdle) handleGRBLTimeout("Timeout aguardando GRBL idle");
 }
 void loopOkTimeout() {
-  if (millis() - inicioEsperaTs > timeoutGRBLOk) handleGRBLTimeout("ok não recebido");
+  if (millis() - inicioEsperaTs > timeoutGRBLOk) handleGRBLTimeout("Timeout aguardando GRBL ok");
 }
 
 // ==
@@ -1230,6 +1243,7 @@ void loopOkTimeout() {
 void setup() {
   Serial.begin(115200);
   SerialGRBL.begin(115200, SERIAL_8N1, GRBL_TX, GRBL_RX);
+  logDebug(DEBUG_ALWAYS, "Xylema32 %s", VERSION);
   setupPins();
   delay(500);
 
