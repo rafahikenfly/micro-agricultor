@@ -1,3 +1,5 @@
+import { GEOMETRIA } from "micro-agricultor";
+
 export function calcularArea(entidade) {
   if (!entidade.dimensao) entidade.dimensao={};
   if (!entidade.aparencia.geometria) return 0;
@@ -5,19 +7,19 @@ export function calcularArea(entidade) {
   const { y, x } = entidade.dimensao;
 
   switch (entidade.aparencia.geometria) {
-    case "rect":
+    case GEOMETRIA.rect.id:
       return x * y;
-    case "circle": {
+    case GEOMETRIA.circle.id: {
       const diametro = Math.min(x, y);
       const raio = diametro / 2;
       return Math.PI * raio ** 2;
     }
-    case "ellipse": {
+    case GEOMETRIA.ellipse.id: {
       const a = x / 2;
       const b = y / 2;
       return Math.PI * a * b;
     }
-    case "polygon": {
+    case GEOMETRIA.polygon.id: {
       const pontos = entidade.aparencia.vertices;
 
       if (!pontos || pontos.length < 3) return 0;

@@ -8,7 +8,7 @@ import { useAuth } from "../../../services/auth/authContext";
 import { batchService } from "../../../services/batchService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 
-export default function MapaCanteiro ({canteiro, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn}) {
+export default function MapaCanteiro ({canteiro, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn, onContextMenu}) {
   const { user } = useAuth();
   const { selection, activeTool, toolSetup, previewSetup, setMapDrag, setShowModal, setMapPreviewActive } = useMapaEngine();
   const key = `${ENTIDADE.canteiro.id}:${canteiro.id}`;
@@ -132,16 +132,13 @@ export default function MapaCanteiro ({canteiro, svgRef, gRef, drag, dragStart, 
         onMouseMove: (evt) => handleMouseMove(evt),
         onDoubleClick: (evt) => { 
           evt.stopPropagation();
-          // Navegação
-          if (evt.altKey) {
-            focusOn(canteiro);
-            return;
-          }
-          // Edição
-          setShowModal({
-          tipo: ENTIDADE.canteiro.id,
-          data: canteiro
-        });}
+          focusOn(canteiro);
+        },
+        onContextMenu: (evt) => {
+          evt.preventDefault();
+          evt.stopPropagation();
+          onContextMenu?.(evt, ENTIDADE.canteiro.id, canteiro);
+        }
       }}
      />
   )

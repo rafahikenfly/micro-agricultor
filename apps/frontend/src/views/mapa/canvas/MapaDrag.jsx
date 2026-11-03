@@ -1,4 +1,4 @@
-import { GEOMETRY_TYPES } from "micro-agricultor";
+import { GEOMETRIA } from "micro-agricultor";
 import { getMouseInMapSpace, resolveDrawCirclePreview, resolveDrawRectPreview, resolveMoveCirclePreview, resolveMoveRectPreview, resolveResizeCirclePreview, resolveResizeRectPreview } from "../../../utils/coordinatesUtils";
 import { useMapaEngine } from "../MapaEngine";
 
@@ -30,18 +30,18 @@ export default function MapaDrag({svgRef, gRef, drag}) {
       case "desenhar":
       case "selecionar":
       case "generic":
-        if (geometria === GEOMETRY_TYPES.RECT)   return resolveDrawRectPreview(startMap, currentMap);
-        if (geometria === GEOMETRY_TYPES.CIRCLE) return resolveDrawCirclePreview(startMap, currentMap);
+        if (geometria === GEOMETRIA.rect.id)   return resolveDrawRectPreview(startMap, currentMap);
+        if (geometria === GEOMETRIA.CIRCLE) return resolveDrawCirclePreview(startMap, currentMap);
         console.warn(`Geometria ${geometria} não implementada para drag ${drag.type}.`)
         break;
       case "redimensionar":
-        if (geometria === GEOMETRY_TYPES.RECT)   return resolveResizeRectPreview(startMap, currentMap, drag.direction, drag.entidade);
-        if (geometria === GEOMETRY_TYPES.CIRCLE) return resolveResizeCirclePreview(startMap, currentMap, drag.direction, drag.entidade);
+        if (geometria === GEOMETRIA.rect.id)   return resolveResizeRectPreview(startMap, currentMap, drag.direction, drag.entidade);
+        if (geometria === GEOMETRIA.circle.id) return resolveResizeCirclePreview(startMap, currentMap, drag.direction, drag.entidade);
         console.warn(`Geometria ${geometria} não implementada para drag ${drag.type}.`)
         break;
       case "mover":
-        if (geometria === GEOMETRY_TYPES.RECT) return resolveMoveRectPreview(startMap, currentMap, drag.entidade);
-        if (geometria === GEOMETRY_TYPES.CIRCLE)return resolveMoveCirclePreview(startMap, currentMap, drag.entidade);
+        if (geometria === GEOMETRIA.rect.id) return resolveMoveRectPreview(startMap, currentMap, drag.entidade);
+        if (geometria === GEOMETRIA.circle.id)return resolveMoveCirclePreview(startMap, currentMap, drag.entidade);
         console.warn(`Geometria ${geometria} não implementada para drag ${drag.type}.`)
         break;
       default:

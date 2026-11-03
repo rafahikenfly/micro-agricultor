@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { criarCanteiro, criarPlanta, ENTIDADE, GEOMETRY_TYPES, movimentar, redimensionar } from "micro-agricultor";
+import { criarCanteiro, criarContextoDispositivo, criarDispositivo, criarPlanta, ENTIDADE, GEOMETRIA, movimentar, redimensionar } from "micro-agricultor";
 
 import { useAuth } from "../../../services/auth/authContext";
 import { useSVGTransform } from "../../../hooks/useSVGTransform";
@@ -12,7 +12,7 @@ import { entitiesInBounds, getMouseInMapSpace } from "../../../utils/coordinates
 import { circleFromEntity, rectFromEntity, resizeCircleRadius, resizeRect } from "../../../utils/geometryUtils";
 
 import { batchService } from "../../../services/batchService";
-import { hortasService, canteirosService, plantasService, entidadesService} from "../../../services/crudService";
+import { hortasService, canteirosService, plantasService, entidadesService, dispositivosService} from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 
 import { NoUser } from "../../../components/common/NoUser";
@@ -23,12 +23,15 @@ import MapaHorta from "./MapaHorta"
 import MapaCanteiro from "./MapaCanteiro"
 import MapaPlanta from "./MapaPlanta"
 import MapaDrag from "./MapaDrag";
+import MapaDispositivo from "./MapaDispositivo";
 import MapaPreview from "./MapaPreview";
 import { useMemo } from "react";
+import MapaContextMenu from "./MapaContextMenu";
 
 const servicesMap = {
   [ENTIDADE.planta.id]: plantasService,
   [ENTIDADE.canteiro.id]: canteirosService,
+  [ENTIDADE.dispositivo.id]: dispositivosService
 }
 
 export default function MapaCanvas () {
@@ -42,7 +45,7 @@ export default function MapaCanvas () {
 
   //Conecta hooks
   const svgRef = useRef(null);
-  const { activeTool, toolSetup, dragActive, selection, previewActive, setShowModal, filters } = useMapaEngine();
+  const { activeTool, toolSetup, setTool, setToolState, dragActive, selection, previewActive, setShowModal, filters } = useMapaEngine();
   const { drag, dragStart, dragMove, dragFinish } = useDrag();
   const { gRef, pan, zoomAt, rotateAt, centerOn, focusOn } = useSVGTransform({
     onRotate: (newRotate) => setRotateState(newRotate),
@@ -52,10 +55,12 @@ export default function MapaCanvas () {
 
   //States
   const [rotateState, setRotateState] = useState(0);
+  const [contextMenu, setContextMenu] = useState(null);
   //const [zoomState, setZoomState] = useState(0);
   const [horta, setHorta] = useState(null);
   const [canteiros, setCanteiros] = useState([]);
   const [plantas, setPlantas] = useState([]);
+  const [dispositivos, setDispositivos] = useState([]);
   const [loading, setLoading] = useState([]);
 
   //Carrega dados
@@ -65,10 +70,11 @@ export default function MapaCanvas () {
 
     setCanteiros([]);
     setPlantas([]);
+    setDispositivos([]);
     setHorta(null);
     setLoading(true);
     let loaded = 0;
-    const total = 3;
+    const total = 4;
 
     const markLoaded = () => {
       loaded++;
@@ -87,7 +93,13 @@ export default function MapaCanvas () {
       {field: "hortaId", op: "==", value: hortaId},
       { field: "visivelNoMapa", op: "==", value: true }
     ]);
-
+    const unsubDispositivos = dispositivosService.subscribe((data) => {
+      setDispositivos(data);
+      markLoaded();
+    }, [
+      {field: "hortaId", op: "==", value: hortaId},
+      { field: "visivelNoMapa", op: "==", value: true }
+    ]);
 
     async function carregarHorta() {
       if (!hortaId) return;
@@ -103,33 +115,70 @@ export default function MapaCanvas () {
     return () => {
       unsubCanteiros();
       unsubPlantas();
+      unsubDispositivos();
     };
   }, [hortaId]);
 
   //Filtra as entidades
   const plantasFiltradas = useMemo(() => {
-    if (!filters?.planta) return plantas;
+    let resultado = plantas;
+    if (filters?.planta?.estadoId) {
+      resultado = resultado.filter(
+        (planta) => planta.estadoId === filters.planta.estadoId
+      );
+    }
 
-    return plantas.filter((p) => {
-      // filtro tipo select
-      if (filters?.planta.estadoId && p.estadoId !== filters.planta.estadoId) return false;
-      if (filters?.planta.especieId && p.especieId !== filters.planta.especieId) return false;
-      if (filters?.planta.estagioId && p.estagioId !== filters.planta.estagioId) return false;
+    if (filters?.planta?.especieId) {
+      resultado = resultado.filter(
+        (planta) => planta.especieId === filters.planta.especieId
+      );
+    }
 
-      return true;
-    });
-  }, [plantas, filters?.planta]);
-  const canteirosFiltrados = useMemo(() => {
-    if (!filters?.canteiro) return canteiros;
+    if (filters?.planta?.estagioId) {
+      resultado = resultado.filter(
+        (planta) => planta.estagioId === filters.planta.estagioId
+      );
+    }
 
-    return canteiros.filter((c) => {
-      if (filters.canteiro.estadoId && c.estadoId !== filters.canteiro.estadoId) {
-        return false;
+    if (
+      activeTool === "operar" &&
+      toolSetup.operar?.posicao &&
+      toolSetup.operar?.dimensao
+    ) {
+      const bounds = {
+        minX: toolSetup.operar.posicao.x - toolSetup.operar.dimensao.x / 2,
+        maxX: toolSetup.operar.posicao.x + toolSetup.operar.dimensao.x / 2,
+        minY: toolSetup.operar.posicao.y - toolSetup.operar.dimensao.y / 2,
+        maxY: toolSetup.operar.posicao.y + toolSetup.operar.dimensao.y / 2,
       };
 
-      return true;
-    });
-  }, [canteiros, filters?.canteiro]);
+      resultado = entitiesInBounds(resultado, bounds);
+    }
+
+    return resultado;    
+  }, [plantas, filters?.planta, activeTool, toolSetup.operar]);
+  const canteirosFiltrados = useMemo(() => {
+    let resultado = canteiros;
+    if (filters?.canteiro?.estadoId) {
+      resultado = resultado.filter(
+        (canteiro) => canteiro.estadoId === filters.canteiro.estadoId
+      );
+    }
+    if (
+      activeTool === "operar" &&
+      toolSetup.operar?.posicao &&
+      toolSetup.operar?.dimensao
+    ) {
+      const bounds = {
+        maxX:toolSetup.operar.posicao.x + toolSetup.operar.dimensao.x/2,
+        maxY:toolSetup.operar.posicao.y + toolSetup.operar.dimensao.y/2,
+        minX:toolSetup.operar.posicao.x - toolSetup.operar.dimensao.x/2,
+        minY:toolSetup.operar.posicao.y - toolSetup.operar.dimensao.y/2,
+      }
+      resultado = entitiesInBounds(resultado, bounds);
+    }
+  return resultado;    
+  }, [canteiros, filters?.canteiro, activeTool, toolSetup.operar]);
 
   // Handlers
   const handleFinishDrag = (evt) => {
@@ -138,6 +187,7 @@ export default function MapaCanvas () {
     const funcaoCriarMap = {
       [ENTIDADE.canteiro.id]: criarCanteiro,
       [ENTIDADE.planta.id]: criarPlanta,
+      [ENTIDADE.dispositivo.id]: criarDispositivo,
     }
 
     const startMap = getMouseInMapSpace(svgRef.current, gRef.current, drag.start.x, drag.start.y);
@@ -198,7 +248,7 @@ export default function MapaCanvas () {
         }
         let resized = {};
         switch (drag.entidade.aparencia.geometria) {
-          case GEOMETRY_TYPES.RECT:
+          case GEOMETRIA.rect.id:
             const rect = rectFromEntity(drag.entidade);
             resized = resizeRect({rect, direction: drag.direction, currentMap});
             dimensoes[drag.entidade.id] = {
@@ -207,7 +257,7 @@ export default function MapaCanvas () {
               z: drag.entidade.dimensao.z,
             }
             break;
-          case GEOMETRY_TYPES.CIRCLE:
+          case GEOMETRIA.circle.id:
             const circle = circleFromEntity(drag.entidade);
             resized = resizeCircleRadius({circle, direction: drag.direction, currentMap});
             dimensoes[drag.entidade.id] = {
@@ -252,6 +302,10 @@ export default function MapaCanvas () {
           y: (startMap.y + currentMap.y)/2,
           z: 0,
         },
+        hortaId: horta.id,
+        aparencia: {
+          geometria: toolSetup.desenhar.geometria
+        },
         dimensao: {
           x: Math.abs(currentMap.x - startMap.x),
           y: Math.abs(currentMap.y - startMap.y),
@@ -281,69 +335,181 @@ export default function MapaCanvas () {
         console.warn("Tool sem drag start handler:", activeTool);
     }
   }
+  const handleContextMenu = (evt, tipo, entidade) => {
+    const opcoesPorTipo = {
+      planta: [
+        { label: "Editar planta", onClick: ()=>{
+          setContextMenu(null)
+          setShowModal({
+            tipo: ENTIDADE.planta.id,
+            data: entidade
+          })}
+        },
+      ],
+      canteiro: [
+        { label: "Editar canteiro", onClick: ()=>{
+          setContextMenu(null)
+          setShowModal({
+            tipo: ENTIDADE.canteiro.id,
+            data: entidade
+          })}
+        },
+      ],
+      dispositivo: [
+        { label: "Editar dispositivo", onClick: ()=>{
+          setContextMenu(null)
+          setShowModal({
+            tipo: ENTIDADE.dispositivo.id,
+            data: entidade
+          })}
+        },
+      ]
+    };
+    let opcoes = opcoesPorTipo[tipo];
+    if (activeTool == "operar") {
+      if (entidade.id == toolSetup.operar.id) {
+        opcoes.push({
+          label: "Finalizar operação",
+          onClick: ()=>{
+            setTool(null);
+            setContextMenu(null)
+          }
+        });
+      }
+      else {
+        const bounds = {
+          maxX:toolSetup.operar.posicao.x + toolSetup.operar.dimensao.x/2,
+          maxY:toolSetup.operar.posicao.y + toolSetup.operar.dimensao.y/2,
+          minX:toolSetup.operar.posicao.x - toolSetup.operar.dimensao.x/2,
+          minY:toolSetup.operar.posicao.y - toolSetup.operar.dimensao.y/2,
+        }
+        if (tipo === ENTIDADE.dispositivo.id) {
+          opcoes.push({
+            label: "Operar", onClick: ()=>{
+              setTool("operar");
+              setToolState(entidade);
+              setContextMenu(null)
+            }
+          });
+        }
+        if (entitiesInBounds([entidade], bounds).length > 0) opcoes = opcoes.concat(
+          criarContextoDispositivo({
+            dispositivo: toolSetup.operar,
+            tipoAlvo: tipo,
+            entidade,
+            user,
+            onHide: ()=>setContextMenu(null)
+          })
+        );
+      }
+    }
+    else {
+      opcoes.push({
+        label: "Operar", onClick: ()=>{
+          setTool("operar");
+          setToolState(entidade);
+          setContextMenu(null)
+        }
+      });
+    }
+    setContextMenu({
+      x: evt.clientX,
+      y: evt.clientY,
+      opcoes,
+      entidade,
+    });
+  };
+
 
   // Render
   if (loading) return <Loading variant="overlay" />
   if (!horta) return <div>Nada por aqui...</div>
+  
   return (
-      <div
-        style={{
-          width: "90vw",
-          height: "90vh",
-          overflow: "hidden",
-          border: "solid black 1px",
-          position: "relative",
-        }}
-      >
+    <div
+      style={{
+        width: "90vw",
+        height: "90vh",
+        overflow: "hidden",
+        border: "solid black 1px",
+        position: "relative",
+      }}
+    >
 
-        <svg ref={svgRef} width="100%" height="100%"
-          style = {{
-            touchAction: "none"
-          }}
-          onPointerDown={(evt)=>{if (dragActive) handleStartDrag(evt)}}
-          onPointerMove={(evt)=>{if (dragActive) dragMove(evt)}}
-          onPointerUp={(evt)=>{if (dragActive) handleFinishDrag(evt)}}        
-        >
-          <g ref={gRef} >
-            <MapaHorta
-              horta={horta}
-              svgRef={svgRef.current}
-              gRef={gRef.current}
+      <svg ref={svgRef} width="100%" height="100%"
+        style = {{
+          touchAction: "none"
+        }}
+        onPointerDown={(evt)=>{if (dragActive) handleStartDrag(evt)}}
+        onPointerMove={(evt)=>{if (dragActive) dragMove(evt)}}
+        onPointerUp={(evt)=>{if (dragActive) handleFinishDrag(evt)}}        
+      >
+        <g ref={gRef} >
+          <MapaHorta
+            horta={horta}
+            svgRef={svgRef.current}
+            gRef={gRef.current}
+          />
+          {dispositivos.map((disp) => (
+            <MapaDispositivo
+              key={disp.id}
+              dispositivo={disp}
+              svgRef={svgRef}
+              gRef={gRef}
+              drag={drag}
+              dragStart={dragStart}
+              dragMove={dragMove}
+              centerOn={centerOn}
+              focusOn={focusOn}
+              onContextMenu={handleContextMenu}
+              destaque={activeTool === "operar" && toolSetup.operar?.id === disp.id}
             />
-            {canteirosFiltrados.map((cant) => (
-              <MapaCanteiro
-                key={cant.id}
-                canteiro={cant}
-                svgRef={svgRef}
-                gRef={gRef}
-                drag={drag}
-                dragStart={dragStart}
-                dragMove={dragMove}
-                centerOn={centerOn}
-                focusOn={focusOn}
-              />
-            ))}
-            {plantasFiltradas.map((plan) => (
-              <MapaPlanta
-                key={plan.id}
-                planta={plan}
-                svgRef={svgRef}
-                gRef={gRef}
-                drag={drag}
-                dragStart={dragStart}
-                dragMove={dragMove}
-                centerOn={centerOn}
-                focusOn={focusOn}
-              />
-            ))}
-            {drag.isDragging && <MapaDrag svgRef={svgRef} gRef={gRef} drag={drag}/>}
-            {previewActive && <MapaPreview svgRef={svgRef} gRef={gRef} />}
-          </g>
-        </svg>
-        <MapaBussola
-          orientacao={horta?.posicao?.orientacao}
-          rotacao={rotateState}
+          ))}
+          {canteirosFiltrados.map((cant) => (
+            <MapaCanteiro
+              key={cant.id}
+              canteiro={cant}
+              svgRef={svgRef}
+              gRef={gRef}
+              drag={drag}
+              dragStart={dragStart}
+              dragMove={dragMove}
+              centerOn={centerOn}
+              focusOn={focusOn}
+              onContextMenu={handleContextMenu}
+            />
+          ))}
+          {plantasFiltradas.map((plan) => (
+            <MapaPlanta
+              key={plan.id}
+              planta={plan}
+              svgRef={svgRef}
+              gRef={gRef}
+              drag={drag}
+              dragStart={dragStart}
+              dragMove={dragMove}
+              centerOn={centerOn}
+              focusOn={focusOn}
+              onContextMenu={handleContextMenu}
+            />
+          ))}
+          {drag.isDragging && <MapaDrag svgRef={svgRef} gRef={gRef} drag={drag}/>}
+          {previewActive && <MapaPreview svgRef={svgRef} gRef={gRef} />}
+        </g>
+      </svg>
+      <MapaBussola
+        orientacao={horta?.posicao?.orientacao}
+        rotacao={rotateState}
+      />
+      {contextMenu && (
+        <MapaContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          entidade={contextMenu.entidade}
+          opcoes={contextMenu.opcoes}
+          onClose={() => setContextMenu(null)}
         />
-      </div>
+      )}
+    </div>
   )
 }

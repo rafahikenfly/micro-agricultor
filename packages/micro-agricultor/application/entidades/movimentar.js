@@ -2,11 +2,13 @@ import { ENTIDADE, EVENTO, ORIGEM } from "../../types/index.js";
 import { criarEvento } from "../../domain/evento.rules.js";
 import { movimentarPlanta } from "../../domain/planta.rules.js";
 import { movimentarCanteiro } from "../../domain/canteiro.rules.js";
+import { movimentarDispositivo } from "../../domain/dispositivo.rules.js";
 import { aplicarRegraPorBatch } from "../batch.js";
 
 const mapTipoEntidadeRegra = {
   [ENTIDADE.planta.id]: movimentarPlanta,
   [ENTIDADE.canteiro.id]: movimentarCanteiro,
+  [ENTIDADE.dispositivo.id]: movimentarDispositivo,
 }
 
 const THRESHOLD = 2; //cm

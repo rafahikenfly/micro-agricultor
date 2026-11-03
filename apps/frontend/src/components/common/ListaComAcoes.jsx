@@ -75,9 +75,9 @@ function ListaComAcoes ({linhaStyle, colunas, sort, dados, acoes,}) {
     });
   };
 
-      /* RENDER */
-      return (
-        <Card>
+    /* RENDER */
+    return (
+      <Card>
         <Card.Body>
           <Table bordered hover responsive>
             <thead>

@@ -33,6 +33,7 @@ import AppAnalise from "../views/AppAnalise";
 import EvolucaoCaracteristica from "../views/analise/relatorios/EvolucaoCaracteristica";
 import Solicitar from "../views/analise/Solicitar";
 import Inferencia from "../views/analise/relatorios/Inferencia";
+import AppAutomacao from "../views/AppAutomacao";
 //import AppCalendario from "../views/ambientes/AppCalendario";
 
 export default function Router() {
@@ -64,6 +65,9 @@ export default function Router() {
           </Route>
           <Route path="/mapa/:hortaId" element={<AppMapa />}>
             <Route index element={<MapaCanvas />} />
+          </Route>
+          <Route path="/automacao" element={<AppAutomacao />}>
+            <Route index element={<MapaVazio />} />
           </Route>
           <Route path="/calendario" element={<AppCalendario />}>
             <Route index element={<CalendarioVazio />} />

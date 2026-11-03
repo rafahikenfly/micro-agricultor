@@ -4,7 +4,7 @@ import { getMouseInMapSpace, pointNearBorder } from "../../../utils/coordinatesU
 
 import SVGEntidade from "../../../services/svg/SVGEntidade";
 
-export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn}) {
+export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn, onContextMenu}) {
   // Não renderiza se tem propriedade de invisibilidade
   if (!planta.visivelNoMapa) return null
   // Não renderiza se é a entidade sendo movida
@@ -86,12 +86,13 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
     <SVGEntidade 
       entidade={planta}
       style={style}
-      eventos={{onClick: (evt) => {
+      eventos={{
+        onClick: (evt) => {
           evt.stopPropagation();
           // Prioridade de pointerTool
           if (activeTool === "fotografar") {
             setShowModal({
-              tipoEntidadeId: "fotografar",
+              tipo: "fotografar",
             })
           }
           // Navegação
@@ -110,17 +111,13 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
         onMouseMove: (evt) => handleMouseMove(evt),
         onDoubleClick: (evt) => { 
           evt.stopPropagation();
-          // Navegação
-          if (evt.altKey) {
-            focusOn(planta);
-            return;
-          }
-          // Edição
-          setShowModal({
-            tipo: ENTIDADE.planta.id,
-            data: planta
-          });
-        }
+          focusOn(planta);
+        },
+        onContextMenu: (evt) => {
+          evt.preventDefault(); // evita o menu padrão do navegador
+          evt.stopPropagation();
+          onContextMenu?.(evt, ENTIDADE.planta.id, planta);
+        }        
       }}
     />
   )

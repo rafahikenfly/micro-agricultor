@@ -2,11 +2,12 @@ import { VARIANTE, ENTIDADE } from "micro-agricultor";
 import CanteiroModal from "../../admin/canteiros/CanteiroModal";
 import PlantaModal from "../../admin/plantas/PlantaModal";
 import { useMapaEngine } from "../MapaEngine";
-import { plantasService, canteirosService } from "../../../services/crudService";
+import { plantasService, canteirosService, dispositivosService } from "../../../services/crudService";
 import { useAuth } from "../../../services/auth/authContext";
 import { useToast } from "../../../services/toast/toastProvider";
 import InspecaoModal from "./InspecaoModal";
 import ModalFiltrar from "./ModalFiltrar";
+import DispositivoModal from "../../admin/dispositivos/DispositivoModal";
 
 export default function MapaModals() {
   const { user } = useAuth();
@@ -50,7 +51,7 @@ export default function MapaModals() {
           show={true}
           data={showModal.data}
           onSave={showModal.data.editavelNoMapa ? 
-            (data)=>salvar(data, canteirosService, ENTIDADE[showModal.tipoEntidadeId]) : 
+            (data)=>salvar(data, canteirosService, ENTIDADE[showModal.tipo]) : 
             false
           }
           onClose={() => setShowModal(null)}
@@ -63,7 +64,19 @@ export default function MapaModals() {
           show={true}
           data={showModal.data}
           onSave={showModal.data.editavelNoMapa ? 
-            (data)=>salvar(data, plantasService, ENTIDADE[showModal.tipoEntidadeId]) :
+            (data)=>salvar(data, plantasService, ENTIDADE[showModal.tipo]) :
+            false
+          }
+          onClose={() => setShowModal(null)}
+        />
+      );
+    case ENTIDADE.dispositivo.id:
+      return (
+        <DispositivoModal
+          show={true}
+          data={showModal.data}
+          onSave={showModal.data.editavelNoMapa ? 
+            (data)=>salvar(data, dispositivosService, ENTIDADE[showModal.tipo]) :
             false
           }
           onClose={() => setShowModal(null)}

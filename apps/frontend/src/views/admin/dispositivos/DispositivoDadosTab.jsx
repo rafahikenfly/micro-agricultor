@@ -11,7 +11,7 @@ export const DispositivoDadosTab = ({ form, setForm, }) => {
               >
                 <StandardInput label="Tipo de dispositivo">
                   <Form.Select
-                    value={form.tipoDispositivoId}
+                    value={form.tipo}
                     onChange={e => setForm({...form, variant: e.target.value})}
                     required
                   >
@@ -20,7 +20,7 @@ export const DispositivoDadosTab = ({ form, setForm, }) => {
                       placeholder: "Selecione o tipo de dispositivo",
                     })}
                   </Form.Select>
-                  <Badge bg={DISPOSITIVO[form.tipoDispositivoId]?.variant}> </Badge>
+                  <Badge bg={DISPOSITIVO[form.tipo]?.variant}> </Badge>
                 </StandardInput>
               </BaseTab>
     )

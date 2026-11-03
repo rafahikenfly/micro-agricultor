@@ -1,4 +1,4 @@
-import { ENTIDADE, GEOMETRY_TYPES } from "micro-agricultor";
+import { ENTIDADE, GEOMETRIA } from "micro-agricultor";
 
 import { useCache } from "../../../hooks/useCache";
 import { useMapaEngine } from "../MapaEngine";
@@ -64,7 +64,7 @@ export default function MapaPainel() {
       setToolState(toolState);
       setMapDrag({
         active: true,
-        geometry: toolState.geometria ?? GEOMETRY_TYPES.RECT,
+        geometry: toolState.geometria ?? GEOMETRIA.rect.id,
         preview: {
           fill: "rgba(42, 22, 4, 0.2)",
           stroke: "rgba(17, 90, 24, 0.9)",

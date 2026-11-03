@@ -1,4 +1,4 @@
-import { GEOMETRY_TYPES } from "micro-agricultor";
+import { GEOMETRIA } from "micro-agricultor";
 import { circleFromEntity, moveCircle, moveRect, rectFromEntity, resizeCircleBox, resizeCircleRadius, resizeRect, viewFromCircle, viewFromRect } from "./geometryUtils";
 
 export const getMouseInMapSpace = (svg, g, clientX, clientY) => {
@@ -113,12 +113,27 @@ function polygonInBounds(vertices, bounds) {
     v.y <= bounds.maxY
   );
 }
+function circleInBounds(circle, bounds) {
+  const inner = {
+    minX: circle.posicao.x - circle.dimensao.x,
+    maxX: circle.posicao.x + circle.dimensao.x,
+    minY: circle.posicao.y - circle.dimensao.y,
+    maxY: circle.posicao.y + circle.dimensao.y,
+  };
+  
+  return (
+    inner.minX >= bounds.minX &&
+    inner.maxX <= bounds.maxX &&
+    inner.minY >= bounds.minY &&
+    inner.maxY <= bounds.maxY
+  );
+}
 
 export function entitiesInBounds(entidades, bounds) {
   return entidades.filter((ent) => {
-    if (ent.aparencia.geometria === GEOMETRY_TYPES.RECT) return rectInBounds(ent, bounds)
-    if (ent.aparencia.geometria === GEOMETRY_TYPES.POLYGON) return polygonInBounds(ent.aparencia.vertices, bounds)
-    if (ent.aparencia.geometria === GEOMETRY_TYPES.CIRCLE) return rectInBounds(ent,bounds)
+    if (ent.aparencia.geometria === GEOMETRIA.rect.id) return rectInBounds(ent, bounds)
+    if (ent.aparencia.geometria === GEOMETRIA.polygon.id) return polygonInBounds(ent.aparencia.vertices, bounds)
+    if (ent.aparencia.geometria === GEOMETRIA.circle.id) return circleInBounds(ent,bounds)
     return pointInBounds(ent.posicao, bounds)}
   );
 }

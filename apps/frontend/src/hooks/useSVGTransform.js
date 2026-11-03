@@ -139,14 +139,14 @@ export function useSVGTransform({ onRotate, onZoom } = {}) {
   };
 
   const focusOn = ({ posicao, dimensao }, padding = 50) => {
-    const bbox = {
+    const bounds = {
       minX: posicao.x - dimensao.x/2,
       minY: posicao.y - dimensao.y/2,
       maxX: posicao.x + dimensao.x/2,
       maxY: posicao.y + dimensao.y/2
     };
 
-    fitToBounds(bbox, padding);
+    fitToBounds(bounds, padding);
   };
   
   const resetView = () => {

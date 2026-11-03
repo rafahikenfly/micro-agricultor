@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer } from "react";
-import { GEOMETRY_TYPES } from "micro-agricultor";
+import { GEOMETRIA } from "micro-agricultor";
 import { useSelection } from "../../hooks/useSelection";
 
 export const ACOES_MAPA = {
@@ -39,10 +39,11 @@ const estadoInicialMapa = {
     plantar: {},
     monitorar: {},
     inspecionar: {},
+    operar: {},
   },
   drag: {
     active: false,
-    geometry: GEOMETRY_TYPES.RECT,
+    geometry: GEOMETRIA.rect.id,
     preview: {
       fill: "rgba(0, 123, 255, 0.2)",
       stroke: "rgba(0, 123, 255, 0.9)",
@@ -53,7 +54,7 @@ const estadoInicialMapa = {
   },
   preview: {
     active: false,
-    geometry: GEOMETRY_TYPES.RECT,
+    geometry: GEOMETRIA.rect.id,
     preview: {
       fill: "rgba(217, 224, 11, 0.4)",
       stroke: "rgba(45, 211, 12, 0.9)",

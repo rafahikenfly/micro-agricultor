@@ -127,7 +127,10 @@ export const entidadesService = (tipoEntidadeId) => {
     case "horta":
       return hortasService;
 
-    default:
+    case "dispositivo":
+      return dispositivosService;
+
+      default:
       throw new Error(`Tipo de entidade não suportado: ${tipoEntidadeId}`);
   }
 }

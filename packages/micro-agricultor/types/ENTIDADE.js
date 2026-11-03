@@ -31,4 +31,14 @@ export const ENTIDADE = {
     manejavel: false,
     inspecionavel: false,
   },
+  dispositivo: {
+    id: "dispositivo",
+    nome: "Dispositivo",
+    masculino: true,
+    variant: VARIANTE.LIGHTBLUE.id,
+    desenhavel: true,
+    monitoravel: true,
+    manejavel: false,
+    inspecionavel: false,
+  }
 };

@@ -21,6 +21,13 @@ export const cacheService = {
       [{ field: "isDeleted", op: "==", value: false }],
       { field: "nome" }
     ),
+  getDispositivos: async () =>
+    await cache.get(
+      "dispositivos",
+      crud.dispositivosService,
+      [{ field: "isDeleted", op: "==", value: false }],
+      { field: "nome" }
+    ),
   getHortas: async () =>
     await cache.get(
       "hortas",
@@ -43,12 +50,12 @@ export const cacheService = {
       { field: "nome" }
     ),
   getEstagiosEspecie: async () =>
-  await cache.get(
-    "estagios_especie",
-    crud.estagiosEspecieService,
-    [{ field: "isDeleted", op: "==", value: false }],
-    { field: "nome" }
-  ),
+    await cache.get(
+      "estagios_especie",
+      crud.estagiosEspecieService,
+      [{ field: "isDeleted", op: "==", value: false }],
+      { field: "nome" }
+    ),
   getCaracteristicas: async () =>
     await cache.get(
       "caracteristicas",
