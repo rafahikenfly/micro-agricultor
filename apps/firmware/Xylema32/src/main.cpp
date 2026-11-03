@@ -64,13 +64,6 @@ const int GRBL_ABORT_PIN = 14;
 const int PUSH_PIN = 7;
 const int ATUADOR_PIN[TOTAL_ATUADORES] = { 15, 16, 17, 18};
 
-
-// Canais LED
-const int CHANNEL_R = 5;
-const int CHANNEL_G = 6;
-const int CHANNEL_B = 7;
-
-
 // Variáveis de configuração em nível de software
 String ssid;
 String password;
@@ -132,7 +125,7 @@ void serialGRBLReceive();
 void ledFade(int maxR, int maxG, int maxB, unsigned long tempoFadeMs, unsigned long intervaloMaximosMs);
 void led(int r, int g, int b);
 void loopLED();
-void processarPush(unsigned long duracaoPush);
+void handlePush(unsigned long duracaoPush);
 void loopPush();
 void logDebug(int level, const char* formato, ...);
 void logWaiting(int level);
@@ -183,12 +176,6 @@ void setupPins() {
   pinMode(LED_B_PIN, OUTPUT);
 
   // Configuração do PWM do ESP32 (Frequência de 5000Hz, resolução de 8 bits = 0 a 255)
-  //ledcSetup(CHANNEL_R, 5000, 8);
-  //ledcAttachPin(LED_R_PIN, CHANNEL_R);
-  //ledcSetup(CHANNEL_G, 5000, 8);
-  //ledcAttachPin(LED_G_PIN, CHANNEL_G);
-  //ledcSetup(CHANNEL_B, 5000, 8);
-  //ledcAttachPin(LED_B_PIN, CHANNEL_B);
   ledcAttach(LED_R_PIN, 5000, 8);
   ledcAttach(LED_G_PIN, 5000, 8);
   ledcAttach(LED_B_PIN, 5000, 8);
@@ -277,7 +264,7 @@ void lerConfig() {
   mqtt_status_channel = preferences.getString("status_ch", "cnc/estado");
   mqtt_event_channel = preferences.getString("event_ch", "cnc/evento");
   intervaloEstado = preferences.getInt("intervalo", 1000);
-  debugLevel = preferences.getInt("dbg_level", 2); // Padrão 2 (INFO) se não existir
+  //debugLevel = preferences.getInt("dbg_level", 2); // Padrão 2 (INFO) se não existir
 
   // Tenta ler o pwmMax. Se a chave "pwmMax" existir, o getBytes preenche o array.
   size_t bytesMax = preferences.getBytes("pwmMax", pwmMax, sizeof(pwmMax));
@@ -574,16 +561,16 @@ void loopLED() {
   // 5. ESTADO DESCONHECIDO (Fallback): Catch-all -> branco fixo
   led(255, 255, 255);
 }
-void processarPush(unsigned long duracaoPush) {
+void handlePush(unsigned long duracaoPush) {
   bool eLongPush = (duracaoPush >= longPushMs);
 
   // Caso 1: Xylema Bloqueado
   if (estadoXylema == BLOQUEADO || estadoXylema == ERRO_CRITICO) {
     if (eLongPush) {
-      logDebug(DEBUG_EVENT, "Reset GRBL manual");
-      reportEventMQTT(INFO, "Reset GRBL manual", "Xylema32");
-      limparFila("Reset manual");
-      pulsoGRBL(GRBL_RESET_PIN, 100, 2000);
+      logDebug(DEBUG_EVENT, "Xylema destravado manualmente");
+      reportEventMQTT(INFO, "Xylema destravado manualmente", "Xylema32");
+      limparFila("Xylema destravado manualmente");
+      estadoXylema = PRONTO;
     }
     else {
       logDebug(DEBUG_ERROR, "Push curto sem ação com Xylema32 bloqueado");
@@ -626,7 +613,7 @@ void loopPush() {
       logDebug(DEBUG_VERBOSE, "Botão solto após %lu ms.", duracao);
       pushed = false;
       // Executa a lógica com base no tempo que ficou pressionado
-      processarPush(duracao);
+      handlePush(duracao);
     }
   }
 }
@@ -654,6 +641,7 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
 
   logDebug(DEBUG_INFO, "<-- MQTT: %.*s", length, payload);
   if (error) {
+    reportEventMQTT(GRAVE, "Erro deserializando comando", "XYLEMA32");
     logDebug(DEBUG_ERROR, "Erro deserializando: %s", error.c_str());
     return;
   }
@@ -797,8 +785,8 @@ bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   if (ok) {
     logDebug(DEBUG_VERBOSE, "Ok: %s", comando.data.c_str());
     acknowledgeCompleted(comando.id);
-    if (popQueue) filaCNC.pop();
   }
+  if (popQueue) filaCNC.pop();
   return ok;
 }
 bool handleComandoHEARTBEAT() {
@@ -859,7 +847,7 @@ bool handleComandoON(ComandoCNC comando) {
     logDebug(DEBUG_ERROR, "Comando ON com índice de atuador inválido: %d", index);
     return false;
   }
-  int pwm = extrairParametro(comando.data.c_str(), 'F') | pwmMax[index];
+  int pwm = extrairParametro(comando.data.c_str(), 'F', 255);
 
   // Atualiza os estados
   int pwmMapeado = map(pwm, 1, 255, pwmMin[index], pwmMax[index]);
@@ -957,6 +945,7 @@ bool handleComandoSET(ComandoCNC comando) {
       logDebug(DEBUG_ERROR, "Nível de. debug %d inválido.", index);
       return false;
     }
+    debugLevel = index;
     preferences.begin("xylema-cfg", false);
     preferences.putInt("dbg_level", index);
     preferences.end();
@@ -1039,7 +1028,7 @@ bool handleComandoDROP(ComandoCNC comando) {
     return false;
   }
   char buffer[128];
-  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91 G1 X100 F500\nG1 Z-100 F500\nG90", dockPos[index][0], dockPos[index][1], dockPos[index][2]);
+  snprintf(buffer, sizeof(buffer), "G90 G0 Z-2\nG0 X%.3f Y%.3f\nG0 Z%.3f\nG91\nG1 X100 F500\nG1 Z-100 F500\nG90", dockPos[index][0], dockPos[index][1], dockPos[index][2]);
   serialGRBLSend(buffer); // GERA NA MARRA O STRING
   estadoXylema = PRONTO;  //OVERRIDE DO AGUARDA OK!
   return true;

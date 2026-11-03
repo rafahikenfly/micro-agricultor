@@ -64,12 +64,11 @@ class CNCJogApp:
         self.is_connected = False
 
         # Dicionário para rastrear o estado de cada acessório (False = Desligado, True = Ligado)
-        self.atuador = {}
-        self.atuadores = {
-            0: {"label": "Desativado"},
-            1: {"label": "Motor"},
-            2: {"label": "Solenóide"},
-            3: {"label": "Mini-bomba"}
+        self.atuador = {
+            0: {"label": "Desativado", "estado": 0},
+            1: {"label": "Motor", "estado": 0},
+            2: {"label": "Solenóide", "estado": 0},
+            3: {"label": "Mini-bomba", "estado": 0}
         }
 
         self.create_widgets()
@@ -112,6 +111,7 @@ class CNCJogApp:
                             self.on_ackQueued(msg_id)
                         elif status == "ERROR":
                             self.on_ackError(msg_id)
+                    self.atualizarComandosAtivos()
 
                     self.root.after(0, lambda: self.log_ack(msg_id, status, data))
                 elif "estado" in topic:
@@ -123,16 +123,18 @@ class CNCJogApp:
 
     def atualizarEstados(self, data):
         grbl = data.get("grbl", {})
-        fila = data.get("fila", {})
-        acessorios_data = data.get("acessorios", {})        
 
-        grbl_state = grbl.get("estado", 6)
-        guiche_state = fila.get("guiche", 0)
-        grbl_disp = grbl.get("disponivel", "--")
-        fila_disp = fila.get("disponivel", "--")
-        endstop = grbl.get("endstops", "--")
-
+        grblState = grbl.get("est", 6)
+        grblBuffer = grbl.get("bf", "--")
+        grblEndstops = grbl.get("fdc", "--")
         pos_data = grbl.get("pos", {"x": 0.0, "y": 0.0, "z": 0.0})
+        
+        xylema = data.get("xylema", {})
+        xylemaState = xylema.get("est", 0)
+        xylemaBuffer = xylema.get("bf", 0)
+        
+        atuadores = data.get("at", {})
+
         if isinstance(pos_data, dict):
             x = pos_data.get("x", 0.0)
             y = pos_data.get("y", 0.0)
@@ -142,23 +144,22 @@ class CNCJogApp:
             posicao = str(pos_data)
         
         # Atualiza os textos na interface
-        info_grbl = GRBL_ESTADOS.get(grbl_state, {"texto": f"Outro ({grbl_state})", "cor": "black"})
+        info_grbl = GRBL_ESTADOS.get(grblState, {"texto": f"Outro ({grblState})", "cor": "black"})
         self.lbl_grbl_state.config(text=info_grbl["texto"], fg=info_grbl["cor"])
         self.lbl_pos.config(text=f"[{posicao}]")
-        info_guiche = XYLEMA_ESTADOS.get(guiche_state, {"texto": f"Outro ({grbl_state})", "cor": "black"})
+        info_guiche = XYLEMA_ESTADOS.get(xylemaState, {"texto": f"Outro ({grblState})", "cor": "black"})
         self.lbl_guiche_state.config(text=info_guiche["texto"], fg=info_guiche["cor"])
-        self.lbl_buffers.config(text=f"Grbl: {grbl_disp} instruções | Fila: {fila_disp} instruções")
-        self.lbl_endstop.config(text=f"{endstop}", fg="red")
+        self.lbl_buffers.config(text=f"Grbl: {grblBuffer} instruções | Fila: {xylemaBuffer} instruções")
+        self.lbl_endstop.config(text=f"{grblEndstops}", fg="red")
 
         # Atualiza os acessórios na interface
-        for i, info_atuador in self.atuadores.items():
-            estado_bool = acessorios_data.get(str(i), acessorios_data.get(i, False))
-                    
-            if i in self.atuador:
-                self.atuador[i]["estado"] = estado_bool
-                info = self.atuador.get(i)
-                label_nome = info_atuador.get("label", f"Acessório {i}")
-                self.atualizarVisualBtn(info["botao"], estado_bool, label_nome)        
+        for i, at in self.atuador.items():
+            atState = atuadores.get(str(i), atuadores.get(i, 0))
+            at["estado"] = atState
+
+            label = at.get("label", f"Atuador {i}")
+            button = at.get("botao")
+            self.atualizarVisualBtn(button, atState, label, atState)        
     def log_ack(self, msg_id, status, data = None):
         # Adiciona a linha no painel de log visual da interface
         log_text = f"[ACK Recebido] ID: {msg_id} -> Status: {status} {data}\n"
@@ -170,12 +171,13 @@ class CNCJogApp:
         # Formata um timestamp legível para o log
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         
+        ts = data.get("timestamp", 0)
         tipo = data.get("tipo", "INFO")
         origem = data.get("origem", "DESCONHECIDO")
-        mensagem = data.get("mensagem", "")
+        mensagem = data.get("msg", "")
         
         # Monta a linha de texto formatada para a caixa de eventos
-        log_text = f"[{timestamp}] [{tipo}] {origem}: {mensagem}\n"
+        log_text = f"[{timestamp} ({ts})] [{tipo}] {origem}: {mensagem}\n"
         
         # Insere na caixa de texto da aba de eventos
         self.log_evento_box.insert("end", log_text)
@@ -189,9 +191,10 @@ class CNCJogApp:
         log_text = f"[{timestamp}] {data}\n"
         
         # Insere na caixa de texto da aba de comandos
-        self.log_comando_box.insert("end", log_text)
-        self.log_comando_box.see("end")  # Auto-scroll para a última linha
-
+        self.logComandosCompletados.insert("end", log_text)
+        self.logComandosCompletados.see("end")  # Auto-scroll para a última linha
+    def atualizarComandosAtivos(self):
+        return
     def on_ackQueued(self, cmd_id):
         if cmd_id in self.active_commands:
             self.active_commands[cmd_id]["status"] = "QUEUED"
@@ -245,7 +248,15 @@ class CNCJogApp:
         
         # Envia o comando
         msg_id = self.proximoId()
-        comando = f'{{"id":{msg_id}, "data":"{data}", "rt":{rt}, "job":"{job}"}}'
+        payload = {
+            "id": msg_id,
+            "data": data,
+            "rt": rt,
+            "job": job
+        }
+
+        # O json.dumps faz todo o trabalho sujo: escapa \n, converte True/False e trata aspas
+        comando = json.dumps(payload)
 
         comando_topic = self.topic_entry.get() + "/comandos"
         self.client.publish(comando_topic, comando)
@@ -253,28 +264,12 @@ class CNCJogApp:
 
         # Salva o comando ativo
         self.active_commands[msg_id] = {"status": "SENT", "data": comando.replace(chr(10), ' | ')}
+
+        self.atualizarComandosAtivos()
         return True
-    #def publishRT(self, rt, value = 0, payload = ""):
-    #    if not self.is_connected:
-    #        messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
-    #        return
-    #    msg_id = self.proximoId()
-    #    # Monta o G-code
-    #    data = f'{{"id":{msg_id}, "type":"rt", "data":"{rt}", "value":{value}, "payload": "{payload}"}}'
-    #    self.despachaComando(data, msg_id)
-    #def publishGCode(self, gcode, job):
-    #    msg_id = self.proximoId()
-    #    # Monta o G-code
-    #    data = f'{{"id":{msg_id}, "data":"{gcode}", "job":"{job}"}}'
-    #    return self.despachaComando(data, msg_id)
-    #def publishSync(self, sync, value = 0, payload = ""):
-    #    msg_id = self.proximoId()
-    #    # Monta o Sync
-    #    data = f'{{"id":{msg_id}, "type":"sync", "data":"{sync}", value: {value}, payload: "{payload}"}}'
-    #    return self.despachaComando(data, msg_id)
     def despachaCustomCommand(self):
-        pubRt = False if self.custom_type_var.get() == "sync" else True
-        data = self.custom_data_entry.get().strip()
+        pubRt = False
+        data = self.custom_data.get().strip()
         return self.despachaComando(data, pubRt)
 
     def rodarTeste(self, tipoTeste):
@@ -307,11 +302,11 @@ class CNCJogApp:
         print(f"--- Macro {macro} enviada ---")
             
 
-    def atualizarVisualBtn(self, btn, ligado, label):
+    def atualizarVisualBtn(self, btn, ligado, label, value):
         if ligado:
             # Força o fundo vermelho e letras brancas
             btn.config(
-                text=f"{label}\n[LIGADO]", 
+                text=f"{label}\n[{value}]",
                 bg="#f44336", 
                 fg="white",
                 activebackground="#d32f2f", # Cor ao clicar
@@ -325,15 +320,6 @@ class CNCJogApp:
                 activebackground="#c0c0c0",
                 activeforeground="black"
             )
-    def atualizarCamposCustom(self):
-        # Opcional: Ajusta o estado dos campos se quiser desativar o que não é usado no gcode
-        tipo = self.custom_type_var.get()
-        if tipo == "gcode":
-            self.custom_value_entry.config(state="disabled")
-            self.custom_payload_entry.config(state="disabled")
-        else:
-            self.custom_value_entry.config(state="normal")
-            self.custom_payload_entry.config(state="normal")
 
 
     def toggle_atuador(self, i):
@@ -342,14 +328,16 @@ class CNCJogApp:
 
         # Inverte o estado atual local apenas para saber qual comando enviar, 
         # mas sem mexer no visual do botão agora (deixa isso para o update_telemetry)
-        info = self.atuador[i]
-        pwm = info["pwm"].get()
-        estado = info["estado"]
+        at = self.atuador[i]
+        pwm = at["slider"].get()
+        estado = at["estado"]
 
         if(pwm == estado):
-            self.despachaComando(f"OFF I{i}", pubRt)
+            print("false", pwm, estado)
+            self.despachaComando(f"OFF I{i} F0", pubRt)
         else:
-            self.despachaComando(f"ON I{i} L{pwm}", pubRt) 
+            print("true", pwm, estado)
+            self.despachaComando(f"ON I{i} F{pwm}", pubRt) 
 
 
     def toggle_random_test(self):
@@ -362,12 +350,12 @@ class CNCJogApp:
             self.random_test_active = True
             threading.Thread(target=self._random_loop_worker, daemon=True).start()
             print("--- Teste de movimento aleatório ATIVADO ---")
-            self.atualizarVisualBtn(self.randomTestBtn, True, "Aleatório")
+            self.atualizarVisualBtn(self.randomTestBtn, True, "Aleatório", "ATIVO")
         else:
             # Desativa o modo
             self.random_test_active = False
             print("--- Teste de movimento aleatório DESATIVADO ---")
-            self.atualizarVisualBtn(self.randomTestBtn, False, "Aleatório")
+            self.atualizarVisualBtn(self.randomTestBtn, False, "Aleatório", "")
     def toggle_square_test(self):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -378,12 +366,12 @@ class CNCJogApp:
             self.square_test_active = True
             threading.Thread(target=self._square_loop_worker, daemon=True).start()
             print("--- Teste de movimento quadrado ATIVADO ---")
-            self.atualizarVisualBtn(self.squareTestBtn, True, "Quadrado")
+            self.atualizarVisualBtn(self.squareTestBtn, True, "Quadrado", "ATIVO")
         else:
             # Desativa o modo
             self.square_test_active = False
             print("--- Teste de movimento quadrado DESATIVADO ---")
-            self.atualizarVisualBtn(self.squareTestBtn, False, "Quadrado")
+            self.atualizarVisualBtn(self.squareTestBtn, False, "Quadrado", "")
     def toggle_zigzag_test(self):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -394,12 +382,12 @@ class CNCJogApp:
             self.zigzag_test_active = True
             threading.Thread(target=self._zigzag_loop_worker, daemon=True).start()
             print("--- Teste de movimento zig-zag ATIVADO ---")
-            self.atualizarVisualBtn(self.zigzagTestBtn, True, "Zigzag")
+            self.atualizarVisualBtn(self.zigzagTestBtn, True, "Zigzag", "ATIVO")
         else:
             # Desativa o modo
             self.zigzag_test_active = False
             print("--- Teste de movimento zig-zag DESATIVADO ---")
-            self.atualizarVisualBtn(self.zigzagTestBtn, False, "Zigzag")
+            self.atualizarVisualBtn(self.zigzagTestBtn, False, "Zigzag", "")
     def toggle_limit_test(self):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -410,12 +398,12 @@ class CNCJogApp:
             self.limit_test_active = True
             threading.Thread(target=self._limit_loop_worker, daemon=True).start()
             print("--- Teste de movimento até limites ATIVADO ---")
-            self.atualizarVisualBtn(self.limitTestBtn, True, "Limites")
+            self.atualizarVisualBtn(self.limitTestBtn, True, "Limites", "ATIVO")
         else:
             # Desativa o modo
             self.limit_test_active = False
             print("--- Teste de movimento até limites DESATIVADO ---")
-            self.atualizarVisualBtn(self.limitTestBtn, False, "Limites")
+            self.atualizarVisualBtn(self.limitTestBtn, False, "Limites", "")
     def toggle_helix_test(self):
         if not self.is_connected:
             messagebox.showwarning("Aviso", "Não conectado ao broker MQTT!")
@@ -426,12 +414,12 @@ class CNCJogApp:
             self.helix_test_active = True
             threading.Thread(target=self._helix_loop_worker, daemon=True).start()
             print("--- Teste de movimento helicoidal ATIVADO ---")
-            self.atualizarVisualBtn(self.helixTestBtn, True, "Helicoidal")
+            self.atualizarVisualBtn(self.helixTestBtn, True, "Helicoidal", "ATIVO")
         else:
             # Desativa o modo
             self.helix_test_active = False
             print("--- Teste de movimento helicoidal DESATIVADO ---")
-            self.atualizarVisualBtn(self.helixTestBtn, False, "Helicoidal")
+            self.atualizarVisualBtn(self.helixTestBtn, False, "Helicoidal", "")
 
 
     def _random_loop_worker(self):
@@ -664,43 +652,15 @@ class CNCJogApp:
         custom_frame = tk.LabelFrame(parent, text=" Comando Personalizado ", padx=5, pady=5)
         custom_frame.pack(fill="x", padx=5, pady=2)
 
-        # Variável para armazenar o tipo selecionado (padrão "gcode")
-        self.custom_type_var = tk.StringVar(value="gcode")
-
-        # --- Linha 1: RadioButtons para seleção do tipo ---
-        tipo_frame = tk.Frame(custom_frame)
-        tipo_frame.pack(fill="x", anchor="w", pady=(0, 5))
-
-        tk.Radiobutton(tipo_frame, text="G-code", variable=self.custom_type_var, value="gcode", command=self.atualizarCamposCustom).pack(side="left", padx=(0, 10))
-        tk.Radiobutton(tipo_frame, text="Sync", variable=self.custom_type_var, value="sync", command=self.atualizarCamposCustom).pack(side="left", padx=(0, 10))
-        tk.Radiobutton(tipo_frame, text="Tempo Real", variable=self.custom_type_var, value="rt", command=self.atualizarCamposCustom).pack(side="left")
-
-        # --- Linha 2: Entradas para Data, Value e Payload ---
-        inputs_frame = tk.Frame(custom_frame)
-        inputs_frame.pack(fill="x", expand=True)
-
-        inputs_frame.grid_columnconfigure(0, weight=2)  # Data
-        inputs_frame.grid_columnconfigure(1, weight=1)  # Value
-        inputs_frame.grid_columnconfigure(2, weight=4)  # Payload (maior)
-
-        self.custom_data_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
-        self.custom_value_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
-        self.custom_payload_entry = tk.Entry(inputs_frame, font=("Consolas", 9))
-
-        # Posicionamento com Grid
-        self.custom_data_entry.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=2)
-        self.custom_value_entry.grid(row=0, column=1, sticky="ew", padx=3, pady=2)
-        self.custom_payload_entry.grid(row=0, column=2, sticky="ew", padx=3, pady=2)
+        # Configura a coluna 0 para expandir com o redimensionamento (necessário para sticky="ew")
+        custom_frame.grid_columnconfigure(0, weight=1)
+        self.custom_data = tk.Entry(custom_frame, font=("Consolas", 9))
+        self.custom_data.grid(row=0, column=0, sticky="ew", padx=(0, 3), pady=2)
 
         # Botão Enviar
-        tk.Button(inputs_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.despachaCustomCommand).grid(row=0, column=3, padx=(5, 0), pady=2)
+        tk.Button(custom_frame, text="Enviar", width=8, bg="#e0e0e0", command=self.despachaCustomCommand).grid(row=0, column=3, padx=(5, 0), pady=2)
 
-        # Atalho de Enter em qualquer campo
-        for entry in (self.custom_data_entry, self.custom_value_entry, self.custom_payload_entry):
-            entry.bind("<Return>", lambda e: self.despachaCustomCommand())
-
-        # Atualiza o estado inicial dos campos com base no padrão (gcode)
-        self.atualizarCamposCustom()
+        self.custom_data.bind("<Return>", lambda e: self.despachaCustomCommand())
 
     def createFrameAtuadores(self, parent):
         frame_atuadores = tk.LabelFrame(parent, text="Acessórios", padx=5, pady=2)
@@ -712,7 +672,7 @@ class CNCJogApp:
         tk.Radiobutton(frame_modo, text="Real-time", variable=self.modo_comando, value="rt").pack(side=tk.LEFT, padx=5)
         tk.Radiobutton(frame_modo, text="Sync", variable=self.modo_comando, value="sync").pack(side=tk.LEFT, padx=5)
         
-        for i, info in self.atuadores.items():
+        for i, info in self.atuador.items():
             linha = (i // 4) + 1
             coluna = i % 4
 
@@ -737,11 +697,8 @@ class CNCJogApp:
             pwm.grid(row=1, column=0, sticky="ew", padx=2, pady=2)
 
             # Armazena as referências
-            self.atuador[i] = {
-                "estado": 0, 
-                "botao": btn, 
-                "pwm": pwm
-            }
+            self.atuador[i]["botao"] = btn
+            self.atuador[i]["slider"] = pwm
 
     def createFrameDocas(self, parent):
         frame_docas = tk.LabelFrame(parent, text="Docas", padx=5, pady=2)
@@ -804,16 +761,19 @@ class CNCJogApp:
         log_notebook = ttk.Notebook(parent)
         log_notebook.pack(fill="both", expand=True, padx=5, pady=5)
 
-        tab_comandos = ttk.Frame(log_notebook)
-        log_notebook.add(tab_comandos, text="Comandos Completados")
-        self.log_comando_box = tk.Text(tab_comandos, height=10, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 10))
-        self.log_comando_box.pack(fill="both", expand=True)
+        # COMPLETADOS
+        tabCompletados = ttk.Frame(log_notebook)
+        log_notebook.add(tabCompletados, text="Comandos Completados")
+        self.logComandosCompletados = tk.Text(tabCompletados, height=10, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 10))
+        self.logComandosCompletados.pack(fill="both", expand=True)
 
+        # ACKS
         tab_acks = ttk.Frame(log_notebook)
         log_notebook.add(tab_acks, text=" Monitor de ACKs ")
         self.log_ack_box = tk.Text(tab_acks, height=10, bg="#1e1e1e", fg="#00ff00", font=("Consolas", 10))
         self.log_ack_box.pack(fill="both", expand=True)
 
+        # EVENTOS
         tab_eventos = ttk.Frame(log_notebook)
         log_notebook.add(tab_eventos, text=" Eventos e Alertas ")
         self.log_evento_box = tk.Text(tab_eventos, height=10, bg="#1e1e1e", fg="#ffcc00", font=("Consolas", 10))
