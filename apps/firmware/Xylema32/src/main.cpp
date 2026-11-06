@@ -836,8 +836,36 @@ int extrairParametro(const char* comando, char letra, int valorPadrao = -1) {
     return atoi(pos); 
 }
 String extrairParametroStr(const char* comando, char letra, String valorPadrao = "") {
-  return valorPadrao;
-}
+// Procura pela ocorrência da letra (convertendo para maiúsculo para padronizar)
+    const char* pos = strchr(comando, toupper(letra));
+    
+    if (pos == NULL) {
+      return valorPadrao; // Retorna o valor padrão se a letra não existir
+    }
+    
+    pos++; // Avança para logo após a letra
+    
+    // Ignora espaços em branco iniciais após a letra
+    while (*pos != '\0' && isspace((unsigned char)*pos)) {
+      pos++;
+    }
+    
+    // Se após os espaços chegarmos ao fim da string, retorna o valor padrão
+    if (*pos == '\0') {
+      return valorPadrao;
+    }
+    
+    // Cria a String a partir da posição atual
+    String resultado = "";
+    
+    // Lê até encontrar um espaço, quebra de linha ou o fim da string
+    while (*pos != '\0' && !isspace((unsigned char)*pos)) {
+      resultado += *pos;
+      pos++;
+    }
+    
+    return resultado.length() > 0 ? resultado : valorPadrao;
+  }
 
 bool handleComandoON(ComandoCNC comando) {
   // Obtém parâmetros
@@ -961,14 +989,14 @@ bool handleComandoSET(ComandoCNC comando) {
 bool handleComandoJOB(ComandoCNC comando) {
   bool ok = false;
   if (comando.data.indexOf("F") != -1)  {
-    String job = extrairParametroStr(comando.data.c_str(), 'F');
+    String job = extrairParametroStr(comando.data.c_str(), 'E');
     logDebug(DEBUG_EVENT, "Finalizada a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Finalizada a tarefa " + jobAtual, "XYLEMA");
     jobAtual = "";
     ok = true;
   }
   if (comando.data.indexOf("S") != -1 && jobAtual == "")  {
-    String job = extrairParametroStr(comando.data.c_str(), 'S');
+    String job = extrairParametroStr(comando.data.c_str(), 'B');
     logDebug(DEBUG_EVENT, "Iniciando a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
     jobAtual = job;

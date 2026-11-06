@@ -1,7 +1,8 @@
-import { ENTIDADE, ORIGEM } from "micro-agricultor";
+import { adquirirTarefa, ENTIDADE, ORIGEM } from "micro-agricultor";
 import { log } from "../logger/index.js";
 import { cacheService } from "../../services/cache.js";
-import { dispatchCommand } from "./index.js";
+import { despachaComando } from "./index.js";
+import { tarefasService } from "../../services/crud.js";
 
 
 export async function handleGRBLCNC(topic, message, grblCnc) {
@@ -60,6 +61,7 @@ export async function handleGRBLCNC(topic, message, grblCnc) {
         }
         else if (lowerTopic.includes("estado")) handleMQTTEstado(payload, grblCnc);
         else if (lowerTopic.includes("evento")) handleMQTTEvento(payload);
+        else if (lowerTopic.includes("comandos")) handleMQTTComando(payload, grblCnc);
         else log(`MQTT ${message} no tópico ${topic} ignorada`);
     } catch (e) {
         log(`[handleGRBLCNC] Erro ao decodificar mensagem recebida: ${e}`);
@@ -123,24 +125,87 @@ function handleMQTTEvento(payload) {
         console.error(`Erro ao processar log de evento: ${e}`);
     }
 }
-async function rapidMoveJog(grblCnc, axis, direction, step, msgId = 1) {
-    // Monta o G-code exatamente como no Python (usando \n para quebras de linha)
-    const data = `G91 G0 ${axis}${direction * step}\nG90`;
-    
-    // Despacha o comando usando a função que criamos anteriormente
-    const sucesso = await dispatchCommand(grblCnc, data, msgId, false, "");
-    
-    return sucesso;
+function moverGrblPara(filaGrbl, { x, y, z } = {}, tarefaId = "") {
+    let eixosGCode = [];
+
+    // Verifica cada eixo individualmente no objeto, diferenciando 0 de indefinido/nulo
+    if (x !== undefined && x !== null) {
+        eixosGCode.push(`X${x}`);
+    }
+    if (y !== undefined && y !== null) {
+        eixosGCode.push(`Y${y}`);
+    }
+    if (z !== undefined && z !== null) {
+        eixosGCode.push(`Z${z}`);
+    }
+
+    // Se nenhum eixo foi informado no objeto, retorna false
+    if (eixosGCode.length === 0) {
+        return false; 
+    }
+
+    const coordenadasStr = eixosGCode.join(" ");
+    const data = `G90 G0 ${coordenadasStr}`;
+
+    filaGrbl.adicionar(tarefaId, data);
+    return true;
 }
+function handleMQTTComando(payload, grblCnc) {
+    log(`[handleGRBLCNC] Comando do GRBLCNC ${grblCnc.id} recebido: ${payload.data}`);
 
-export async function executarTesteMovimento(grblCnc) {
-    console.log("Iniciando teste de movimento JOG...");
+}
+export function adquirirTarefaGrbl({filaGrbl, tarefa, cache}) {
+    // 1. verifica se a tarefa pode ser adquirida pelo GRBLCNC
+    // Associada a outro tipo de agente
+    if (tarefa.execucao.agente?.tipo !== "GRBLCNC") {
+        console.error(`Tarefa atribuída a agente tipo ${tarefa.execucao.agente.tipo}`)
+        return false;
+    }
+    // Adquirida por outro agente
+    const agoraMs = Date.now();
+    if (agoraMs < tarefa.execucao.adquiridaAte) {
+        log(`[handleGRBLCNC] Tarefa ${tarefa.id} adquirida pelo agente ${tarefa.execucao.agente?.id}`);
+        return false;
+    }
+    //TODO: GrblCNC tem os sensores/atuadores necessários 
+    if (!filaGrbl.dispositivo) return false;
+    //GrblCNC tem o alcance necessário
+    const entidades = [];
+    tarefa.contexto.entidadesId.forEach(entidadeId => {
+        const ent = cache.map.get(entidadeId);
+        if (!ent || !ent.posicao) {
+            console.error(`Entidade ${entidadeId} não encontrada ou sem posição.`);
+            return;
+        }
+        const alcanceX = filaGrbl.dispositivo.dimensao.x / 2;
+        const alcanceY = filaGrbl.dispositivo.dimensao.y / 2;
+        const alcanceZ = filaGrbl.dispositivo.dimensao.z / 2; //TODO: NO EIXO Z A POSICAO É INFERIOR, NÃO O MEIO
 
-    // Movimento no eixo X (-100) -> axis: 'X', direction: -1, step: 100
-    await rapidMoveJog(grblCnc, 'X', -1, 100, 101);
+        // Verifica se a distância do centro do GRBLCNC até a entidade está dentro do raio/limite
+        const noAlcanceX = Math.abs(ent.posicao.x - filaGrbl.dispositivo.posicao.x) <= alcanceX;
+        const noAlcanceY = Math.abs(ent.posicao.y - filaGrbl.dispositivo.posicao.y) <= alcanceY;
+        const noAlcanceZ = Math.abs(ent.posicao.z - filaGrbl.dispositivo.posicao.z) <= alcanceZ;
+        if (!noAlcanceX || !noAlcanceY || !noAlcanceZ) {
+            console.error(`Entidade ${entidadeId} fora do alcance do GRBL ${filaGrbl.dispositivo.id}.`);
+            return;
+        }
+        console.log(`Entidade ${entidadeId} No alcance do GRBL ${filaGrbl.dispositivo.id}. (${ent.posicao.x},${ent.posicao.y},${ent.posicao.z})`);
+        entidades.push(ent);
+    });
 
-    // Pequena pausa entre os comandos se necessário, ou envie o Y logo em seguida:
+    // 2. Adquire a tarefa para o GRBLcnc se alguma entidade puder ser manejada
+    if (entidades.length) {
+        const prazoExpiracao = 300000; // 5 minutos
+        const tarefaAdquirida = adquirirTarefa({
+            tarefa,
+            agente: {tipo: "GRBLCNC", id: filaGrbl.dispositivo.id},
+            timestamp: agoraMs,
+            prazoExpiracao,
+        });
     
-    // Movimento no eixo Y (-100) -> axis: 'Y', direction: -1, step: 100
-    await rapidMoveJog(grblCnc, 'Y', -1, 100, 102);
+        tarefasService.update(tarefasService.getRefById(tarefa.id),tarefaAdquirida, {nome: "teste", uid:"teste2"})
+        log(`[handleGRBLCNC] Tarefa atualizada no Firebase: ${tarefa.id}`);
+        filaGrbl.adicionar("", `JOB B${tarefa.id}`);
+        moverGrblPara(filaGrbl, entidades[0].posicao, tarefa.id);
+    }
 }

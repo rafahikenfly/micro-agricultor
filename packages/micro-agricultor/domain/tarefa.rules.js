@@ -84,11 +84,14 @@ export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => { //
 }
 
 export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000}) => {
-  if (tarefa.resolucao?.tipoResolucaoId) throw new Error(`[adquirirTarefa] Tarefa ${tarefa.id} já resolvida`);
-  if (tarefa.execucao !== null) {
-    const expirou = tarefa.execucao.expiraEm < timestamp;
-    if (!expirou) throw new Error(`[adquirirTarefa] Tarefa ${tarefa.id} com execução não expirada`);
-  }
+  if (tarefa.resolucao?.tipoResolucaoId) {
+    console.error(`[adquirirTarefa] Tarefa ${tarefa.id} já resolvida`)
+    return false;
+  };
+  if (tarefa.execucao && timestamp > tarefa.execucao.expiraEm) {
+    console.error(`[adquirirTarefa] Tarefa ${tarefa.id} com execução não expirada`)
+    return false
+  };
 
   return {
     ...tarefa,

@@ -1,5 +1,5 @@
 import { log } from "./core/logger/index.js";
-import { startMQTT } from "./core/mqtt/index.js";
+import { getClient, startMQTT } from "./core/mqtt/index.js";
 import { supervisorTarefas } from "./listener/supervisorTarefas.js";
 import { runJob } from "./pipeline/runJob.js";
 import {
@@ -23,6 +23,7 @@ async function main() {
   // fluxo normal
   log("Iniciando tarefas em tempo real...");
   startMQTT();
+  const client = getClient();
 
   log("Iniciando tarefas agendadas...");
   dailyMaintenance();
@@ -30,7 +31,7 @@ async function main() {
   refreshCriticalCaches();
 
   log("Iniciando listeners...");
-  supervisorTarefas();
+  supervisorTarefas(client);
 
   log("Backend online 🚀");
 }

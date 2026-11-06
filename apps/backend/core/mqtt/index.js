@@ -7,9 +7,6 @@ const BROKER_URL = "mqtt://localhost:1883";
 
 let client;
 
-export function getClient() {
-  return client
-}
 export function startMQTT() {
   if (client) {
     log("[startMQTT]: MQTT já iniciado, ignorando nova inicialização");
@@ -44,8 +41,16 @@ export function startMQTT() {
     log("MQTT desconectado ⚠️");
   });
 }
+export function getClient() {
+  return client
+}
 
-export function dispatchCommand(grblCnc, data, msgId = 0, rt = false, job = "") {
+export function despachaComando(grblCnc, data, msgId = 0, rt = false, job = "") {
+  if (!grblCnc || !grblCnc.id) {
+    console.error("Erro: Objeto grblCnc inválido ou não fornecido para despachaComando!", grblCnc);
+    return false;
+  }
+  
   const client = getClient();
 
   // Verifica conexão
