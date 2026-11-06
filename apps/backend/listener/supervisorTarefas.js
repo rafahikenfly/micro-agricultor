@@ -9,58 +9,46 @@ export async function supervisorTarefas(client) {
 
   const cachePlantas = await cacheService.getPlantas();
   const cacheCanteiros = await cacheService.getCanteiros();
-
+  const cacheDispositivos = await cacheService.getDispositivos();
+  
   const cacheMap = {
     [ENTIDADE.planta.id]: cachePlantas,
     [ENTIDADE.canteiro.id]: cacheCanteiros,
   }
 
-  //TODO: Pegar todos os grblCNC do BD e criar uma fila para cada
-  const grblCnc = {
-      id: "cnc",
-      grbl: {},
-      xylema: {},
-      atuador: {
-          0: {ativo: false, label: "Desativado", estado: 0},
-          1: {ativo: true, label: "Motor", estado: 0},
-          2: {ativo: true, label: "Solenóide", estado: 0},
-          3: {ativo: true, label: "Mini-bomba", estado: 0}
-      },
-      posicao: {
-        x: 2500,
-        y: 1500,
-        z: 0,
-      },
-      dimensao: {
-        x: 5000,
-        y: 3000,
-        z: 1000,
-      }
-  }
-  const filaGrbl = new filaDispositivo(client, grblCnc)
-  //EO TODO
+  const filas = {};
+  cacheDispositivos.list.forEach((dispositivo) => {
+    if (dispositivo.tipo === "GRBL") {
+      const filaGrbl = new filaDispositivo(client, dispositivo)
+      log(`[supervisorTarefas] Fila criada para dispositivo GRBLCNC: ${dispositivo.id}`);
+      filas[dispositivo.id] = filaGrbl;
+    }
+  });
 
   db.collection("tarefas").onSnapshot(
     (snapshot) => {
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
-          const novaTarefa = change.doc.data();
-          if (novaTarefa.agente && novaTarefa.agente.tipo === "GRBLCNC") {
+          const tarefa = change.doc.data();
+          tarefa.id = change.doc.id;
+          if (tarefa.execucao?.agente?.tipo === "GRBL" && tarefa.execucao?.agente?.id) {
+            // Tarefa associada a um agente específico
             log("[supervisorTarefas] Nova tarefa atribuída a agente GRBLCnc. Adquirindo tarefa...");
             adquirirTarefaGrbl({
-              filaGrbl,
-              tarefa: novaTarefa,
-              cache: cacheMap[novaTarefa.contexto.tipoEntidadeId]
+              filaGrbl: filas[tarefa.execucao.agente.id],
+              tarefa,
+              cache: cacheMap[tarefa.contexto.tipoEntidadeId]
             });
           }
           else log(`Nova tarefa no Firebase: ${change.doc.id}`);
         }
         if (change.type === "modified") {
           const novaTarefa = change.doc.data();
-          if (novaTarefa.execucao.agente && novaTarefa.execucao.agente.tipo === "GRBLCNC") {
-            log("[supervisorTarefas] Agente GRBLCNC detectado em tarefa. Adquirindo tarefa...");
+          if (novaTarefa.execucao.agente && novaTarefa.execucao.agente.tipo === "GRBL" && novaTarefa.execucao?.agente?.id) {
+            // Tarefa associada a um agente específico
+            log("[supervisorTarefas] Tarefa atribuída a agente GRBLCnc. Adquirindo tarefa...");
             adquirirTarefaGrbl({
-              filaGrbl,
+              filaGrbl: filas[novaTarefa.execucao.agente.id],
               tarefa: novaTarefa,
               cache: cacheMap[novaTarefa.contexto.tipoEntidadeId]
             });

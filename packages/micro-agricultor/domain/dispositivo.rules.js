@@ -1,4 +1,6 @@
+//import { tarefasService } from "../../../apps/frontend/src/services/crudService.js";
 import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
+import { ENTIDADE } from "../types/ENTIDADE.js";
 import { EVENTO } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -48,7 +50,7 @@ export function redimensionarDispositivo({entidade, dimensao, posicao}) {
 
 
 
-export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user, onHide=()=>{}, servicesMap={}}) {
+export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user, servicesMap={}, onHide=()=>{}}) {
   const acoesContexto = [];
   switch (dispositivo.tipo) {
     case DISPOSITIVO.GRBL.id:
@@ -58,18 +60,26 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
           acoesContexto.push({
             label: atuador.contextMenuLabel,
             onClick: () => {
+              console.log(entidade);
               const tarefa = criarTarefa({
                 dados: {
                   nome: `${atuador.contextMenuLabel} ${entidade.nome} com ${dispositivo.nome}`,
                 },
                 contexto: {
                   caracteristicaId: atuador.caracteristicaId,
-                  entidadesId: entidade.id,
+                  entidadesId: [entidade.id],
                   tipoEntidadeId: atuador.tipoEntidadeId,
                   tipoEventoId: EVENTO.MANEJO.id,
                 },
+                execucao: {
+                  agente: {
+                    id: dispositivo.id,
+                    tipo: DISPOSITIVO.GRBL.id,
+                  }
+                }
               });
               servicesMap.tarefa.create(tarefa, user);
+              console.log("aqui2 outro")
               onHide();
             },
           });

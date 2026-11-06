@@ -399,7 +399,7 @@ export default function MapaCanvas () {
             tipoAlvo: tipo,
             entidade,
             user,
-            onHide: ()=>setContextMenu(null),
+            onHide: ()=>{setContextMenu(null)},
             servicesMap,
           })
         );}

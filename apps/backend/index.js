@@ -31,7 +31,7 @@ async function main() {
   refreshCriticalCaches();
 
   log("Iniciando listeners...");
-  supervisorTarefas(client);
+  await supervisorTarefas(client);
 
   log("Backend online 🚀");
 }
