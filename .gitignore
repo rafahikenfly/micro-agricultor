@@ -35,4 +35,5 @@ sensores.sb.wal
 *.sln
 *.sw?
 servicekey.json
+serviceKey.json
 firebaseConfig.js

@@ -1,6 +1,4 @@
-import { tarefasService } from "../../../apps/frontend/src/services/crudService.js";
 import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
-import { ENTIDADE } from "../types/ENTIDADE.js";
 import { EVENTO } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -50,7 +48,7 @@ export function redimensionarDispositivo({entidade, dimensao, posicao}) {
 
 
 
-export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user, onHide=()=>{}}) {
+export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user, onHide=()=>{}, servicesMap={}}) {
   const acoesContexto = [];
   switch (dispositivo.tipo) {
     case DISPOSITIVO.GRBL.id:
@@ -71,7 +69,7 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
                   tipoEventoId: EVENTO.MANEJO.id,
                 },
               });
-              tarefasService.create(tarefa, user);
+              servicesMap.tarefa.create(tarefa, user);
               onHide();
             },
           });

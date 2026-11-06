@@ -12,7 +12,7 @@ import { entitiesInBounds, getMouseInMapSpace } from "../../../utils/coordinates
 import { circleFromEntity, rectFromEntity, resizeCircleRadius, resizeRect } from "../../../utils/geometryUtils";
 
 import { batchService } from "../../../services/batchService";
-import { hortasService, canteirosService, plantasService, entidadesService, dispositivosService} from "../../../services/crudService";
+import { hortasService, canteirosService, plantasService, entidadesService, dispositivosService, tarefasService} from "../../../services/crudService";
 import { eventosService, mutacoesService } from "../../../services/historyService";
 
 import { NoUser } from "../../../components/common/NoUser";
@@ -31,7 +31,8 @@ import MapaContextMenu from "./MapaContextMenu";
 const servicesMap = {
   [ENTIDADE.planta.id]: plantasService,
   [ENTIDADE.canteiro.id]: canteirosService,
-  [ENTIDADE.dispositivo.id]: dispositivosService
+  [ENTIDADE.dispositivo.id]: dispositivosService,
+  tarefa: tarefasService,
 }
 
 export default function MapaCanvas () {
@@ -392,15 +393,16 @@ export default function MapaCanvas () {
             }
           });
         }
-        if (entitiesInBounds([entidade], bounds).length > 0) opcoes = opcoes.concat(
+        if (entitiesInBounds([entidade], bounds).length > 0) {opcoes = opcoes.concat(
           criarContextoDispositivo({
             dispositivo: toolSetup.operar,
             tipoAlvo: tipo,
             entidade,
             user,
-            onHide: ()=>setContextMenu(null)
+            onHide: ()=>setContextMenu(null),
+            servicesMap,
           })
-        );
+        );}
       }
     }
     else {

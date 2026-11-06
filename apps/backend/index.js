@@ -1,5 +1,6 @@
 import { log } from "./core/logger/index.js";
 import { startMQTT } from "./core/mqtt/index.js";
+import { supervisorTarefas } from "./listener/supervisorTarefas.js";
 import { runJob } from "./pipeline/runJob.js";
 import {
   dailyMaintenance,
@@ -27,6 +28,9 @@ async function main() {
   dailyMaintenance();
   hourlyMaintenance();
   refreshCriticalCaches();
+
+  log("Iniciando listeners...");
+  supervisorTarefas();
 
   log("Backend online 🚀");
 }
