@@ -1,7 +1,7 @@
 import mqtt from "mqtt";
 import { log } from "../logger/index.js";
-import { handleDispositivo } from "./handleDispositivo.js";
-import { handleGRBLCNC } from "./handleGRBLCNC.js";
+import { handleDispositivo } from "../devices/handleDispositivo.js";
+import { handleGRBLCNC } from "../devices/handleGRBLCNC.js";
 
 const BROKER_URL = "mqtt://localhost:1883";
 

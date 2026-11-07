@@ -70,6 +70,7 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
                   entidadesId: [entidade.id],
                   tipoEntidadeId: atuador.tipoEntidadeId,
                   tipoEventoId: EVENTO.MANEJO.id,
+                  macroId: atuador.macroId,
                 },
                 execucao: {
                   agente: {

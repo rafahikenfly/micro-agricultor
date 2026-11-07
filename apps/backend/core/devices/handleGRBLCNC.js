@@ -1,9 +1,7 @@
-import { adquirirTarefa, ENTIDADE, ORIGEM } from "micro-agricultor";
+import { adquirirTarefa, ENTIDADE, MACRO, ORIGEM } from "micro-agricultor";
 import { log } from "../logger/index.js";
 import { cacheService } from "../../services/cache.js";
-import { despachaComando } from "./index.js";
 import { tarefasService } from "../../services/crud.js";
-
 
 export async function handleGRBLCNC(topic, message, grblCnc) {
     const user = { uid: "handleGRBLCNC", nome: ORIGEM.BACKEND.id };
@@ -154,6 +152,26 @@ function moverGrblPara(filaGrbl, entidade = {}, tarefaId = "") {
     filaGrbl.adicionar(tarefaId, data);
     return true;
 }
+function iniciarJob(filaGrbl, tarefaId) {
+    filaGrbl.adicionar("", `JOB B${tarefaId}`);
+}
+function finalizarJob(filaGrbl, tarefaId) {
+    filaGrbl.adicionar("", `JOB E${tarefaId}`);
+}
+function processarComando(template, variaveis) {
+    return template.replace(/\{([^}]+)\}/g, (match, chave) => {
+        // Se a variável existir no objeto, substitui; senão, mantém o original (ou vazio)
+        return variaveis.hasOwnProperty(chave) ? variaveis[chave] : match;
+    })
+};
+
+function rodarMacro(filaGrbl, tarefaId, macroId, variaveis) {
+    if (!macroId) return false;
+    MACRO[macroId].codeArray.forEach(code => {
+        const comandoPronto = processarComando(code, variaveis);
+        filaGrbl.adicionar(tarefaId, comandoPronto);
+    });
+}
 function handleMQTTComando(payload, grblCnc) {
     log(`[handleGRBLCNC] Comando do GRBLCNC ${grblCnc.id} recebido: ${payload.data}`);
 
@@ -165,17 +183,26 @@ export function adquirirTarefaGrbl({filaGrbl, tarefa, cache}) {
         log(`[adquirirTarefaGrbl] Tarefa atribuída a agente tipo ${tarefa.execucao.agente.tipo}`)
         return false;
     }
-    // Adquirida por outro agente
+    // Já adquirida, sem expirar
     const agoraMs = Date.now();
     if (agoraMs < tarefa.execucao.adquiridaAte) {
         log(`[handleGRBLCNC] Tarefa ${tarefa.id} adquirida pelo agente ${tarefa.execucao.agente?.id}`);
         return false;
     }
-    //TODO: GrblCNC tem os sensores/atuadores necessários 
-    if (!filaGrbl.dispositivo) {
-        log(`[handleGRBLCNC] Tarefa ${tarefa.id} não pode ser realizada pelo {filaGrbl.dispositivo}`);
-        return false
-    };
+    // GrblCNC tem algum sensor/atuador capaz de rodar a macro
+    // Busca o índice do atuador correspondente
+    const indiceAtuador = filaGrbl.dispositivo.atuadores.findIndex(
+        a => a.macroId === tarefa.contexto.macroId
+    );
+    // Se o atuador foi encontrado, segue (findIndex retorna -1 se não encontrar)
+    if (indiceAtuador === -1) {
+        log(`[handleGRBLCNC] Nenhum atuador/sensor com macroId ${tarefa.contexto.macroId} encontrado no dispositivo.`);
+        return false;
+    }
+
+    // O índice está salvo na variável 'indiceAtuador'
+    log(`[handleGRBLCNC] Atuador encontrado no índice: ${indiceAtuador}`);
+
 
     //GrblCNC tem o alcance necessário
     const entidades = [];
@@ -185,18 +212,15 @@ export function adquirirTarefaGrbl({filaGrbl, tarefa, cache}) {
             console.error(`Entidade ${entidadeId} não encontrada ou sem posição.`);
             return;
         }
+        // Calcula o alcance do dispositivo
         const alcanceX = filaGrbl.dispositivo.dimensao.x / 2;
         const alcanceY = filaGrbl.dispositivo.dimensao.y / 2;
-        const alcanceZ = filaGrbl.dispositivo.dimensao.z / 2; //TODO: NO EIXO Z A POSICAO É INFERIOR, NÃO O MEIO
-        console.log(`Entidade ${entidadeId} encontrada: (${ent.posicao.x},${ent.posicao.y},${ent.posicao.z})`);
-        console.log(`GRBL ${filaGrbl.dispositivo.id} posição: (${filaGrbl.dispositivo.posicao.x},${filaGrbl.dispositivo.posicao.y},${filaGrbl.dispositivo.posicao.z})`);
-        console.log(`GRBL ${filaGrbl.dispositivo.id} dimensões: (${filaGrbl.dispositivo.dimensao.x},${filaGrbl.dispositivo.dimensao.y},${filaGrbl.dispositivo.dimensao.z})`);
-        console.log(`Alcance do GRBL ${filaGrbl.dispositivo.id}: X=${alcanceX}, Y=${alcanceY}, Z=${alcanceZ}`);
+        const alcanceZ = filaGrbl.dispositivo.dimensao.z;
 
-        // Verifica se a distância do centro do GRBLCNC até a entidade está dentro do raio/limite
+        // Verifica se a distância do centro do GRBLCNC até a entidade está dentro do alcance
         const noAlcanceX = alcanceX > Math.abs(ent.posicao.x - filaGrbl.dispositivo.posicao.x);
         const noAlcanceY = alcanceY > Math.abs(ent.posicao.y - filaGrbl.dispositivo.posicao.y);
-        //const noAlcanceZ = alcanceZ > Math.abs(ent.posicao.z - filaGrbl.dispositivo.posicao.z);
+        const noAlcanceZ = alcanceZ > ent.posicao.z + ent.dimensao.z - filaGrbl.dispositivo.posicao.z;
         if (!noAlcanceX) {
             console.error(`Entidade ${entidadeId} fora do alcance X do GRBL ${filaGrbl.dispositivo.id}.`);
             return;
@@ -205,26 +229,45 @@ export function adquirirTarefaGrbl({filaGrbl, tarefa, cache}) {
             console.error(`Entidade ${entidadeId} fora do alcance Y do GRBL ${filaGrbl.dispositivo.id}.`);
             return;
         }
-        
+        if (!noAlcanceZ) {
+            console.error(`Entidade ${entidadeId} fora do alcance Z do GRBL ${filaGrbl.dispositivo.id}.`);
+            return;
+        }        
         console.log(`Entidade ${entidadeId} No alcance do GRBL ${filaGrbl.dispositivo.id}. (${ent.posicao.x},${ent.posicao.y},${ent.posicao.z})`);
         entidades.push(ent);
     });
 
     // 2. Adquire a tarefa para o GRBLcnc se alguma entidade puder ser manejada
-    if (entidades.length) {
-        const prazoExpiracao = 300000; // 5 minutos
-        const tarefaAdquirida = adquirirTarefa({
-            tarefa,
-            agente: {tipo: "GRBLCNC", id: filaGrbl.dispositivo.id},
-            timestamp: agoraMs,
-            prazoExpiracao,
-        });
-        if (tarefaAdquirida){
-            tarefasService.update(tarefasService.getRefById(tarefa.id),tarefaAdquirida, {nome: "teste", uid:"teste2"})
-            log(`[handleGRBLCNC] Tarefa atualizada no Firebase: ${tarefa.id}`);
-            filaGrbl.adicionar("", `JOB B${tarefa.id}`);
-            moverGrblPara(filaGrbl, entidades[0], tarefa.id);
-        }
+    if (!entidades.length) {
+        log(`[handleGRBLCNC] Tarefa ${tarefa.id} não tem nenhuma entidade no alcance do GRBL ${filaGrbl.dispositivo.id}.`);
+        return;
     }
-    else log(`[handleGRBLCNC] Tarefa ${tarefa.id} não tem nenhuma entidade no alcance do GRBL ${filaGrbl.dispositivo.id}.`);
+    const prazoExpiracao = 300000; // 5 minutos
+    const tarefaAdquirida = adquirirTarefa({
+        tarefa,
+        agente: {tipo: "GRBLCNC", id: filaGrbl.dispositivo.id},
+        timestamp: agoraMs,
+        prazoExpiracao,
+    });
+    if (!tarefaAdquirida){
+        log(`[handleGRBLCNC] Falha na aquisiç!ao da ${tarefa.id} pelo GRBL ${filaGrbl.dispositivo.id}.`);
+        return;
+    }
+    tarefasService.update(tarefasService.getRefById(tarefa.id),tarefaAdquirida, {nome: "teste", uid:"teste2"})
+    log(`[handleGRBLCNC] Tarefa atualizada no Firebase: ${tarefa.id}`);
+    iniciarJob(filaGrbl, tarefa.id);
+    entidades.forEach(ent => {
+        const variaveis = {
+            indiceAtuador,
+            xDim: ent.dimensao.x,
+            yDim: ent.dimensao.y,
+            zDim: ent.dimensao.z,
+            xPos: ent.posicao.x,
+            yPos: ent.posicao.y,
+            zPos: ent.posicao.z,
+        }
+        moverGrblPara(filaGrbl, ent, tarefa.id)
+        rodarMacro(filaGrbl, tarefa.id, tarefa.contexto.macroId, variaveis);
+    });
+    finalizarJob(filaGrbl, tarefa.id);
 }

@@ -3,7 +3,7 @@ import { renderOptions, StandardArrayInput, StandardCheckboxGroup, StandardInput
 import { SENSOR } from "micro-agricultor/types/SENSOR"
 import { Form } from "react-bootstrap"
 import { useCache } from "../../../hooks/useCache"
-import { ATUADOR, ENTIDADE } from "micro-agricultor"
+import { ATUADOR, ENTIDADE, MACRO } from "micro-agricultor"
 
 export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
   const { cacheCaracteristicas, reading } = useCache([
@@ -25,10 +25,11 @@ export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
         inputLabel="Incluir atuador"
         inputData={form}
         colunas={[
-          {rotulo: "Ação", dataKey: "contextMenuLabel", },
-          {rotulo: "Ativo", dataKey: "ativo", },
           {rotulo: "Rótulo", dataKey: "label", },
           {rotulo: "Tipo de Atuador", dataKey: "tipoAtuadorId", render: (a)=>ATUADOR[a.tipoAtuadorId]?.nome ?? `id: ${a.tipoSensorId}`},
+          {rotulo: "Ativo", dataKey: "ativo", render: (a)=> a.ativo ? "Sim" : "Não"},
+          {rotulo: "Ação", dataKey: "contextMenuLabel", },
+          {rotulo: "Macro", dataKey: "macroId", },
           {rotulo: "Tipo de Entidade", dataKey: "tipoEntidadeId", render: (a)=>ENTIDADE[a.tipoEntidadeId]?.nome ?? `id: ${a.tipoEntidadeId}`},
           {rotulo: "Caracteristica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? `id: ${a.caracteristicaId}`},
         ]}
@@ -46,6 +47,8 @@ export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
         </Form.Select>
       </StandardInput>
       <StandardInput label="Tipo de Alvo">
+        {// TODO: MUDAR ISSO PARA UM ARRAY DE SELEÇÃO QUE PERMITA SELECIONAR DIVERSOS TIPOS DE ALVO
+        }
         <Form.Select
           value={form.tipoEntidadeId ?? ""}
           onChange={e => setForm({...form, tipoEntidadeId: e.target.value})}
@@ -71,13 +74,24 @@ export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
           })}
         </Form.Select>
       </StandardInput>
-      <StandardInput label="Nome de ação de contexto">
+      <StandardInput label="Ação">
         <Form.Control
           value={form.contextMenuLabel ?? ""}
           onChange={e => setForm({...form, contextMenuLabel: e.target.value})}
         />
+        <Form.Select
+          value={form.tipoEntidadeId ?? ""}
+          onChange={e => setForm({...form, macroId: e.target.value})}
+        >
+          {renderOptions({
+            list: Object.values(MACRO),
+            loading: reading,
+            placeholder: "Selecione a macro do atuador",
+            nullOption: false,
+          })}
+        </Form.Select>
       </StandardInput>
-      <StandardInput label="Nome do atuador">
+      <StandardInput label="Atuador">
         <Form.Control
           value={form.label ?? ""}
           onChange={e => setForm({...form, label: e.target.value})}
