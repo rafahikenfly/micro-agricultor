@@ -14,7 +14,7 @@ from macros import MACROS
 # Configurações padrão do MQTT (ajuste conforme seu broker)
 DEFAULT_BROKER = "192.168.18.15"
 DEFAULT_PORT = 1883
-DEFAULT_TOPIC = "cnc"
+DEFAULT_TOPIC = "Dzujtc3Vp2AhofL1xtBr"
 
 #GRBL -->$130=1290.000
 #GRBL -->$131=855.000

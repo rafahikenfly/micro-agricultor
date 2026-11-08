@@ -1,13 +1,14 @@
 import mqtt from "mqtt";
 import { log } from "../logger/index.js";
-import { handleDispositivo } from "../devices/handleDispositivo.js";
-import { handleGRBLCNC } from "../devices/handleGRBLCNC.js";
+import { filaDispositivo, handleDispositivo } from "../devices/handleDispositivo.js";
+import { handleGRBLCNC, } from "../devices/handleGRBLCNC.js";
 
 const BROKER_URL = "mqtt://localhost:1883";
 
 let client;
+let fila = {};
 
-export function startMQTT() {
+export function startMQTT(dispositivos) {
   if (client) {
     log("[startMQTT]: MQTT já iniciado, ignorando nova inicialização");
     return;
@@ -20,17 +21,36 @@ export function startMQTT() {
     log("[startMQTT]: MQTT conectado");
 
     // Subscribe nos tópicos
-    client.subscribe("cnc/#", (err) => {
-      if (err) {
-        log("[startMQTT]: Erro ao se inscrever nos tópicos MQTT", err);
-      } else {
-        log("[startMQTT]: Inscrito no tópico MQTT cnc/#");
+    dispositivos.list.forEach(disp => {
+      if (disp.tipo === "GRBL") {
+        //TODO: usar o mqtt é uma propriedade que não precisa ser do GRBL!
+        // O ideal aqui é mudar o cadastro do dispositivo para ter uma propriedade
+        // bool useMQTT, por exemplo
+        const topic = disp.id + "/#";
+        client.subscribe(topic, (err) => {
+          if (err) {
+            log("[startMQTT]: Erro ao se inscrever nos tópicos MQTT", err);
+          } else {
+            startFila(disp);
+            log(`[startMQTT]: Inscrito no dispositivo ${disp.id}/#`);
+          }
+        });
       }
     });
   });
 
   client.on("message", (topic, message) => {
-    handleMessage(topic, message);
+    const partes = topic.split('/');
+    const dispositivoId = partes[0];
+
+    if (partes[1] === "ack") {
+      const fila = getFila(dispositivoId);
+      recebeAcknowledge(message, fila);
+    }
+    else {
+      const dispositivo = dispositivos.map.get(dispositivoId);
+      handleMessage(partes[1], message, dispositivo);
+    }
   });
 
   client.on("error", (err) => {
@@ -41,8 +61,16 @@ export function startMQTT() {
     log("MQTT desconectado ⚠️");
   });
 }
+function startFila(dispositivo) {
+      const filaGrbl = new filaDispositivo(client, dispositivo)
+      fila[dispositivo.id] = filaGrbl;
+      log(`[mqtt] Fila MQTT criada para dispositivo GRBLCNC: ${dispositivo.id}`);
+}
 export function getClient() {
   return client
+}
+export function getFila(dispositivoId) {
+  return fila[dispositivoId];
 }
 
 export function despachaComando(grblCnc, data, msgId = 0, rt = false, job = "") {
@@ -106,26 +134,30 @@ export function despachaComando(grblCnc, data, msgId = 0, rt = false, job = "") 
     return true;
 }
 
-function handleMessage(topic, message) {
-  if (topic.startsWith("dispositivos/")) {
-    handleDispositivo(topic, message);
-    return;
-  }
-  if (topic.startsWith("cnc/")) {
-    const grblCnc = {
-        id: "cnc",
-        grbl: {},
-        xylema: {},
-        atuador: {
-            0: {ativo: false, label: "Desativado", estado: 0},
-            1: {ativo: true, label: "Motor", estado: 0},
-            2: {ativo: true, label: "Solenóide", estado: 0},
-            3: {ativo: true, label: "Mini-bomba", estado: 0}
-        }
-    }
+function handleMessage(topic, message, remetente) {
+  if (remetente) {
+    switch (remetente.tipo) {
+      case 'GRBL':
+        handleGRBLCNC(topic, message, remetente);
+        break;
 
-    handleGRBLCNC(topic, message, grblCnc);
-    return;
+      case 'dispositivo':
+        handleDispositivo(dispositivoId, message);
+      default:
+        log(`MQTT ${message} no tópico /${topic} ignorada (remetente anônimo)`);
+        break;
+    }
   }
-  log(`MQTT ${message} no tópico ${topic} ignorada`)
+}
+
+function recebeAcknowledge(message, fila) {
+  const payload = JSON.parse(message.toString());
+  const { id, status, data } = payload;
+
+  if (fila) {
+    fila.receberAck(id, status, data);
+  }
+  else {
+    log("[supervisorTarefas] Acknowledge recebido de remetente sem fila.");
+  }
 }

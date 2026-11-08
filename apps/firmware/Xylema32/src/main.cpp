@@ -165,7 +165,11 @@ void loopDelay();
 void loopIdleTimeout();
 void loopOkTimeout();
 
-// ==
+  // Campos customizados para o MQTT
+  WiFiManagerParameter* pMqttServer;
+  WiFiManagerParameter* pDeviceId;
+
+  // ==
 // SETUP
 // == 
 void setupPins() {
@@ -211,24 +215,32 @@ void setupPins() {
   pinMode(GRBL_RESUME_PIN, OUTPUT);
   digitalWrite(GRBL_RESUME_PIN, HIGH);
 }
+void saveConfigCallback() {
+  logDebug(DEBUG_INFO, "Salvando...");
+  preferences.begin("xylema-cfg", false);
+  preferences.putString("mqttServer", pMqttServer->getValue());
+  preferences.putString("deviceId", pDeviceId->getValue());
+  preferences.end();
+
+  logDebug(DEBUG_INFO, "Configurações salvas com sucesso.");
+
+  led(20, 255, 20); 
+  delay(3000);
+}
 void wifiConfig() {
-  logDebug(DEBUG_EVENT, "Xylema em mode de configuração Wi-fi. Acesse a rede %s", CONFIG_NETWORK);
-  led(255,120,0);
+  logDebug(DEBUG_EVENT, "Xylema em mode de configuração Wi-fi. Acesse a rede %s.", CONFIG_NETWORK);
+  led(255,255,255);
   WiFiManager wm;
+    
+  WiFiManagerParameter  mqttServer("mqttServer", "IP do Servidor MQTT", "192.168.18.15", 40);
+  WiFiManagerParameter  deviceId("deviceId", "Id do Dispositivo", "Dzujtc3Vp2AhofL1xtBr", 40);
+  pMqttServer = &mqttServer;
+  pDeviceId = &deviceId;
+  wm.addParameter(&mqttServer);
+  wm.addParameter(&deviceId);
   
-  // Campos customizados para o MQTT
-  WiFiManagerParameter custom_mqtt_server("server", "IP do Raspberry Pi (MQTT)", "192.168.18.15", 40);
-  WiFiManagerParameter custom_cmd_ch("cmd", "Canal MQTT Comandos", "cnc/comandos", 40);
-  WiFiManagerParameter custom_ack_ch("ack", "Canal MQTT ACK", "cnc/ack", 40);
-  WiFiManagerParameter custom_status_ch("status", "Canal MQTT Estado", "cnc/estado", 40);
-  WiFiManagerParameter custom_event_ch("status", "Canal MQTT Evento", "cnc/evento", 40);
-
-  wm.addParameter(&custom_mqtt_server);
-  wm.addParameter(&custom_cmd_ch);
-  wm.addParameter(&custom_ack_ch);
-  wm.addParameter(&custom_status_ch);
-  wm.addParameter(&custom_event_ch);
-
+  wm.setSaveConfigCallback(saveConfigCallback);
+  
   // Inicia o Access Point e trava aguardando a configuração
   if (!wm.startConfigPortal(CONFIG_NETWORK)) {
     logDebug(DEBUG_ERROR, "Falha ao criar portal de configuração. Reiniciando ESP.");
@@ -236,21 +248,6 @@ void wifiConfig() {
     ESP.restart();
     return;
   }
-
-  // Se configurou com sucesso, pega os valores preenchidos e salva no Preferences
-  preferences.begin("xylema-cfg", false);
-  preferences.putString("ssid", wm.getWiFiSSID());
-  preferences.putString("password", wm.getWiFiPass());
-  preferences.putString("mqtt_srv", custom_mqtt_server.getValue());
-  preferences.putString("cmd_ch", custom_cmd_ch.getValue());
-  preferences.putString("ack_ch", custom_ack_ch.getValue());
-  preferences.putString("status_ch", custom_status_ch.getValue());
-  preferences.putString("event_ch", custom_event_ch.getValue());
-  preferences.end();
-
-  logDebug(DEBUG_INFO, "Configurações salvas com sucesso.");
-  led(0, 255, 0); 
-  delay(1000);
 }
 void lerConfig() {
   preferences.begin("xylema-cfg", true); // Modo leitura (read-only)
@@ -258,13 +255,13 @@ void lerConfig() {
   // Carrega os valores salvos, ou usa um padrão caso estejam vazios
   ssid = preferences.getString("ssid", "DEFAULT_SSID");
   password = preferences.getString("password", "DEFAULT_PASS");
-  mqtt_server = preferences.getString("mqtt_srv", "192.168.18.15");
-  mqtt_command_channel = preferences.getString("cmd_ch", "cnc/comandos");
-  mqtt_ack_channel = preferences.getString("ack_ch", "cnc/ack");
-  mqtt_status_channel = preferences.getString("status_ch", "cnc/estado");
-  mqtt_event_channel = preferences.getString("event_ch", "cnc/evento");
-  intervaloEstado = preferences.getInt("intervalo", 1000);
-  //debugLevel = preferences.getInt("dbg_level", 2); // Padrão 2 (INFO) se não existir
+  mqtt_server = preferences.getString("mqttServer", "192.168.18.15");
+  mqtt_command_channel = preferences.getString("deviceId", "Dzujtc3Vp2AhofL1xtBr")+"/comandos";   // Padrão Dzujtc3Vp2AhofL1xtBr
+  mqtt_ack_channel = preferences.getString("deviceId", "Dzujtc3Vp2AhofL1xtBr")+"/ack";
+  mqtt_status_channel = preferences.getString("deviceId", "Dzujtc3Vp2AhofL1xtBr")+"/estado";
+  mqtt_event_channel = preferences.getString("deviceId", "Dzujtc3Vp2AhofL1xtBr")+"/evento";
+  intervaloEstado = preferences.getInt("intervalo", 10000);                                       // Padrão 10000ms
+  debugLevel = preferences.getInt("dbg_level", 2);                                                // Padrão 2 (INFO) se não existir
 
   // Tenta ler o pwmMax. Se a chave "pwmMax" existir, o getBytes preenche o array.
   size_t bytesMax = preferences.getBytes("pwmMax", pwmMax, sizeof(pwmMax));
@@ -301,7 +298,6 @@ void lerConfig() {
     };
     memcpy(dockPos, padraoDocks, sizeof(dockPos));
   }
-
   preferences.end();
 
   logDebug(DEBUG_EVENT, "Configurações lidas com sucesso.");
@@ -673,13 +669,6 @@ void callbackMQTT(char* topic, byte* payload, unsigned int length) {
     return;
   }
 
-  if (!comando.rt && comando.job != jobAtual) {
-    logDebug(DEBUG_ERROR, "Xylema ocupado com outra tarefa: %s", jobAtual);
-    acknowledgeError(id, "Xylema ocupado");
-    reportEventMQTT(LEVE, "Xylema ocupado", "XYLEMA32");
-    return;
-  }
-
   // 3. Processa ou inclui na fila
   if (comando.rt) handleComandoXylema(comando, false);
   else {
@@ -727,6 +716,7 @@ void reportStatusMQTT() {
     JsonObject xylemaObj = docStatus["xylema"].to<JsonObject>();
     xylemaObj["est"] = estadoXylema;
     xylemaObj["bf"] = tamanhoFila - filaCNC.size();
+    xylemaObj["job"] = jobAtual;
 
     JsonObject atuadoresObj = docStatus["at"].to<JsonObject>();
     for (int i = 0; i < TOTAL_ATUADORES; i++) {
@@ -759,6 +749,13 @@ void reportEventMQTT(int tipo, String mensagem, String origem) {
 // ===
 bool handleComandoXylema(ComandoCNC comando, bool popQueue = true) {
   bool ok = false;
+  if (!comando.rt && comando.job != jobAtual) {
+    logDebug(DEBUG_ERROR, "Xylema ocupado com outra tarefa: %s", jobAtual);
+    acknowledgeError(comando.id, "Xylema com outra tarefa");
+    reportEventMQTT(LEVE, "Xylema ocupado com outra tarefa", "XYLEMA32");
+    return ok;
+  }
+
   logDebug(DEBUG_VERBOSE, "Processando: %s", comando.data.c_str());
   if (comando.data == "HOLD")        { pulsoGRBL(GRBL_HOLD_PIN); ok = true;}
   else if (comando.data == "ABORT")  { pulsoGRBL(GRBL_ABORT_PIN); ok = true;}
@@ -969,15 +966,26 @@ bool handleComandoSET(ComandoCNC comando) {
   }
   else if (comando.data.indexOf("DEBUG_LEVEL") != -1) {
     if (index < 0 && index >= 5) { // 5 É O NÚMERO MÁXIMO DO ENUM
-      acknowledgeError(comando.id, "Índice de atuador inválido.");
-      logDebug(DEBUG_ERROR, "Nível de. debug %d inválido.", index);
+      acknowledgeError(comando.id, "Índice de atuador inválido (válido de 0-4).");
+      logDebug(DEBUG_ERROR, "Nível de debug %d inválido.", index);
       return false;
     }
-    debugLevel = index;
     preferences.begin("xylema-cfg", false);
     preferences.putInt("dbg_level", index);
     preferences.end();
     logDebug(DEBUG_ALWAYS, "Nível de debug alterado para %d", index);
+    return true;
+  }
+  else if (comando.data.indexOf("REPORT_INTERVAL") != -1) {
+    if (index < 1000 && index >= 60000) { // DE 1 A 60 SEGUNDOS
+      acknowledgeError(comando.id, "Intervalo de reporte inválido (válido de 1000-60000ms).");
+      logDebug(DEBUG_ERROR, "Intervalo de reporte %d inválido.", index);
+      return false;
+    }
+    preferences.begin("xylema-cfg", false);
+    preferences.putInt("intervalo", index);
+    preferences.end();
+    logDebug(DEBUG_ALWAYS, "Intervalo de reporte de estado configurado para %dms", index);
     return true;
   }
   else {
@@ -988,15 +996,15 @@ bool handleComandoSET(ComandoCNC comando) {
 }
 bool handleComandoJOB(ComandoCNC comando) {
   bool ok = false;
-  if (comando.data.indexOf("F") != -1)  {
-    String job = extrairParametroStr(comando.data.c_str(), 'E');
+  if (comando.data.indexOf("|") != -1)  {
+    String job = extrairParametroStr(comando.data.c_str(), '|');
     logDebug(DEBUG_EVENT, "Finalizada a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Finalizada a tarefa " + jobAtual, "XYLEMA");
     jobAtual = "";
     ok = true;
   }
-  if (comando.data.indexOf("S") != -1 && jobAtual == "")  {
-    String job = extrairParametroStr(comando.data.c_str(), 'B');
+  if (comando.data.indexOf("$") != -1 && jobAtual == "")  {
+    String job = extrairParametroStr(comando.data.c_str(), '$');
     logDebug(DEBUG_EVENT, "Iniciando a tarefa %s.", job.c_str());
     reportEventMQTT(INFO, "Iniciando a tarefa " + job, "XYLEMA");
     jobAtual = job;
@@ -1064,6 +1072,7 @@ bool handleComandoDROP(ComandoCNC comando) {
 
 void limparFila(String mensagem) {
   logDebug(DEBUG_INFO, "Limpando a fila de comandos.");
+  jobAtual = "";
   estadoXylema = BLOQUEADO;
   while (!filaCNC.empty()) {
     ComandoCNC m = filaCNC.front();

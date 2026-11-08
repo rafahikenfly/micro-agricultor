@@ -1,5 +1,5 @@
 import { log } from "./core/logger/index.js";
-import { getClient, startMQTT } from "./core/mqtt/index.js";
+import { startMQTT } from "./core/mqtt/index.js";
 import { supervisorTarefas } from "./listener/supervisorTarefas.js";
 import { runJob } from "./pipeline/runJob.js";
 import {
@@ -7,6 +7,7 @@ import {
   hourlyMaintenance,
   refreshCriticalCaches
 } from "./scheduler/dailyMaintenance.js";
+import { cacheService } from "./services/cache.js";
 
 const args = process.argv.slice(2);
 
@@ -20,18 +21,23 @@ async function main() {
     return;
   }
 
-  // fluxo normal
-  log("Iniciando tarefas em tempo real...");
-  startMQTT();
-  const client = getClient();
+  
+  // Fluxo normal
+  const dispositivos = await cacheService.getDispositivos()
 
+  log("Assinando mqtt...");
+  startMQTT(dispositivos);
+
+
+  log("Iniciando listeners...");
+  await supervisorTarefas();
+
+  
   log("Iniciando tarefas agendadas...");
   dailyMaintenance();
   hourlyMaintenance();
   refreshCriticalCaches();
 
-  log("Iniciando listeners...");
-  await supervisorTarefas(client);
 
   log("Backend online 🚀");
 }

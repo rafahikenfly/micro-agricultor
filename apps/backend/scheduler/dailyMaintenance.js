@@ -12,10 +12,11 @@ const dailyTasks = [
 ];
 
 const hourlyTasks = [
+  { name: "distribuidorDeTarefas"},
   { name: "currentStateInspector" },
-  { name: "taskStateInspector"},
+//  { name: "taskStateInspector"},
   { name: "mediaTaskInspector" },
-  { name: "reportTaskInspector" },
+//  { name: "reportTaskInspector" },
 ];
 
 async function runTasks(tasks, label) {
@@ -70,10 +71,12 @@ export function refreshCriticalCaches() {
   cron.schedule("*/30 * * * *", async () => {
     cacheService.clearCache("caracteristicas");
     cacheService.clearCache("necessidades");
+    cacheService.clearCache("dispositivos");
 
     await Promise.all([
       cacheService.getCaracteristicas(),
-      cacheService.getNecessidades()
+      cacheService.getNecessidades(),
+      cacheService.getDispositivos()
     ]);
   });
 

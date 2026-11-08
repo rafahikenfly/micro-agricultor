@@ -106,6 +106,10 @@ export default function ({planta, svgRef, gRef, drag, dragStart, dragMove, cente
           } else {
             selection.selectSingle(key);
           }
+          // Contexto
+          if (evt.ctrlKey) {
+            onContextMenu?.(evt, ENTIDADE.planta.id, planta);
+          }
         },
         onMouseDown: (evt) => handleStartDrag(evt),
         onMouseMove: (evt) => handleMouseMove(evt),

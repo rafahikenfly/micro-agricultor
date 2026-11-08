@@ -12,10 +12,13 @@ export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
     "caracteristicas"
   ]);
   const [form, setForm] = useState({
-    tipoAtuadorId: "",
-    tipoEntidadeId: "",
+    ativo: false,
     caracteristicaId: "",
     contextMenuLabel: "",
+    label: "",
+    macroId: "",
+    tipoAtuadorId: "",
+    tipoEntidadeId: "",
   })
     
   return (
@@ -80,7 +83,7 @@ export const DispositivosAtuadoresTab = ({formAtuadores, setFormAtuadores}) => {
           onChange={e => setForm({...form, contextMenuLabel: e.target.value})}
         />
         <Form.Select
-          value={form.tipoEntidadeId ?? ""}
+          value={form.macroId ?? ""}
           onChange={e => setForm({...form, macroId: e.target.value})}
         >
           {renderOptions({

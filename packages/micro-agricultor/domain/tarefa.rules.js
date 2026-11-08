@@ -4,6 +4,7 @@
 // Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
 // Cada tarefa tem um planejamento e uma resolução, além de estado.
 
+import { timestamp } from "../../../apps/backend/infra/firebase.js";
 import { ESTADO_TAREFA, RECORRENCIA, RECORRENCIA_FIM, RESOLUCAO } from "../types/index.js";
 import { adicionarAno, adicionarDia, adicionarMes, mergeComValidacao } from "./rulesUtils.js";
 
@@ -40,62 +41,69 @@ const tarefaPadrao = {
       execucoes: 0,
     },
   },
-  execucao: null,
-  //{
-  //  adquiridaEm: 0,
-  //  adquiridaAte: 0,
+  execucao:
+  {
+    adquiridaEm: 0,
+    adquiridaAte: 0,
   //  iniciadoEm: 0,
   //  finalizadoEm: 0,
-  //  tentativas: 0,
-  //  ultimoErro: "",
-  //  maxTentativas: 3,
+    tentativas: 0,
+    ultimoErro: "",
+    maxTentativas: 3,
+    agente: {
+      tipo: "",
+      id: "",
+    },
+  },
+  resolucao:
+  {
+    tipoResolucaoId: "",
+    resolvidoEm: "",
   //  agente: {
   //    tipo: "",
   //    id: "",
   //  },
-  //}
-  resolucao: null
-  //{
-  //  tipoResolucaoId: "",
-  //  resolvidoEm: "",
-  //  agente: {
-  //    tipo: "",
-  //    id: "",
-  //  },
-  //}
+  }
 }
 
 export const validarTarefa = (dataObj = {}) => {
     const valid = mergeComValidacao(tarefaPadrao, dataObj);
     return valid;
 }
-
-export const criarTarefa = ({ contexto, planejamento, resolucao, dados}) => { //TODO: update
+0
+export const criarTarefa = ({ contexto, planejamento, resolucao, execucao, dados}) => { //TODO: update
   const novaTarefa = {
     ...tarefaPadrao,
     contexto: { ...tarefaPadrao.contexto, ...contexto },
+    execucao: { ...tarefaPadrao.execucao, ...execucao },
     planejamento: { ...tarefaPadrao.planejamento, ...planejamento },
-    resolucao: resolucao ?? structuredClone(tarefaPadrao.resolucao),
+    resolucao: { ...tarefaPadrao.resolucao, ...resolucao },
     ...dados,
   };
 
   const valid = validarTarefa(novaTarefa);
   return valid;
 }
-
-export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000}) => {
-  if (tarefa.resolucao?.tipoResolucaoId) throw new Error(`[adquirirTarefa] Tarefa ${tarefa.id} já resolvida`);
-  if (tarefa.execucao?.expiraEm) {
-    const expirou = tarefa.execucao.expiraEm < timestamp;
-    if (!expirou) {
-      console.log(`[adquirirTarefa] Tarefa ${tarefa.id} com execução não expirada`)
-      return false;
-    };
+export const podeAdquirirTarefa = ({tarefa, timestamp}) => {
+  if (!tarefa) {console.error("Nenhuma tarefa!"); return false;}
+  if (tarefa.estado === ESTADO_TAREFA.PROCESSANDO.id) return false;
+  if (tarefa.estado === ESTADO_TAREFA.FEITO.id)  return false;
+  if (tarefa.estado === ESTADO_TAREFA.PENDENTE.id) {
+    if (timestamp < tarefa.execucao.adquiridaAte)  return false;
+  };
+  if (tarefa.estado === ESTADO_TAREFA.ERRO.id) {
+      if (tarefa.execucao.tentativas > tarefa.execucao.maxTentativas) return false;
   }
 
+  return true;
+}
+export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000}) => {
+  if (!podeAdquirirTarefa({tarefa, timestamp})) return false;
   return {
     ...tarefa,
+    estado: ESTADO_TAREFA.PROCESSANDO.id,
     execucao: {
+      ...tarefa.execucao,
       adquiridaEm: timestamp,
       adquiridaAte: timestamp + prazoExpiracao,
       tentativas: (tarefa.execucao?.tentativas ?? 0) + 1,
@@ -103,58 +111,33 @@ export const adquirirTarefa = ({tarefa, agente, timestamp, prazoExpiracao = 3000
     }
   };
 }
-export const devolverTarefa = ({ tarefa, agente }) => {
-  if (!tarefa.execucao) {
-    throw new Error(`[devolverTarefa] Tarefa ${tarefa.id} não está em execução`);
-  }
-
-  if (tarefa.execucao.agente.id !== agente.id) {
-    throw new Error(`[devolverTarefa] Agente não é o dono da execução`);
-  }
-
+export const falharTarefa = ({tarefa, erro, timestamp}) => {
   return {
     ...tarefa,
-    execucao: null
-  };
-};
-
-export const retryTarefa = ({ tarefa, agente, timestamp, erro, }) => {
-  if (!tarefa.execucao) {
-    throw new Error(`[retryTarefa] Tarefa ${tarefa.id} não está em execução`);
-  }
-
-  if (tarefa.execucao.agente.id !== agente.id) {
-    throw new Error(`[retryTarefa] Agente não é o dono da execução`);
-  }
-
-  const tentativas = (tarefa.execucao.tentativas ?? 0) + 1;
-  const maxTentativas = tarefa.execucao.maxTentativas ?? 0;
-
-  // Estourou tentativas → falha definitiva
-  if (tentativas >= maxTentativas) {
-    return {
-      ...tarefa,
-      execucao: null,
-      estado: ESTADO_TAREFA.FEITO.id,
-      resolucao: {
-        ...(tarefa.resolucao ?? {}),
-        tipoResolucaoId: RESOLUCAO.FALHA.id,
-        resolvidoEm: timestamp,
-        agente,
-      }
-    };
-  }
-
-  // Retry normal
-  return {
-    ...tarefa,
+    estado: ESTADO_TAREFA.ERRO.id,
     execucao: {
       ...tarefa.execucao,
-      tentativas,
-      ultimoErro: erro
+      ultimoErro: erro,
+      adquiridaAte: timestamp,
     }
-  };
-};
+  }
+}
+export const concluirTarefa = ({tarefa, timestamp}) => {
+  return {
+    ...tarefa,
+    estado: ESTADO_TAREFA.FEITO.id,
+    resolucao:{
+      ...(tarefa.resolucao ?? {}),
+      tipoResolucaoId: RESOLUCAO.CONCLUIDO,
+      resolvidoEm: timestamp,
+    }
+  }
+}
+
+
+
+
+
 export const resolverTarefa = ({tarefa, tipoResolucaoId, agente, timestamp}) => {
   if (tarefa.resolucao?.tipoResolucaoId) throw new Error(`[resolverTarefa] Tarefa ${tarefa.id} já resolvida`);
   const tarefaResolvida = {

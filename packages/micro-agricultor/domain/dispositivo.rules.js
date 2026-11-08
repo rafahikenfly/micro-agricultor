@@ -1,6 +1,4 @@
-//import { tarefasService } from "../../../apps/frontend/src/services/crudService.js";
 import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
-import { ENTIDADE } from "../types/ENTIDADE.js";
 import { EVENTO } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -15,16 +13,16 @@ const aparenciaPadrao = {
 };
 const dispositivoPadrao = {
     aparencia: aparenciaPadrao,
+    atuadores: [],
     descricao: "",
     dimensao: { x: 100, y: 100, z: 100 },
-    posicao: { x: 0, y: 0, z: 0 },
-    descricao: "",
-    tipo: "",
+    editavelNoMapa: true,
     hortaId: "",
     nome: "",
-    perifericos: {},
+    posicao: { x: 0, y: 0, z: 0 },
+    telemetria: {},
+    tipo: "",
     visivelNoMapa: true,
-    editavelNoMapa: true,
 };
 
 export const validarDispositivo = (dataObj = {}) => {
@@ -34,7 +32,7 @@ export const validarDispositivo = (dataObj = {}) => {
 
 export function criarDispositivo({ entidade }) {
   const valid = validarDispositivo(entidade);
-  // OUTRAS CONDICOES DE CANTEIROS
+  // OUTRAS CONDICOES DE DISPOSITIVOS
   return valid;
 }
 export function movimentarDispositivo({entidade, posicao}) {
@@ -60,7 +58,7 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
           acoesContexto.push({
             label: atuador.contextMenuLabel,
             onClick: () => {
-              console.log(entidade);
+              if (!atuador.macroId) console.info(`Atuador ${atuador.contextMenuLabel} não possui macroId definido.`);
               const tarefa = criarTarefa({
                 dados: {
                   nome: `${atuador.contextMenuLabel} ${entidade.nome} com ${dispositivo.nome}`,
@@ -70,7 +68,7 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
                   entidadesId: [entidade.id],
                   tipoEntidadeId: atuador.tipoEntidadeId,
                   tipoEventoId: EVENTO.MANEJO.id,
-                  macroId: atuador.macroId,
+                  macroId: atuador.macroId || "",
                 },
                 execucao: {
                   agente: {
@@ -80,7 +78,6 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
                 }
               });
               servicesMap.tarefa.create(tarefa, user);
-              console.log("aqui2 outro")
               onHide();
             },
           });
@@ -91,4 +88,10 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
       break;
   }
   return acoesContexto
+}
+export function temCapacidade({dispositivo, tarefa}) {
+  return true
+}
+export function temAlcance({dispositivo, entidade}) {
+  return true
 }
