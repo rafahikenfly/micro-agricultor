@@ -27,6 +27,7 @@ import MapaDispositivo from "./MapaDispositivo";
 import MapaPreview from "./MapaPreview";
 import { useMemo } from "react";
 import MapaContextMenu from "./MapaContextMenu";
+import MapaTelemetria from "./MapaTelemetria";
 
 const servicesMap = {
   [ENTIDADE.planta.id]: plantasService,
@@ -46,7 +47,7 @@ export default function MapaCanvas () {
 
   //Conecta hooks
   const svgRef = useRef(null);
-  const { activeTool, toolSetup, setTool, setToolState, dragActive, selection, previewActive, setShowModal, filters } = useMapaEngine();
+  const { activeTool, toolSetup, setTool, setToolState, dragActive, selection, previewActive, setShowModal, filters, setShowPainel } = useMapaEngine();
   const { drag, dragStart, dragMove, dragFinish } = useDrag();
   const { gRef, pan, zoomAt, rotateAt, centerOn, focusOn } = useSVGTransform({
     onRotate: (newRotate) => setRotateState(newRotate),
@@ -91,8 +92,10 @@ export default function MapaCanvas () {
       setPlantas(data);
       markLoaded();
     }, [
-      {field: "hortaId", op: "==", value: hortaId},
-      { field: "visivelNoMapa", op: "==", value: true }
+      { field: "hortaId", op: "==", value: hortaId },
+      { field: "visivelNoMapa", op: "==", value: true },
+      { field: "isDeleted", op: "==", value: false},
+      { field: "isArchived", op: "==", value: false},
     ]);
     const unsubDispositivos = dispositivosService.subscribe((data) => {
       setDispositivos(data);
@@ -389,7 +392,8 @@ export default function MapaCanvas () {
             label: "Operar", onClick: ()=>{
               setTool("operar");
               setToolState(entidade);
-              setContextMenu(null)
+              setContextMenu(null);
+              setShowPainel(true);
             }
           });
         }
@@ -452,21 +456,27 @@ export default function MapaCanvas () {
             svgRef={svgRef.current}
             gRef={gRef.current}
           />
-          {dispositivos.map((disp) => (
-            <MapaDispositivo
-              key={disp.id}
-              dispositivo={disp}
-              svgRef={svgRef}
-              gRef={gRef}
-              drag={drag}
-              dragStart={dragStart}
-              dragMove={dragMove}
-              centerOn={centerOn}
-              focusOn={focusOn}
-              onContextMenu={handleContextMenu}
-              destaque={activeTool === "operar" && toolSetup.operar?.id === disp.id}
-            />
-          ))}
+          {dispositivos.map((disp) => {
+            const isOperando = activeTool === "operar" && toolSetup.operar?.id === disp.id;
+
+            return (
+              <>
+                <MapaDispositivo
+                  dispositivo={disp}
+                  svgRef={svgRef}
+                  gRef={gRef}
+                  drag={drag}
+                  dragStart={dragStart}
+                  dragMove={dragMove}
+                  centerOn={centerOn}
+                  focusOn={focusOn}
+                  onContextMenu={handleContextMenu}
+                  destaque={isOperando}
+                />
+                {isOperando && ( <MapaTelemetria dispositivo={disp} /> )}
+              </>
+            );
+          })}
           {canteirosFiltrados.map((cant) => (
             <MapaCanteiro
               key={cant.id}

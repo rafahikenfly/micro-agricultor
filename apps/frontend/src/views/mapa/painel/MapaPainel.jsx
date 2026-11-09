@@ -14,6 +14,7 @@ import { pluralizar } from "../../../utils/uiUtils";
 import PainelDesenhar from "./PainelDesenhar";
 import PainelPlantar from "./PainelPlantar";
 import ModalFiltrar from "../modals/ModalFiltrar";
+import PainelOperar from "./PainelOperar";
 
 export default function MapaPainel() {
   const {
@@ -42,6 +43,7 @@ export default function MapaPainel() {
     inspecionar: PainelInspecionar,
     fotografar: PainelFotografar,
     manejar: PainelManejar,
+    operar: PainelOperar,
   };
   const OffcanvasContent = TOOL_PANELS[activeTool] || null;
   if (!OffcanvasContent) return null;
@@ -75,6 +77,7 @@ export default function MapaPainel() {
       });
       
     },
+    operar: (toolState)=>console.log("monitorar", toolState),
     monitorar: (toolState)=>console.log("monitorar", toolState),
     inspecionar: (toolState)=>console.log("inspecionar", toolState),
     fotografar: (toolState)=>console.log("fotografar", toolState),

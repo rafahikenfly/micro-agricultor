@@ -2,9 +2,9 @@ import { log } from "../core/logger/index.js";
 import { criarEvento, aplicarRegraPorBatch, ENTIDADE, EVENTO, ORIGEM, evoluirEntidade } from "micro-agricultor";
 import { cacheService, plantasService, canteirosService, eventosService, mutacoesService, batchService } from "../services/index.js";
 
-export async function dailyEvolution() {
-    log("Iniciando evolução de características de todo o banco de dados...")
-    const user = { uid: "dailyEvolution", nome: ORIGEM.BACKEND.id };
+export async function evolucaoDiaria() {
+    log("Iniciando evolução diária de características das entidades...")
+    const user = { uid: "evolucaoDiaria", nome: ORIGEM.BACKEND.id };
 
     const [
       cacheCaracteristicas,
@@ -28,7 +28,7 @@ export async function dailyEvolution() {
     const evento = criarEvento({
       tipoEvento: EVENTO.EVOLUCAO,
       timestamp,
-      origem: {id: "dailyEvolution", tipo: ORIGEM.BACKEND.id},
+      origem: {id: "evolucaoDiaria", tipo: ORIGEM.BACKEND.id},
       entidadesKey: [],
     })
     const entidadesKeySet = new Set();
@@ -41,7 +41,7 @@ export async function dailyEvolution() {
     // =========
     // Primeiro, evolui as caracteristicas das plantas
     // =========
-    const plantas = cachePlantas.list.filter(p => !p.isArchived);
+    const plantas = cachePlantas.list.filter(p => !p.isArchived); // Plantas arquivadas não têm evolução
     log(`${plantas.length} plantas para evoluir...`);
     for (const planta of plantas) {
       await batch.commitIfNeeded();
@@ -96,8 +96,12 @@ export async function dailyEvolution() {
       commitEvento = true;
     }
 
+    // ========
+    // Outras entidades vão aqui
+    // ========
+
     // =========
-    // Terceiro, finaliza o evento
+    // Último, finaliza o evento
     // =========
     if (commitEvento) {
       evento.entidadesKey = Array.from(entidadesKeySet);
@@ -106,6 +110,6 @@ export async function dailyEvolution() {
 
     await batch.commit();
 
-    log("Evolução de características concluída.")
+    log("Evolução de entidades concluída.")
     return;
 }

@@ -1,25 +1,45 @@
-import { ENTIDADE } from "micro-agricultor";
-import { cacheService } from "../services";
+import { ENTIDADE, entidadesAoAlcance, ESTADO_TAREFA, indiceCapaz, RECORRENCIA } from "micro-agricultor";
+import { cacheService, tarefasService } from "../services";
+import { log } from "../core/logger";
 
 export async function distribuidorDeTarefas() {
+  try {
+    cacheService.clearCache("tarefas")
+    const tarefasPendentes = (await cacheService
+        .getTarefas())
+        .list
+        .filter(t => t.estado === ESTADO_TAREFA.PENDENTE.id);
+    const dispositivos = await cacheService.getDispositivos();
+    const plantas = await cacheService.getPlantas();
+    const canteiros = await cacheService.getCanteiros();
 
-    try {
-        cacheService.clearCache("tarefas")
-        const tarefasPendentes = (await cacheService
-            .getTarefas())
-            .list
-            .filter(t => t.estado === ESTADO_TAREFA.PENDENTE.id);
-        const dispositivos = await cacheService.getDispositivos();
-        const plantas = await cacheService.getPlantas();
-        const canteiros = await cacheService.getCanteiros();
-
-        const mapEntidades = {
-          [ENTIDADE.planta.id]: plantas,
-          [ENTIDADE.canteiro.id]: canteiros,
-        }
-
-        const tarefasDisponiveis = filtrarTarefas(tarefasPendentes, dispositivos, mapEntidades);
+    const mapEntidades = {
+      [ENTIDADE.planta.id]: plantas,
+      [ENTIDADE.canteiro.id]: canteiros,
     }
+
+    const tarefasOrdenadas = ordenarPrioridades(tarefasPendentes);
+
+    // Percorre cada tarefa ordenada para verificar e atribuir um dispositivo
+    for (const tarefa of tarefasOrdenadas) {
+      const tarefaComAgente = atribuiAgente(tarefa, dispositivos, mapEntidades);
+      
+      if (tarefaComAgente) {
+        tarefasService.update(
+          tarefasService.getRefById(tarefa.id),
+          tarefaComAgente,
+          {nome: "BACKEND", uid:"adquirirTarefa"}
+        );
+        log(`[distribuidorDeTarefas] Tarefa ${tarefaComAgente.id} distribuida para ${tarefaComAgente.execucao.agente.id}`)
+        
+        // Caso queira salvar/atualizar cada tarefa imediatamente no serviço:
+        // await cacheService.atualizarTarefa(tarefaComAgente);
+      }
+    }
+  }
+  catch {
+    
+  }
 }
 
 function atribuiAgente(tarefa, dispositivos, mapEntidades) {
@@ -33,11 +53,13 @@ function atribuiAgente(tarefa, dispositivos, mapEntidades) {
 
   // Verifica se há dispositivo com capacidade e alcance de realizar a tarefa
   const dispositivoApto = dispositivos.find(disp => {
-    if (!temCapacidade({ disp, tarefa })) return false;         // Capacidade
-    return entidadesTarefa.som(ent => temAlcance({disp, ent})); // Alcance
-  })
+    if (indiceCapaz({ disp, tarefa }) !== -1) return false;
+    if (entidadesAoAlcance({ disp, entidadesTarefa }).length > 0) return false;
 
-  // Retorna a tarefa atribuída
+    return true;
+  });
+
+  // Retorna a tarefa atribuída ou nulo
   if (dispositivoApto) {
     return {
       ...tarefa,
@@ -50,20 +72,10 @@ function atribuiAgente(tarefa, dispositivos, mapEntidades) {
       }
     };
   }
-
   return null;
 }
-
-/**
- * Filtra tarefas executáveis e as ordena por importância.
- * @param {Array} tarefas - Lista de tarefas vindas do Firestore
- * @param {Array} dispositivos - Lista de dispositivos/agentes GRBL conectados com seus estados e alcances
- */
-function processarEOrdenarTarefasParaInspetor(tarefas, dispositivos) {
-  
-
-  // 2. ORDENAÇÃO: Critérios de Importância
-  return tarefasCompativeis.sort((a, b) => {
+function ordenarPrioridades(tarefas) {
+  return tarefas.sort((a, b) => {
     
     // Critério 1: Estado da atividade (ERRO > PENDENTE > Outros)
     const pesoEstado = (estado) => {
@@ -71,13 +83,13 @@ function processarEOrdenarTarefasParaInspetor(tarefas, dispositivos) {
       if (estado === "PENDENTE") return 2;
       return 1;
     };
-    const scoreA = pesoEstado(a.estado);
-    const scoreB = pesoEstado(b.estado);
-    if (scoreA !== scoreB) return scoreB - scoreA; // Maior peso primeiro
+    const estadoA = ESTADO_TAREFA[a.estado].prioridade;
+    const estadoB = ESTADO_TAREFA[b.estado].prioridade;
+    if (estadoA !== estadoB) return estadoB - estadoA; // Maior peso primeiro
 
-    // Critério 2: Vencimento (`venceEm`) - Quanto mais cedo, mais importante (crescente)
-    const vencimentoA = a.venceEm ? new Date(a.venceEm).getTime() : Infinity;
-    const vencimentoB = b.venceEm ? new Date(b.venceEm).getTime() : Infinity;
+    // Critério 2: Vencimento crescente
+    const vencimentoA = a.planejamento?.venceEm ? new Date(a.planejamento.venceEm).getTime() : Infinity;
+    const vencimentoB = b.planejamento?.venceEm ? new Date(b.planejamento.venceEm).getTime() : Infinity;
     if (vencimentoA !== vencimentoB) return vencimentoA - vencimentoB;
 
     // Critério 3: Planejamento / Prioridade numérica - Quanto menor, mais importante
@@ -86,24 +98,11 @@ function processarEOrdenarTarefasParaInspetor(tarefas, dispositivos) {
     if (prioA !== prioB) return prioA - prioB;
 
     // Critério 4: Planejamento / Recorrência
-    const recA = a.planejamento?.tipoRecorrenciaId;
-    const recB = b.planejamento?.tipoRecorrenciaId;
-    
-    const temRecA = recA && recA !== "NENHUMA";
-    const temRecB = recB && recB !== "NENHUMA";
-
-    // O que tem recorrência tem prioridade sobre o que não tem
-    if (temRecA && !temRecB) return -1;
-    if (!temRecA && temRecB) return 1;
-
-    // Se ambos têm recorrência, menor intervalo tem maior prioridade
-    if (temRecA && temRecB) {
-      const intervaloA = a.planejamento?.intervaloRecorrenciaMinutos || 0;
-      const intervaloB = b.planejamento?.intervaloRecorrenciaMinutos || 0;
-      if (intervaloA !== intervaloB) return intervaloA - intervaloB;
-    }
+    const recA = RECORRENCIA[a.planejamento?.tipoRecorrenciaId].prioridade;
+    const recB = RECORRENCIA[b.planejamento?.tipoRecorrenciaId].prioridade;
+    if (recA !== recB) return recB - recA; // Maior peso primeiro
 
     return 0;
   });
-}
+
 }

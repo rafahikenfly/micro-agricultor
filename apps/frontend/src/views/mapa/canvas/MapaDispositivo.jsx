@@ -3,8 +3,10 @@ import { useMapaEngine } from "../MapaEngine";
 import { getMouseInMapSpace, pointNearBorder } from "../../../utils/coordinatesUtils";
 
 import SVGEntidade from "../../../services/svg/SVGEntidade";
+import { useMemo } from "react";
+import React from "react";
 
-export default function ({dispositivo, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn, onContextMenu, destaque = false}) {
+function ComponenteDispositivo ({dispositivo, svgRef, gRef, drag, dragStart, dragMove, centerOn, focusOn, onContextMenu, destaque = false}) {
 
   // Não renderiza se tem propriedade de invisibilidade
   if (!dispositivo.visivelNoMapa) return null
@@ -18,17 +20,20 @@ export default function ({dispositivo, svgRef, gRef, drag, dragStart, dragMove, 
   const selecionado = selection.isSelected(key);
   const primaria = selection.isPrimary(key);
 
-  const style = {
-    opacity: 0.35,
-  }
-  if (selecionado) style.opacity = 1.00
-  if (primaria) style.filter = "drop-shadow(0 0 6px rgba(226, 121, 9, 0.8))";
+  const style = useMemo(() => {
+    const calculatedStyle = { opacity: 0.35 };
+    
+    if (selecionado) calculatedStyle.opacity = 1.00;
+    if (primaria) calculatedStyle.filter = "drop-shadow(0 0 6px rgba(226, 121, 9, 0.8))";
 
-  if (destaque) {
-    style.stroke = "#22c55e";
-    style.strokeWidth = Math.max(dispositivo.aparencia?.espessura ?? 1, 4);
-    style.filter = "drop-shadow(0 0 6px rgba(34, 197, 94, 0.9))";
-  }
+    if (destaque) {
+      calculatedStyle.stroke = "#22c55e";
+      calculatedStyle.strokeWidth = Math.max(dispositivo.aparencia?.espessura ?? 1, 4);
+      calculatedStyle.filter = "drop-shadow(0 0 6px rgba(34, 197, 94, 0.9))";
+    }
+
+    return calculatedStyle;
+  }, [selecionado, primaria, destaque, dispositivo.aparencia]);
 
   const handleStartDrag = (evt) => {
     if (activeTool === "mover") {
@@ -128,3 +133,21 @@ export default function ({dispositivo, svgRef, gRef, drag, dragStart, dragMove, 
     />
   )
 }
+
+function areEqual(prevProps, nextProps) {
+  if (prevProps.destaque !== nextProps.destaque) return false;
+  if (prevProps.drag.isDragging !== nextProps.drag.isDragging) return false;
+
+  const dispPrev = prevProps.dispositivo;
+  const dispNext = nextProps.dispositivo;
+
+  if (dispPrev.id !== dispNext.id) return false;
+  if (dispPrev.visivelNoMapa !== dispNext.visivelNoMapa) return false;
+  
+  if (JSON.stringify(dispPrev.posicao) !== JSON.stringify(dispNext.posicao)) return false;
+  if (JSON.stringify(dispPrev.aparencia) !== JSON.stringify(dispNext.aparencia)) return false;
+
+  return true; 
+}
+
+export default React.memo(ComponenteDispositivo, areEqual);

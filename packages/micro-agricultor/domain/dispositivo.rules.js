@@ -1,5 +1,5 @@
 import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
-import { EVENTO } from "../types/EVENTO.js";
+import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -89,9 +89,34 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user,
   }
   return acoesContexto
 }
-export function temCapacidade({dispositivo, tarefa}) {
-  return true
+export function indiceCapaz({dispositivo, tarefa}) {
+  let indice = -1;
+  if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.MANEJO.id) {
+    // Busca o índice do atuador correspondente no GrblCNC capaz de rodar a macro
+    indice = dispositivo.atuadores.findIndex(
+        a => a.caracteristicaId === tarefa.contexto.caracteristicaId
+    );
+  }
+  if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.MONITORAMENTO.id) {
+    // Busca o índice do sensor correspondente no GrblCNC capaz de rodar a macro
+    indice = dispositivo.sensores.findIndex(
+        a => a.caracteristicaId === tarefa.contexto.caracteristicaId
+    );
+  }
+  return indice;
 }
-export function temAlcance({dispositivo, entidade}) {
-  return true
+export function entidadesAoAlcance({dispositivo, entidades}) {
+  const alcanceX = dispositivo.dimensao.x / 2;
+  const alcanceY = dispositivo.dimensao.y / 2;
+  const alcanceZ = dispositivo.dimensao.z;
+
+  return entidades.filter(ent => {
+    if (!ent || !ent.posicao) return false;
+
+    const noAlcanceX = alcanceX > Math.abs(ent.posicao.x - dispositivo.posicao.x);
+    const noAlcanceY = alcanceY > Math.abs(ent.posicao.y - dispositivo.posicao.y);
+    const noAlcanceZ = alcanceZ > ent.posicao.z + ent.dimensao.z - dispositivo.posicao.z;
+
+    return noAlcanceX && noAlcanceY && noAlcanceZ;
+  });
 }

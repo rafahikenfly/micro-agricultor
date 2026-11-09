@@ -1,13 +1,13 @@
 export const RECORRENCIA = {
-    NENHUMA: {id: "NENHUMA", nome: "Nenhuma"},
-    DIARIA: {id: "DIARIA", nome: "Diário"},
-    SEMANAL: {id: "SEMANAL", nome: "Semanal"},
-    QUINZENAL: {id: "QUINZENAL", nome: "Quinzenal"},
-    MENSAL: {id: "MENSAL", nome: "Mensal"},
-    BIMESTRAL: {id: "BIMESTRAL", nome: "Bimestral"},
-    TRIMESTRAL: {id: "TRIMESTRAL", nome: "Trimestral"},
-    SEMESTRAL: {id: "SEMESTRAL", nome: "Semestral"},
-    ANUAL: {id: "ANUAL", nome: "Anual"},
+    NENHUMA:   {id: "NENHUMA",   nome: "Nenhuma",   prioridade: 8},
+    DIARIA:    {id: "DIARIA",    nome: "Diário",    prioridade: 0},
+    SEMANAL:   {id: "SEMANAL",   nome: "Semanal",   prioridade: 1},
+    QUINZENAL: {id: "QUINZENAL", nome: "Quinzenal", prioridade: 2},
+    MENSAL:    {id: "MENSAL",    nome: "Mensal",    prioridade: 3},
+    BIMESTRAL: {id: "BIMESTRAL", nome: "Bimestral", prioridade: 4},
+    TRIMESTRAL:{id: "TRIMESTRAL",nome: "Trimestral",prioridade: 5},
+    SEMESTRAL: {id: "SEMESTRAL", nome: "Semestral", prioridade: 6},
+    ANUAL:     {id: "ANUAL",     nome: "Anual",     prioridade: 7},
 }
 
 export const RECORRENCIA_FIM = {

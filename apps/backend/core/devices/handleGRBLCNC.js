@@ -1,58 +1,12 @@
-import { adquirirTarefa, concluirTarefa, ENTIDADE, falharTarefa, MACRO, ORIGEM, } from "micro-agricultor";
+import { adquirirTarefa, concluirTarefa, falharTarefa, MACRO, ORIGEM, } from "micro-agricultor";
 import { log } from "../logger/index.js";
-import { cacheService } from "../../services/cache.js";
 import { dispositivosService, tarefasService } from "../../services/crud.js";
 import { telemedir } from "micro-agricultor/application/entidades/telemedir.js";
 
 export async function handleGRBLCNC(topic, message, dispositivo) {
-    const [
-      cachePlantas,
-      cacheCanteiros
-    ] = await Promise.all([
-      cacheService.getPlantas(),
-      cacheService.getCanteiros(),
-    ]);
-  
-    const entidadeCaches = {
-      [ENTIDADE.planta.id]: cachePlantas,
-      [ENTIDADE.canteiro.id]: cacheCanteiros,
-    }
-  
-    // recupera config do dispositivo
-//    const grblCncId = topic.split("/")[1];
-//    const grblCnc = cacheDispositivos.map.get(grblCncId)
-//    if (!grblCnc) {
-//      log(`[handleGRBLCNC]: Dispositivo ${grblCncId} não cadastrado.`);
-//      return;
-//    }
-
-    // processa o payload
     try {
         const payload = JSON.parse(message.toString());
-        if (topic.includes("ack")) {
-/*            const msgId = payload.id;
-            const status = payload.status || "ERROR";
-            const data = payload.data || "";
-
-             // Libera a espera para este msg_id específico, se houver alguém aguardando
-            if (this.activeCommands && this.activeCommands[msgId]) {
-                // Armazena o status atual recebido
-                this.activeCommands[msgId].status = status;
-                
-                if (status === "COMPLETED") {
-                    this.on_ackCompleted(msgId);
-                } else if (status === "QUEUED") {
-                    this.on_ackQueued(msgId);
-                } else if (status === "ERROR") {
-                    this.on_ackError(msgId);
-                }
-            }
-            this.atualizarComandosAtivos();
-
-            // Equivalente ao root.after(0, ...) dependendo do ambiente (ex: setTimeout ou requestAnimationFrame no front-end)
-             handleMQTTAck(msgId, status, data);
- */           
-        }
+        if (topic.includes("ack")) {}
         else if (topic.includes("estado")) handleMQTTEstado(payload, dispositivo);
         else if (topic.includes("evento")) handleMQTTEvento(payload);
         else if (topic.includes("comandos")) handleMQTTComando(payload, dispositivo);
@@ -236,6 +190,8 @@ function filtrarEntidadesAoAlcance(tarefa, cacheEntidades, dispositivo) {
 }
 export async function adquirirTarefaGrbl({filaGrbl, tarefa, cache, eventos, timestamp}) {
     // Busca o índice do atuador correspondente no GrblCNC capaz de rodar a macro
+    // TODO: o rule do dispositivo usa a caracteristicaId para fazer a operaçào.
+    // será que dá para padronizar?
     const indiceAtuador = filaGrbl.dispositivo.atuadores.findIndex(
         a => a.macroId === tarefa.contexto.macroId
     );

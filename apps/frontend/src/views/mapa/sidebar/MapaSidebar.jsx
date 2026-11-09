@@ -1,6 +1,7 @@
 import { Button, OverlayTrigger, Tooltip } from "react-bootstrap";
 import { useMapaEngine } from "../MapaEngine";
 import { VARIANTE } from "micro-agricultor";
+import MapaTelemetria from "../canvas/MapaTelemetria";
 
 export default function MapaSidebar() {
 

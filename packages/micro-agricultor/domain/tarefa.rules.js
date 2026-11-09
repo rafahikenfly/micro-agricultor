@@ -4,7 +4,6 @@
 // Ex: A tarefa é algo como "MONITORAR NÚMERO DE FOLHAS" e pode ter N entidades do tipo PLANTA.
 // Cada tarefa tem um planejamento e uma resolução, além de estado.
 
-import { timestamp } from "../../../apps/backend/infra/firebase.js";
 import { ESTADO_TAREFA, RECORRENCIA, RECORRENCIA_FIM, RESOLUCAO } from "../types/index.js";
 import { adicionarAno, adicionarDia, adicionarMes, mergeComValidacao } from "./rulesUtils.js";
 

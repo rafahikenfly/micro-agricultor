@@ -20,12 +20,17 @@ export async function telemedir({
   if (!timestamp) {
     throw new Error("Timestamp da telemetria não informada.");
   }
+
+  const novaTelemetria = {
+    ...estado,
+    ts: timestamp,
+  };
+
   entidade.telemetria = estado;
   entidade.telemetria.ts = timestamp;
-  services.entidade.update(
+  return services.entidade.update(
     services.entidade.getRefById(entidade.id),
-    entidade,
+    {telemetria: novaTelemetria},
     user,
   )
-
 }
