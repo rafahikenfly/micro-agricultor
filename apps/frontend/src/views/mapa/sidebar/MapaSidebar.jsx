@@ -121,7 +121,7 @@ export default function MapaSidebar() {
         setTool("inspecionar");
         setShowPainel(true);
       }
-    },     
+    },
     {
       id: "manejar",
       icon: "🪏",
@@ -133,6 +133,18 @@ export default function MapaSidebar() {
         setShowPainel(true);
       }
     },
+    {
+      id: "operar",
+      icon: "[O]",
+      text: "Operar",
+      onClick: activeTool ===  "operar" ? resetTool : () => {
+        setMapDragActive(false);
+        setMapPreviewActive(false);
+        setTool("operar");
+        setShowPainel(true);
+      }
+    },
+    
   ];
 
   return (

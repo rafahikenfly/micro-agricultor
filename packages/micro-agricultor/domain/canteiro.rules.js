@@ -35,6 +35,8 @@ const canteiroPadrao = {
   hortaId: "",
   hortaNome: "",
   estadoAtual: {},
+  visivelNoMapa: true,
+  editavelNoMapa: true,
 }
 /**
  * Protege contra problemas no objeto.

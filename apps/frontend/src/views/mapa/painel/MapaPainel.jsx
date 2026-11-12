@@ -29,10 +29,7 @@ export default function MapaPainel() {
     setMapPreview,
     selection,
   } = useMapaEngine();
-  const { cachePlantas, cacheCanteiros, reading } = useCache([
-    "plantas",
-    "canteiros"
-  ]);
+  const { cacheEntidades, reading } = useCache(["entidades"]);
   if (!activeTool) return null;
 
   // DEFINIÇÃO DE PAINEIS
@@ -75,9 +72,8 @@ export default function MapaPainel() {
           pointerEvents: "none",
         },
       });
-      
     },
-    operar: (toolState)=>console.log("monitorar", toolState),
+    operar: (toolState)=>console.log("operar", toolState),
     monitorar: (toolState)=>console.log("monitorar", toolState),
     inspecionar: (toolState)=>console.log("inspecionar", toolState),
     fotografar: (toolState)=>console.log("fotografar", toolState),
@@ -124,11 +120,9 @@ export default function MapaPainel() {
       >
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>{offcanvasHeader({
+            tipoEntidadeId: "dispositivo",
             selection,
-            caches: {
-              [ENTIDADE.planta.id]: cachePlantas,
-              [ENTIDADE.canteiro.id]: cacheCanteiros,
-            },
+            caches: cacheEntidades,
             primary: false})}
             </Offcanvas.Title>
         </Offcanvas.Header>
@@ -155,7 +149,7 @@ export default function MapaPainel() {
 
 export function offcanvasHeader ({tipoEntidadeId, selection, caches, primary = false}) {
   if (!selection.primary) return <div><strong>Nenhuma seleção</strong></div>
-  const last = resolvePrimarySelection(selection, caches)
+  const last = resolvePrimarySelection(selection, caches, tipoEntidadeId)
   if (primary) return (
     <div>
       <strong>{last.nome}</strong>

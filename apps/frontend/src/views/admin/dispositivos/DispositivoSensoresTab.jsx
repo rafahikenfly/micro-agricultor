@@ -1,30 +1,25 @@
 import { useState } from "react"
-import { renderOptions, StandardArrayInput, StandardInput } from "../../../utils/formUtils"
-import { SENSOR } from "micro-agricultor/types/SENSOR"
+import { renderOptions, StandardArrayInput, StandardCheckboxGroup, StandardInput } from "../../../utils/formUtils"
 import { Form } from "react-bootstrap"
 import { useCache } from "../../../hooks/useCache"
-import { ENTIDADE } from "micro-agricultor"
+import { SENSOR, ENTIDADE, MACRO } from "micro-agricultor"
+import { renderBadgeGroup } from "../../../utils/uiUtils"
 
 export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
-  const { cacheCanteiros, cachePlantas, cacheCaracteristicas, reading } = useCache([
+  const { cacheCaracteristicas, reading } = useCache([
     "canteiros",
     "plantas",
     "caracteristicas"
   ]);
   const [form, setForm] = useState({
-    tipoSensorId: "",
+    ativo: false,
+    caracteristicaId: "",
+    contextMenuLabel: "",
+    label: "",
+    macroId: "",
+    tipoAtuadorId: "",
     tipoEntidadeId: "",
-    entidadeId: "",
-    pino: 0,
-    confianca: 0,
-    mudancaMinima: 0,
-    intervaloLeitura: 0
   })
-
-  const listaEntidades = {
-    [ENTIDADE.planta.id]: cachePlantas?.list ?? [],
-    [ENTIDADE.canteiro.id]: cacheCanteiros?.list ?? [],
-  }
     
   return (
     <StandardArrayInput
@@ -33,84 +28,92 @@ export const DispositivosSensoresTab = ({formSensores, setFormSensores}) => {
         inputLabel="Incluir sensor"
         inputData={form}
         colunas={[
-          {rotulo: "Entidade", dataKey: "entidadeId", render: (a)=>cacheCanteiros?.map.get(a.entidadeId)?.nome ?? `id: ${a.entidadeId}`},
-          {rotulo: "Tipo", dataKey: "tipoSensorId", render: (a)=>SENSOR[a.tipoSensorId]?.nome ?? `id: ${a.tipoSensorId}`},
+          {rotulo: "Nome", dataKey: "nome", },
+          {rotulo: "Tipo de Atuador", dataKey: "tipoAtuadorId", render: (a)=>ATUADOR[a.tipoAtuadorId]?.nome ?? `id: ${a.tipoSensorId}`},
+          {rotulo: "Ativo", dataKey: "ativo", render: (a)=> a.ativo ? "Sim" : "Não"},
+          {rotulo: "Ação", dataKey: "contextMenuLabel", },
+          {rotulo: "Macro", dataKey: "macroId", },
+          {rotulo: "Aplicável à", dataKey: "aplicavel", render: (a)=>renderBadgeGroup(a, "aplicavel", ENTIDADE) },
           {rotulo: "Caracteristica", dataKey: "caracteristicaId", render: (a)=>cacheCaracteristicas?.map.get(a.caracteristicaId)?.nome ?? `id: ${a.caracteristicaId}`},
-          {rotulo: "Pino", dataKey: "pino",},
-          {rotulo: "Mín", dataKey: "mudancaMinima",},
-          {rotulo: "Hb(ms)", dataKey: "heartbeatMs",},
         ]}
     >
-      <StandardInput label="Sensor/Pino/Confianca">
+      <StandardInput label="Tipo de Sensor">
         <Form.Select
-          value={form.tipoSensorId ?? ""}
-          onChange={e => setForm({...form, tipoSensorId: e.target.value})}
+          value={form.tipoAtuadorId ?? ""}
+          onChange={e => setForm({...form, tipoAtuadorId: e.target.value})}
         >
           {renderOptions({
             list: Object.values(SENSOR),
-            placeholder: "Selecione tipo de sensor",
-            nullOption: false,
-          })}
-        </Form.Select>
-        <Form.Control
-          type="number"
-          value={form.pino}
-          onChange={e => setForm({...form, pino: Number(e.target.value)})}
-        />
-        <Form.Control
-          type="number"
-          value={form.confianca}
-          onChange={e => setForm({...form, confianca: Number(e.target.value)})}
-        />
-      </StandardInput>
-      <StandardInput label="Valor relevante/Intervalo Leitura">
-        <Form.Control
-          type="number"
-          value={form.mudancaMinima}
-          onChange={e => setForm({...form, mudancaMinima: Number(e.target.value)})}
-        />
-        <Form.Control
-          type="number"
-          value={form.intervaloLeitura}
-          onChange={e => setForm({...form, intervaloLeitura: Number(e.target.value)})}
-        />
-      </StandardInput>
-      <StandardInput label="Entidade">
-        <Form.Select
-          value={form.tipoEntidadeId ?? ""}
-          onChange={e => setForm({...form, tipoEntidadeId: e.target.value})}
-        >
-          {renderOptions({
-            list: Object.values(ENTIDADE),
-            loading: reading,
-            placeholder: "Selecione o tipo de entidade",
-            nullOption: false,
-            isOptionDisabled: (a) => !listaEntidades[a.id]
-          })}
-        </Form.Select>
-        <Form.Select
-          value={form.entidadeId ?? ""}
-          onChange={e => setForm({...form, entidadeId: e.target.value})}
-        >
-          {renderOptions({
-            list: listaEntidades[form.tipoEntidadeId],
-            loading: reading,
-            placeholder: "Selecione a entidade",
+            placeholder: "Selecione tipo de sensor do dispositivo",
             nullOption: false,
           })}
         </Form.Select>
       </StandardInput>
-      <StandardInput label="Confiança">
+      <StandardCheckboxGroup label="Opções">
+        <Form.Check
+          type="checkbox"
+          label="Ativo"
+          checked={form.ativo ?? false}
+          onChange={e => setForm({...form, ativo: e.target.checked})}
+        />
+        <Form.Check
+          type="checkbox"
+          label="Usar troca"
+          checked={form.usarTroca ?? false}
+          onChange={e => setForm({...form, usarTroca: e.target.checked})}
+        />
+        <Form.Check
+          type="checkbox"
+          label="Usar parâmetros"
+          checked={form.usarParametros ?? false}
+          onChange={e => setForm({...form, usarParametros: e.target.checked})}
+        />
+      </StandardCheckboxGroup>
+      <StandardCheckboxGroup label="Aplicável a">
+        {Object.values(ENTIDADE).map(te => (
+          <Form.Check
+            key={te.id}
+            label={te.nome}
+            checked={form.aplicavel?.[te.id] === true ?? false}
+            onChange={e => setForm({ ...form, aplicavel: { ...form.aplicavel, [te.id]: e.target.checked } })}
+          />
+        ))}
+      </StandardCheckboxGroup>
+      <StandardInput label="Característica Afetada">
         <Form.Select
           value={form.caracteristicaId ?? ""}
           onChange={e => setForm({...form, caracteristicaId: e.target.value})}
         >
           {renderOptions({
             list: Object.values(cacheCaracteristicas?.list ?? []),
-            placeholder: "Selecione a característica",
+            placeholder: "Selecione a característica inspecionada pelo sensor",
+            loading: reading,
             nullOption: false,
           })}
         </Form.Select>
+      </StandardInput>
+      <StandardInput label="Ação">
+        <Form.Control
+          value={form.contextMenuLabel ?? ""}
+          onChange={e => setForm({...form, contextMenuLabel: e.target.value})}
+        />
+        <Form.Select
+          value={form.macroId ?? ""}
+          onChange={e => setForm({...form, macroId: e.target.value})}
+        >
+          {renderOptions({
+            list: Object.values(MACRO),
+            loading: reading,
+            placeholder: "Selecione a macro do atuador",
+            nullOption: false,
+          })}
+        </Form.Select>
+      </StandardInput>
+      <StandardInput label="Nome">
+        <Form.Control
+          value={form.nome ?? ""}
+          onChange={e => setForm({...form, nome: e.target.value})}
+        />
       </StandardInput>
     </StandardArrayInput>
   )

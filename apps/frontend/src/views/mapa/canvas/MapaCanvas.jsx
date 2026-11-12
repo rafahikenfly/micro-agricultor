@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { criarCanteiro, criarContextoDispositivo, criarDispositivo, criarPlanta, ENTIDADE, GEOMETRIA, movimentar, redimensionar } from "micro-agricultor";
+import { criarCanteiro, criarContextoDispositivo, criarDispositivo, criarPlanta, ENTIDADE, entidadesAoAlcance, GEOMETRIA, movimentar, redimensionar } from "micro-agricultor";
 
 import { useAuth } from "../../../services/auth/authContext";
 import { useSVGTransform } from "../../../hooks/useSVGTransform";
@@ -28,6 +28,7 @@ import MapaPreview from "./MapaPreview";
 import { useMemo } from "react";
 import MapaContextMenu from "./MapaContextMenu";
 import MapaTelemetria from "./MapaTelemetria";
+import { unixToReadableString } from "../../../utils/dateUtils";
 
 const servicesMap = {
   [ENTIDADE.planta.id]: plantasService,
@@ -125,6 +126,7 @@ export default function MapaCanvas () {
 
   //Filtra as entidades
   const plantasFiltradas = useMemo(() => {
+    if (filters?.planta?.ocultar) return [];
     let resultado = plantas;
     if (filters?.planta?.estadoId) {
       resultado = resultado.filter(
@@ -162,6 +164,7 @@ export default function MapaCanvas () {
     return resultado;    
   }, [plantas, filters?.planta, activeTool, toolSetup.operar]);
   const canteirosFiltrados = useMemo(() => {
+    if (filters?.canteiro?.ocultar) return [];
     let resultado = canteiros;
     if (filters?.canteiro?.estadoId) {
       resultado = resultado.filter(
@@ -183,6 +186,16 @@ export default function MapaCanvas () {
     }
   return resultado;    
   }, [canteiros, filters?.canteiro, activeTool, toolSetup.operar]);
+  const dispositivosFiltrados = useMemo(() => {
+    if (filters?.dispositivo?.ocultar) return [];
+    let resultado = dispositivos;
+    if (filters?.dispositivo?.id) {
+      resultado = resultado.filter(
+        (dispositivo) => dispositivo.tipo === filters.dispositivo.id
+      );
+    }
+  return resultado;    
+  }, [dispositivos, filters?.dispositivo]);
 
   // Handlers
   const handleFinishDrag = (evt) => {
@@ -300,7 +313,7 @@ export default function MapaCanvas () {
       const tipoEntidadeId = toolSetup.desenhar.tipoEntidadeId
       const entidade = {
         nome: `Novo ${tipoEntidadeId}`,
-        descricao: `Criado pelo mapa em ${Date.now()}`,
+        descricao: `Criado pelo mapa em ${unixToReadableString(Date.now())}`,
         posicao: {
           x: (startMap.x + currentMap.x)/2,
           y: (startMap.y + currentMap.y)/2,
@@ -318,7 +331,7 @@ export default function MapaCanvas () {
       };
       const data = funcaoCriarMap[tipoEntidadeId]({entidade})
       setShowModal({
-        tipoEntidadeId,
+        tipo: tipoEntidadeId,
         data,
       })
     }
@@ -339,84 +352,29 @@ export default function MapaCanvas () {
         console.warn("Tool sem drag start handler:", activeTool);
     }
   }
-  const handleContextMenu = (evt, tipo, entidade) => {
-    const opcoesPorTipo = {
-      planta: [
-        { label: "Editar planta", onClick: ()=>{
-          setContextMenu(null)
-          setShowModal({
-            tipo: ENTIDADE.planta.id,
-            data: entidade
-          })}
-        },
-      ],
-      canteiro: [
-        { label: "Editar canteiro", onClick: ()=>{
-          setContextMenu(null)
-          setShowModal({
-            tipo: ENTIDADE.canteiro.id,
-            data: entidade
-          })}
-        },
-      ],
-      dispositivo: [
-        { label: "Editar dispositivo", onClick: ()=>{
-          setContextMenu(null)
-          setShowModal({
-            tipo: ENTIDADE.dispositivo.id,
-            data: entidade
-          })}
-        },
-      ]
-    };
-    let opcoes = opcoesPorTipo[tipo];
-    if (activeTool == "operar") {
-      if (entidade.id == toolSetup.operar.id) {
-        opcoes.push({
-          label: "Finalizar operação",
-          onClick: ()=>{
-            setTool(null);
-            setContextMenu(null)
-          }
-        });
+  const handleContextMenu = (evt, tipoEntidadeId, entidade) => {
+    let opcoes = [
+      { label: `Editar ${tipoEntidadeId}`, onClick: ()=>{
+        setContextMenu(null)
+        setShowModal({
+          tipo: tipoEntidadeId,
+          data: entidade
+        })}
       }
-      else {
-        const bounds = {
-          maxX:toolSetup.operar.posicao.x + toolSetup.operar.dimensao.x/2,
-          maxY:toolSetup.operar.posicao.y + toolSetup.operar.dimensao.y/2,
-          minX:toolSetup.operar.posicao.x - toolSetup.operar.dimensao.x/2,
-          minY:toolSetup.operar.posicao.y - toolSetup.operar.dimensao.y/2,
-        }
-        if (tipo === ENTIDADE.dispositivo.id) {
-          opcoes.push({
-            label: "Operar", onClick: ()=>{
-              setTool("operar");
-              setToolState(entidade);
-              setContextMenu(null);
-              setShowPainel(true);
-            }
-          });
-        }
-        if (entitiesInBounds([entidade], bounds).length > 0) {opcoes = opcoes.concat(
-          criarContextoDispositivo({
-            dispositivo: toolSetup.operar,
-            tipoAlvo: tipo,
-            entidade,
-            user,
-            onHide: ()=>{setContextMenu(null)},
-            servicesMap,
-          })
-        );}
+    ];
+
+    if (activeTool === "operar" && toolSetup.operar) {
+      if (entidadesAoAlcance({dispositivo: toolSetup.operar, entidades: [entidade]}).length > 0) {
+        opcoes = opcoes.concat(
+        criarContextoDispositivo({
+          dispositivo: toolSetup.operar,
+          tipoAlvo: tipoEntidadeId,
+          entidade,
+          user,
+          onHide: ()=>{setContextMenu(null)},
+          servicesMap,
+        }));
       }
-    }
-    else {
-      opcoes.push({
-        label: "Operar", onClick: ()=>{
-          setTool("operar");
-          setToolState(entidade);
-          setContextMenu(null)
-        }
-      });
     }
     setContextMenu({
       x: evt.clientX,
@@ -456,11 +414,11 @@ export default function MapaCanvas () {
             svgRef={svgRef.current}
             gRef={gRef.current}
           />
-          {dispositivos.map((disp) => {
+          {dispositivosFiltrados.map((disp) => {
             const isOperando = activeTool === "operar" && toolSetup.operar?.id === disp.id;
 
             return (
-              <>
+              <React.Fragment key={disp.id}>
                 <MapaDispositivo
                   dispositivo={disp}
                   svgRef={svgRef}
@@ -474,7 +432,7 @@ export default function MapaCanvas () {
                   destaque={isOperando}
                 />
                 {isOperando && ( <MapaTelemetria dispositivo={disp} /> )}
-              </>
+              </React.Fragment>
             );
           })}
           {canteirosFiltrados.map((cant) => (
@@ -517,7 +475,6 @@ export default function MapaCanvas () {
         <MapaContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          entidade={contextMenu.entidade}
           opcoes={contextMenu.opcoes}
           onClose={() => setContextMenu(null)}
         />

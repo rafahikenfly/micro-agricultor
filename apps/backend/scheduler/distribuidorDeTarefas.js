@@ -1,4 +1,4 @@
-import { ENTIDADE, entidadesAoAlcance, ESTADO_TAREFA, indiceCapaz, RECORRENCIA } from "micro-agricultor";
+import { ENTIDADE, entidadesAoAlcance, ESTADO_TAREFA, ferramentaCapaz, RECORRENCIA } from "micro-agricultor";
 import { cacheService, tarefasService } from "../services";
 import { log } from "../core/logger";
 
@@ -53,7 +53,7 @@ function atribuiAgente(tarefa, dispositivos, mapEntidades) {
 
   // Verifica se há dispositivo com capacidade e alcance de realizar a tarefa
   const dispositivoApto = dispositivos.find(disp => {
-    if (indiceCapaz({ disp, tarefa }) !== -1) return false;
+    if (!ferramentaCapaz({ disp, tarefa })) return false;
     if (entidadesAoAlcance({ disp, entidadesTarefa }).length > 0) return false;
 
     return true;

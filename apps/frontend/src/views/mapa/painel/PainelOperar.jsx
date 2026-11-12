@@ -3,7 +3,7 @@ import { StandardInput } from "../../../utils/formUtils";
 import { Button, Form } from "react-bootstrap";
 import { useAuth } from "../../../services/auth/authContext";
 import { ISOToReadableString, toDateTimeLocal } from "../../../utils/dateUtils";
-import { VARIANTE } from "micro-agricultor";
+import { DISPOSITIVO, ENTIDADE, VARIANTE } from "micro-agricultor";
 import { useCache } from "../../../hooks/useCache";
 import { useToast } from "../../../services/toast/toastProvider";
 import { resolvePrimarySelection, resolveSelection } from "../../../utils/catalogUtils";
@@ -12,26 +12,30 @@ import { useMapaEngine } from "../MapaEngine";
 import Loading from "../../../components/Loading";
 
 export default function PainelOperar({ show, onCancel }) {
-  if (!show) return null;
 
+  
   const { user } = useAuth();
-  const { setShowPainel, selection, setActiveTool } = useMapaEngine();
+  const { setShowPainel, selection, setTool, setToolState, toolSetup } = useMapaEngine();
   const { toastMessage } = useToast();
   const { cacheEntidades, reading } = useCache(["entidades"]);
 
-  const [primaryType, setPrimaryType] = useState(selection?.primaryType() || "");
+  const [dispositivo, setDispositivo] = useState(null);
+  const [tipoDispositivoId, setTipoDispositivoId] = useState("nenhum");
   const [customCode, setCustomCode] = useState("");
   const [writing, setWriting] = useState(false);
 
 
   useEffect(() => {
     if (selection) {
-      setPrimaryType(selection.primaryType());
+      const primary = selection.primaryType();
+      if (primary === ENTIDADE.dispositivo.id) {
+        const disp = resolvePrimarySelection(selection, cacheEntidades)
+        setDispositivo(disp);
+      }
     }
   }, [selection]);
 
-  const list = selection ? resolveSelection(selection, primaryType, cacheEntidades?.[primaryType]) : [];
-  const last = resolvePrimarySelection(selection, cacheEntidades);
+  if (!show) return null;
 
   const adicionarLog = (msg) => {
     setLogsConsole((prev) => [...prev.slice(-50), `[${new Date().toLocaleTimeString()}] ${msg}`]);
@@ -54,7 +58,7 @@ export default function PainelOperar({ show, onCancel }) {
       enviarCustomCode(comandoGcode);
 
       toastMessage({
-        body: `Ação "${acaoNome}" executada com sucesso para ${list.length} ${pluralizar(list.length, primaryType || "alvo")}.`,
+        body: `Ação "${acaoNome}" executada com sucesso.`,
         variant: VARIANTE.GREEN.variant,
       });
       setShowPainel(false);
@@ -69,16 +73,31 @@ export default function PainelOperar({ show, onCancel }) {
     }
   };
 
-  const acoes = [
-    {label: "🏠 Home ($H)", onClick: () => enviarCustomCode("$H"), variant: VARIANTE.LIGHTBLUE.variant},
-    {label: "Encerrar operação", onClick: () => setActiveTool(""), variant: VARIANTE.RED.variant},
-  ]
-  if (reading) return <Loading variant="overlay" />;
+  const acoes = {
+    nenhum: [
+      {label: "Iniciar operação", onClick: () => {
+        if (dispositivo) {
+          setTool("operar");
+          setToolState(dispositivo);
+        }
+      }, variant: VARIANTE.RED.variant},
+    ],
+    [DISPOSITIVO.GRBL.id]: [
+      {label: "🏠 Home ($H)", onClick: () => enviarCustomCode("$H"), variant: VARIANTE.LIGHTBLUE.variant},
+      {label: "Encerrar operação", onClick: () => {
+        setTool("");
+        setToolState(null);
+      }, variant: VARIANTE.RED.variant},
+    ],
+  }
+
+  const tipoOperacao = toolSetup?.operar?.tipo || "nenhum";
+  const listaAcoes = acoes[tipoOperacao] || acoes.nenhum;
 
   return (
     <div className="p-3">
-      {/* Console Serial / G-code */}
-      <div className="mb-3">
+      {dispositivo && <div className="mb-3">
+        Operando {dispositivo.nome}
         <Form.Control
           type="text"
           size="sm"
@@ -92,11 +111,12 @@ export default function PainelOperar({ show, onCancel }) {
             }
           }}
         />
-      </div>
+      </div>}
 
       <div className="d-grid gap-2">
-      {acoes.map((acao)=>
+      {listaAcoes.map((acao, index)=>
         <Button
+          key={index}
           variant={`outline-${acao.variant}`}
           size="sm"
           disabled={writing}

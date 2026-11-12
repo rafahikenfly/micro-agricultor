@@ -8,12 +8,11 @@ export default function ListaToolbar({
   configFiltros = []
 }) {
   const handleChange = (key, value) => {
-    setFiltros(//(f) => (
+    setFiltros(
       {
       ...filtros,
       [key]: value || null
     })
-  //);
   };
 
   return (

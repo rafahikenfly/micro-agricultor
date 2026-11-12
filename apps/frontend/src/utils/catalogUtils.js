@@ -10,6 +10,5 @@ export const resolvePrimarySelection = (selection, caches) => {
   if (!selection?.primary || !caches) return null;
   
   const [tipo, id] = selection.primary.split(":");
-
   return caches?.[tipo]?.map?.get(id) ?? null;
 };

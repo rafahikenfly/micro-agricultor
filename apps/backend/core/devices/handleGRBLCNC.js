@@ -1,4 +1,4 @@
-import { adquirirTarefa, concluirTarefa, falharTarefa, MACRO, ORIGEM, } from "micro-agricultor";
+import { adquirirTarefa, concluirTarefa, entidadesAoAlcance, falharTarefa, ferramentaCapaz, MACRO, ORIGEM, } from "micro-agricultor";
 import { log } from "../logger/index.js";
 import { dispositivosService, tarefasService } from "../../services/crud.js";
 import { telemedir } from "micro-agricultor/application/entidades/telemedir.js";
@@ -189,25 +189,28 @@ function filtrarEntidadesAoAlcance(tarefa, cacheEntidades, dispositivo) {
     return entidades;
 }
 export async function adquirirTarefaGrbl({filaGrbl, tarefa, cache, eventos, timestamp}) {
-    // Busca o índice do atuador correspondente no GrblCNC capaz de rodar a macro
-    // TODO: o rule do dispositivo usa a caracteristicaId para fazer a operaçào.
-    // será que dá para padronizar?
-    const indiceAtuador = filaGrbl.dispositivo.atuadores.findIndex(
-        a => a.macroId === tarefa.contexto.macroId
-    );
-    // Se o atuador foi encontrado, segue (findIndex retorna -1 se não encontrar)
-    if (indiceAtuador === -1) {
+    // Busca o índice da ferramenta correspondente no GrblCNC capaz de rodar a macro
+
+    const ferramenta = ferramentaCapaz({dispositivo: filaGrbl.dispositivo, tarefa});
+    if (!ferramenta) {
         log(`[handleGRBLCNC] Nenhum atuador/sensor com macroId ${tarefa.contexto.macroId} encontrado no dispositivo.`);
         return false;
     }
-    // TODO: buscar os sensores também
-    log(`[handleGRBLCNC] Atuador encontrado no índice: ${indiceAtuador}`);
-
-
+    log(`[handleGRBLCNC] Ferramenta ${ferramenta.nome} (${ferramenta.indiceFerramenta}) capaz de realizar a tarefa ${tarefa.id}`);
 
     // Busca as entidades que podem ser manejadas
-    const entidades = filtrarEntidadesAoAlcance(tarefa, cache, filaGrbl.dispositivo);
-    if (!entidades.length) {
+    const entidades = tarefa.contexto.entidadesId
+    .map(entidadeId => {
+        const ent = cache.map.get(entidadeId);
+        if (!ent || !ent.posicao) {
+            console.error(`Entidade ${entidadeId} não encontrada ou sem posição.`);
+            return null; // Marca como inválido para remover depois
+        }
+        return ent;
+    })
+    .filter(Boolean);
+    const entidadesAoAlcance = entidadesAoAlcance({dispositivo: filaGrbl.dispositivo, entidades});
+    if (!entidadesAoAlcance.length) {
         log(`[handleGRBLCNC] Tarefa ${tarefa.id} não tem nenhuma entidade no alcance do GRBL ${filaGrbl.dispositivo.id}.`);
         return;
     }

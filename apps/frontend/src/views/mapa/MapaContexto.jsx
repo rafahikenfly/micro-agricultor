@@ -70,6 +70,7 @@ const estadoInicialMapa = {
   filter: {
     planta: {},
     canteiro: {},
+    dispositivo: {},
   }
 };
 
@@ -187,6 +188,7 @@ function reducerMapa(state, action) {
       filter: {
         planta: {},
         canteiro: {},
+        dispositivo: {},
       }
   };
   /* 

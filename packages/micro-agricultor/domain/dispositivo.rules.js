@@ -1,4 +1,5 @@
 import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
+import { EFEITO } from "../types/EFEITOS.js";
 import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
@@ -20,15 +21,38 @@ const dispositivoPadrao = {
     hortaId: "",
     nome: "",
     posicao: { x: 0, y: 0, z: 0 },
+    sensores: [],
     telemetria: {},
     tipo: "",
     visivelNoMapa: true,
 };
+const ferramentaPadrao = {
+  ativo: false,
+  nome: "Nova ferramenta",
+  tipoFerramentaId: "",
+  tipoEventoId: EVENTO.MONITORAMENTO.id,
+  efeito: EFEITO.NENHUM.id,
+  caracteristicaId: "",
+  indiceFerramenta: "",
+  aplicavel: {},
+  usarMover: false,
+  usarParametro: false,
+  parametros: {},
+  usarMenuContexto: false,
+  nomeAcao: "",
+  usarMacro: false,
+  macroId: "",
+  usarTroca: false,
+  indiceTroca: "",
+}
 
 export const validarDispositivo = (dataObj = {}) => {
-    const valid = mergeComValidacao(dispositivoPadrao, dataObj);
-    return valid;
-}
+  const valid = mergeComValidacao(dispositivoPadrao, dataObj);
+  if (Array.isArray(valid.ferramentas)) {
+    valid.sensores = valid.sensores.map(f => mergeComValidacao(ferramentaPadrao, f));
+  }
+  return valid;
+};
 
 export function criarDispositivo({ entidade }) {
   const valid = validarDispositivo(entidade);
@@ -48,62 +72,49 @@ export function redimensionarDispositivo({entidade, dimensao, posicao}) {
 
 
 
-export function criarContextoDispositivo({dispositivo, tipoAlvo, entidade, user, servicesMap={}, onHide=()=>{}}) {
+export function criarContextoDispositivo({dispositivo, tipoAlvo, entidadesId, user, servicesMap={}, onHide=()=>{}}) {
   const acoesContexto = [];
-  switch (dispositivo.tipo) {
-    case DISPOSITIVO.GRBL.id:
-      (dispositivo.atuadores ?? [])
-        .filter((atuador) => atuador.tipoEntidadeId === tipoAlvo)
-        .forEach((atuador)=> {
-          acoesContexto.push({
-            label: atuador.contextMenuLabel,
-            onClick: () => {
-              if (!atuador.macroId) console.info(`Atuador ${atuador.contextMenuLabel} não possui macroId definido.`);
-              const tarefa = criarTarefa({
-                dados: {
-                  nome: `${atuador.contextMenuLabel} ${entidade.nome} com ${dispositivo.nome}`,
-                },
-                contexto: {
-                  caracteristicaId: atuador.caracteristicaId,
-                  entidadesId: [entidade.id],
-                  tipoEntidadeId: atuador.tipoEntidadeId,
-                  tipoEventoId: EVENTO.MANEJO.id,
-                  macroId: atuador.macroId || "",
-                },
-                execucao: {
-                  agente: {
-                    id: dispositivo.id,
-                    tipo: DISPOSITIVO.GRBL.id,
-                  }
-                }
-              });
-              servicesMap.tarefa.create(tarefa, user);
-              onHide();
+  (dispositivo.ferramentas ?? [])
+    .filter((ferr) => ferr.usarMenuContexto)
+    .filter((ferr) => ferr.aplicavel[tipoAlvo])
+    .forEach((ferr)=> {
+      acoesContexto.push({
+        label: ferr.nomeAcao,
+        onClick: () => {
+          const tarefa = criarTarefa({
+            dados: {
+              nome: `${ferr.nomeAcao} com ${dispositivo.nome}.`,
             },
+            descricao: `${ferr.nomeAcao} ${entidadesId.length} ${tipoAlvo}, usando ${ferr.nome} (${ferr.indiceFerramenta}) de ${dispositivo.nome}`,
+            contexto: {
+              caracteristicaId: ferr.caracteristicaId,
+              entidadesId: entidadesId,
+              tipoEntidadeId: ferr.tipoEntidadeId,
+              tipoEventoId: ferr.tipoEventoId,
+            },
+            execucao: {
+              agente: {
+                id: dispositivo.id,
+                tipo: dispositivo.tipo,
+              }
+            }
           });
-        });
-      break;
-    default:
-      console.error("Tipo de dispositivo desconhecido na criação de menu de contexto");
-      break;
-  }
+          servicesMap.tarefa.create(tarefa, user);
+          onHide();
+        },
+      });
+    });
   return acoesContexto
 }
-export function indiceCapaz({dispositivo, tarefa}) {
-  let indice = -1;
-  if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.MANEJO.id) {
-    // Busca o índice do atuador correspondente no GrblCNC capaz de rodar a macro
-    indice = dispositivo.atuadores.findIndex(
-        a => a.caracteristicaId === tarefa.contexto.caracteristicaId
-    );
-  }
-  if (tarefa.contexto.tipoEventoId === EVENTO_TYPES.MONITORAMENTO.id) {
-    // Busca o índice do sensor correspondente no GrblCNC capaz de rodar a macro
-    indice = dispositivo.sensores.findIndex(
-        a => a.caracteristicaId === tarefa.contexto.caracteristicaId
-    );
-  }
-  return indice;
+export function ferramentaCapaz({dispositivo, tarefa}) {
+  return ferr = dispositivo.ferramentas.find(
+    ferr => {
+      ferr.ativo &&                                               // Ferramenta ativa
+      ferr.tipoEventoId === tarefa.contexto.tipoEventoId &&       // Adequada ao tipo de evento
+      ferr.aplicavel[tarefa.contexto.tipoEntidadeId] &&           // Aplicável ao tipo de entidade
+      ferr.caracteristicaId === tarefa.contexto.caracteristicaId  // Aplicável à característica alvo
+    }
+  )
 }
 export function entidadesAoAlcance({dispositivo, entidades}) {
   const alcanceX = dispositivo.dimensao.x / 2;

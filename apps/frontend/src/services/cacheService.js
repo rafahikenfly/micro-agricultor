@@ -127,16 +127,18 @@ export const cacheService = {
     ),
   // DERIVED
   getEntidades: async () => {
-    const [plantas, canteiros, hortas] = await Promise.all([
+    const [plantas, canteiros, hortas, dispositivos] = await Promise.all([
       cacheService.getPlantas(),
       cacheService.getCanteiros(),
       cacheService.getHortas(),
+      cacheService.getDispositivos(),
     ]);
 
     return {
       [ENTIDADE.planta.id]: plantas,
       [ENTIDADE.canteiro.id]: canteiros,
       [ENTIDADE.horta.id]: hortas,
+      [ENTIDADE.dispositivo.id]: dispositivos,
     };
   },
 

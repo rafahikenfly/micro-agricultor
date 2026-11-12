@@ -4,10 +4,9 @@ import { validarDispositivo } from "micro-agricultor";
 
 import { handleSaveForm } from "../../../utils/formUtils";
 import { DispositivoDadosTab } from "./DispositivoDadosTab";
-import { DispositivosSensoresTab } from "./DispositivoSensoresTab";
-import { DispositivosAtuadoresTab } from "./DispositivoAtuadoresTab";
 import { DispositivoLocalizacaoTab } from "./DispositivoLocalizacaoTab";
 import { useCache } from "../../../hooks/useCache";
+import { DispositivosFerramentasTab } from "./DispositivoFerramentasTab";
 
 
 export default function DispositivoModal({ show, onSave, onClose, data = {}, }) {
@@ -58,16 +57,10 @@ export default function DispositivoModal({ show, onSave, onClose, data = {}, }) 
                 loading={reading}
               />
             </Tab>
-            <Tab eventKey="sensores" title="Sensores">
-              <DispositivosSensoresTab
-                formSensores={form.sensores ?? []}
-                setFormSensores={(sensores)=>setForm({...form, sensores})}
-              />
-            </Tab>
-            <Tab eventKey="atuadores" title="Atuadores">
-              <DispositivosAtuadoresTab
-                formAtuadores={form.atuadores ?? []}
-                setFormAtuadores={(atuadores)=>setForm({...form, atuadores})}
+            <Tab eventKey="ferramentas" title="Ferramentas">
+              <DispositivosFerramentasTab
+                formFerramentas={form.ferramentas ?? []}
+                setFormFerramentas={(ferramentas)=>setForm({...form, ferramentas})}
               />
             </Tab>
         </Tabs>

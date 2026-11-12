@@ -12,7 +12,7 @@ export const DispositivoDadosTab = ({ form, setForm, }) => {
                 <StandardInput label="Tipo de dispositivo">
                   <Form.Select
                     value={form.tipo}
-                    onChange={e => setForm({...form, variant: e.target.value})}
+                    onChange={e => setForm({...form, tipo: e.target.value})}
                     required
                   >
                     {renderOptions({

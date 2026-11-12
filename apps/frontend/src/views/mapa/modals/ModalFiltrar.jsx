@@ -1,10 +1,10 @@
-import { Button, Modal, Tab, Tabs } from "react-bootstrap"
+import { Button, Form, Modal, Tab, Tabs } from "react-bootstrap"
 import ListaToolbar from "../../../components/listas/ListaToolbar"
 import Loading from "../../../components/Loading"
 import { useCache } from "../../../hooks/useCache"
 import { useMapaEngine } from "../MapaEngine"
 import { useState } from "react"
-import { VARIANTE } from "micro-agricultor"
+import { DISPOSITIVO, VARIANTE } from "micro-agricultor"
 
 export default function ModalFiltrar({show, onClose}) {
   const { filters, setFilter, resetFilter } = useMapaEngine()
@@ -30,6 +30,11 @@ export default function ModalFiltrar({show, onClose}) {
           className="mb-3"
         >
           <Tab eventKey="plantas" title="Plantas">
+            <Form.Check
+              value={filters.planta.ocultar}
+              label="Ocultar todas"
+              onChange={(e) => setFilter({...filters, planta: {...filters.planta, ocultar: e.target.checked}})}
+            />
             <ListaToolbar
               filtros={filters.planta}
               setFiltros={(planta)=>setFilter({planta})}
@@ -65,6 +70,11 @@ export default function ModalFiltrar({show, onClose}) {
             />
           </Tab>
           <Tab eventKey="canteiros" title="Canteiros">
+            <Form.Check
+              value={filters.canteiro.ocultar}
+              label="Ocultar todos"
+              onChange={(e) => setFilter({...filters, canteiro: {...filters.canteiro, ocultar: e.target.checked}})}
+            />
             <ListaToolbar
               filtros={filters.canteiro}
               setFiltros={(canteiro)=>setFilter({canteiro})}
@@ -77,6 +87,28 @@ export default function ModalFiltrar({show, onClose}) {
                   labelKey: "nome",
                   valueKey: "id",
                   placeholder: "Todos estados"
+                }
+              ]}
+            />
+          </Tab>
+          <Tab eventKey="dispositivos" title="Dispositivos">
+            <Form.Check
+              value={filters.dispositivo.ocultar}
+              label="Ocultar todos"
+              onChange={(e) => setFilter({...filters, dispositivo: {...filters.dispositivo, ocultar: e.target.checked}})}
+            />
+            <ListaToolbar
+              filtros={filters.dispositivo}
+              setFiltros={(dispositivo)=>setFilter({dispositivo})}
+              configFiltros={[
+                {
+                  key: "id",
+                  type: "select",
+                  label: "Tipo",
+                  list: Object.values(DISPOSITIVO) ?? [],
+//                  labelKey: "nome",
+                  valueKey: "id",
+                  placeholder: "Todos os Tipos"
                 }
               ]}
             />
