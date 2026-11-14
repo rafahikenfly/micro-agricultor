@@ -27,6 +27,8 @@ const tarefaPadrao = {
     entidadesId: [],      // string [ entidadeId ]
     caracteristicaId: "", // Catalogo Características
     tipoEventoId: "",     // EVENTO_TYPES
+    // macroId: ""           // Usado na automação
+    // comando: ""           // Usado na automação
   },
   planejamento: {
     prioridade: 0,

@@ -34,10 +34,10 @@ const mapTipoEntidadeRegra = {
 export async function derivar({
   tipoEntidadeId,
   posicoes,
-  canteiro,
-  especie,
-  variedade,
-  tecnica,
+  canteiro, //plantar
+  especie,  //plantar
+  variedade,//plantar
+  tecnica,  //plantar
   services,
   user,
   timestamp

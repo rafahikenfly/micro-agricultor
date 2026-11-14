@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Modal, Form, Button, Tabs, Tab } from "react-bootstrap";
+import { Modal, Form, Tabs, Tab } from "react-bootstrap";
 import { validarObjetoCanteiro } from "micro-agricultor";
 
 

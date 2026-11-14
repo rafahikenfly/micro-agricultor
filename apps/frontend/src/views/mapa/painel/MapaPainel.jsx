@@ -1,4 +1,4 @@
-import { ENTIDADE, GEOMETRIA } from "micro-agricultor";
+import { GEOMETRIA } from "micro-agricultor";
 
 import { useCache } from "../../../hooks/useCache";
 import { useMapaEngine } from "../MapaEngine";
@@ -13,7 +13,6 @@ import PainelManejar from "./PainelManejar";
 import { pluralizar } from "../../../utils/uiUtils";
 import PainelDesenhar from "./PainelDesenhar";
 import PainelPlantar from "./PainelPlantar";
-import ModalFiltrar from "../modals/ModalFiltrar";
 import PainelOperar from "./PainelOperar";
 
 export default function MapaPainel() {
@@ -49,6 +48,7 @@ export default function MapaPainel() {
   // DEFINIÇÃO DE CONFIRMAÇÕES
   // as ações acontecem no canvas. Aqui mora apenas a configuração da ação.
   const TOOL_ONCONFIRM = {
+    // Plantar salva as configurações do plantio
     plantar: (toolState, layout)=>{
       //Configura estado da ferramenta
       setToolState(toolState);
@@ -59,6 +59,7 @@ export default function MapaPainel() {
         entidade: toolState.metadata.variedade,
       });
     },
+    // Desenhar salva as configurações do desenho
     desenhar: (toolState)=>{
       setToolState(toolState);
       setMapDrag({
@@ -73,10 +74,15 @@ export default function MapaPainel() {
         },
       });
     },
+    // Operar apenas abre o painel
     operar: (toolState)=>console.log("operar", toolState),
+    // Monitorar apenas abre o painel
     monitorar: (toolState)=>console.log("monitorar", toolState),
+    // Inspecionar apenas abre o painel
     inspecionar: (toolState)=>console.log("inspecionar", toolState),
+    // Fotografar apenas abre o painel
     fotografar: (toolState)=>console.log("fotografar", toolState),
+    // Manejar apenas abre o painel
     manejar: (toolState)=>console.log("manejar",toolState)
   }
 

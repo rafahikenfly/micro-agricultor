@@ -1,6 +1,5 @@
-import { DISPOSITIVO } from "../types/DISPOSITIVO.js";
 import { EFEITO } from "../types/EFEITOS.js";
-import { EVENTO, EVENTO_TYPES } from "../types/EVENTO.js";
+import { EVENTO } from "../types/EVENTO.js";
 import { movimentarEntidade, redimensionarEntidade } from "./entidade.rules.js";
 import { mergeComValidacao } from "./rulesUtils.js";
 import { criarTarefa } from "./tarefa.rules.js";
@@ -77,28 +76,11 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidadesId, us
   (dispositivo.ferramentas ?? [])
     .filter((ferr) => ferr.usarMenuContexto)
     .filter((ferr) => ferr.aplicavel[tipoAlvo])
-    .forEach((ferr)=> {
+    .forEach((ferramenta)=> {
       acoesContexto.push({
-        label: ferr.nomeAcao,
+        label: ferramenta.nomeAcao,
         onClick: () => {
-          const tarefa = criarTarefa({
-            dados: {
-              nome: `${ferr.nomeAcao} com ${dispositivo.nome}.`,
-            },
-            descricao: `${ferr.nomeAcao} ${entidadesId.length} ${tipoAlvo}, usando ${ferr.nome} (${ferr.indiceFerramenta}) de ${dispositivo.nome}`,
-            contexto: {
-              caracteristicaId: ferr.caracteristicaId,
-              entidadesId: entidadesId,
-              tipoEntidadeId: ferr.tipoEntidadeId,
-              tipoEventoId: ferr.tipoEventoId,
-            },
-            execucao: {
-              agente: {
-                id: dispositivo.id,
-                tipo: dispositivo.tipo,
-              }
-            }
-          });
+          const tarefa = criarTarefaParaDispositivo({dispositivo, ferramenta, entidadesId})
           servicesMap.tarefa.create(tarefa, user);
           onHide();
         },
@@ -106,6 +88,43 @@ export function criarContextoDispositivo({dispositivo, tipoAlvo, entidadesId, us
     });
   return acoesContexto
 }
+
+export function criarTarefaParaDispositivo ({dispositivo, ferramenta, entidadesId = [], comando}) {
+  const usandoComandoDireto = Boolean(comando);
+
+  const contexto = usandoComandoDireto
+    ? {
+        tipoEventoId: EVENTO.COMANDO_DIRETO.id,
+        comando,
+      }
+    : {
+        caracteristicaId: ferramenta.caracteristicaId,
+        entidadesId,
+        tipoEntidadeId: ferramenta.tipoEntidadeId,
+        tipoEventoId: ferramenta.tipoEventoId,
+      };
+
+  const nome = usandoComandoDireto
+    ? `Executar comando em ${dispositivo.nome}.`
+    : `${ferramenta.nomeAcao} com ${dispositivo.nome}.`;
+
+  const descricao = usandoComandoDireto
+    ? `Executar comando ${comando} diretamente no dispositivo ${dispositivo.nome}.`
+    : `${ferramenta.nomeAcao} em ${entidadesId.length} entidades, usando ${ferramenta.nome} (${ferramenta.indiceFerramenta}) de ${dispositivo.nome}.`;
+
+  return criarTarefa({
+    dados: { nome },
+    descricao,
+    contexto,
+    execucao: {
+      agente: {
+        id: dispositivo.id,
+        tipo: dispositivo.tipo,
+      },
+    },
+  });
+}
+
 export function ferramentaCapaz({dispositivo, tarefa}) {
   return ferr = dispositivo.ferramentas.find(
     ferr => {

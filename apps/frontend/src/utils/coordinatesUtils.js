@@ -165,7 +165,7 @@ export function resolveDrawCirclePreview(startMap, currentMap) {
 }
 
 // PREVIEW UTILS
-export const getPreviewPoints = ({ start, geometria, layout }) => {
+export const getPreviewPoints = ({ start, geometria, layout, offset = {x: 0, y: 0} }) => {
   if (!geometria || !start || !layout) return [];
 
   function getColumnLabel(n) {
@@ -186,8 +186,8 @@ export const getPreviewPoints = ({ start, geometria, layout }) => {
     for (let c = 0; c < layout.colunas; c++) {
       const letra = getColumnLabel(c);
       result.push({
-        x: start.x + (c * offsetX),
-        y: start.y + (l * offsetY),
+        x: start.x + offset.x + (c * offsetX),
+        y: start.y + offset.y + (l * offsetY),
         linha: l + 1,
         coluna: c + 1,
         coordenada: `${letra}${l + 1}`

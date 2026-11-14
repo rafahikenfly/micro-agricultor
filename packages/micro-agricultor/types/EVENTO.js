@@ -1,6 +1,6 @@
-export const EVENTO_TYPES = {
-    CREATE: "CREATE",
-}
+//export const EVENTO_TYPES = {
+//    CREATE: "CREATE",
+//}
 
 export const EVENTO = {
   EVOLUCAO: {
@@ -66,5 +66,12 @@ export const EVENTO = {
     categoria: "sistema",
     geraNecessidade: false
   },
-  [EVENTO_TYPES.CREATE]: {id: EVENTO_TYPES.CREATE, nome: "Criação", categoria: "entidade", geraNecessidade: false},
+  COMANDO_DIRETO: {
+    id: "COMANDO_DIRETO",
+    nome: "Comando direto",
+    acao: "Comandar",
+    categoria: "automação",
+    geraNecessidade: false
+  }
+//  [EVENTO_TYPES.CREATE]: {id: EVENTO_TYPES.CREATE, nome: "Criação", categoria: "entidade", geraNecessidade: false},
 };

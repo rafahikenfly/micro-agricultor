@@ -1,4 +1,4 @@
-import { EVENTO, EVENTO_TYPES } from "micro-agricultor"
+import { EVENTO } from "micro-agricultor"
 import { useToast } from "../../../services/toast/toastProvider";
 
 export function createCalendarioTarefaHandler(engine, tarefa) {

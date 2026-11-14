@@ -98,6 +98,7 @@ export default function MapaCanteiro ({canteiro, svgRef, gRef, drag, dragStart, 
               start: cursorMap,
               geometria: previewSetup.entidade.aparencia.geometria,
               layout: previewSetup.layout,
+              offset: {x: previewSetup.layout.dimensao.x/2, y: previewSetup.layout.dimensao.y/2}
             });
             derivar({
               tipoEntidadeId: ENTIDADE.planta.id,

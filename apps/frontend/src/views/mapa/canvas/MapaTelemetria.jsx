@@ -10,10 +10,10 @@ function MapaTelemetria({ dispositivo }) {
   const offsetX = -dispositivo.dimensao.x/2;
   const offsetY = dispositivo.dimensao.y/2;
 
-  const estadoGrbl = dispositivo.telemetria.grbl;
-  const estadoXylema = dispositivo.telemetria.xylema;
-  const telemetriaTs = dispositivo.telemetria.ts;
-  const estadoAtuadores = dispositivo.telemetria.atuadores;
+  const estadoGrbl = dispositivo.telemetria.grbl ?? {pos: {}};
+  const estadoXylema = dispositivo.telemetria.xylema ?? {};
+  const telemetriaTs = dispositivo.telemetria.ts ?? 0;
+  const estadoAtuadores = dispositivo.telemetria.atuadores ?? [];
 
   return (
     <g 
@@ -34,22 +34,22 @@ function MapaTelemetria({ dispositivo }) {
 
       {/* Título */}
       <text x="8" y="16" fill="#ffffff" fontSize="9" fontWeight="bold" fontFamily="sans-serif">
-        {unixToReadableString(telemetriaTs)}
+        {telemetriaTs ? unixToReadableString(telemetriaTs) : "N/D"}
       </text>
 
       {/* Coordenadas X, Y, Z */}
       <text x="8" y="32" fill="#4ade80" fontSize="7" fontFamily="monospace">
-        X:{estadoGrbl.pos.x ?? 0} | Y:{estadoGrbl.pos.y ?? 0} | Z:{estadoGrbl.pos.z ?? 0}
+        X:{estadoGrbl.pos.x ?? "N/D"} | Y:{estadoGrbl.pos.y ?? "N/D"} | Z:{estadoGrbl.pos.z ?? "N/D"}
       </text>
       {/* Estados adicionais (Grbl e Xylema) */}
       <text x="8" y="42" fill="#ffffff" fontSize="9" fontFamily="sans-serif">
-        Grbl:{ESTADO_GRBL[estadoGrbl.estado]}
+        Grbl:{ESTADO_GRBL[estadoGrbl.estado] ?? "N/D"}
       </text>
       <text x="8" y="52" fill="#ffffff" fontSize="9" fontFamily="sans-serif">
-        Xyl:{ESTADO_XYLEMA[estadoXylema.estado]}
+        Xyl:{ESTADO_XYLEMA[estadoXylema.estado] ?? "N/D"}
       </text>
       <text x="8" y="62" fill="#ffffff" fontSize="9" fontFamily="sans-serif">
-        Buffer | Grbl:{estadoGrbl.bf} | Xyl:{estadoXylema.bf}
+        Buffer | Grbl:{estadoGrbl.bf ?? "N/D"} | Xyl:{estadoXylema.bf ?? "N/D"}
       </text>
 
       {/* Atuadores */}

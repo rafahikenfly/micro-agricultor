@@ -182,8 +182,8 @@ export function derivarPlanta({ especie, variedade, tecnica, canteiro, posicao }
     nome: `${variedade.nome} • ${posicao.coordenada} • ${canteiro.nome}`,
   }
 
-  const entidade = validarPlanta({entidade: plantaDerivada})
-  return { entidade, operacao: "CREATE"}
+  const entidade = validarPlanta(plantaDerivada);
+  return { entidade, operacao: "CREATE"};
 }
 
 // =====

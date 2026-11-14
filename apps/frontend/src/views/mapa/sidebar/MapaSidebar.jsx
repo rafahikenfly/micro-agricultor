@@ -31,7 +31,7 @@ export default function MapaSidebar() {
   const tools = [
     {
       id: "filtrar",
-      icon: "⚙️",
+      icon: "👁️",
       text: "Filtrar entidades exibidas",
       onClick: ()=> setShowModal({
         tipo: "filtrar",
@@ -135,7 +135,7 @@ export default function MapaSidebar() {
     },
     {
       id: "operar",
-      icon: "[O]",
+      icon: "🤖",
       text: "Operar",
       onClick: activeTool ===  "operar" ? resetTool : () => {
         setMapDragActive(false);
